@@ -2,25 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Project Manager Dashboard')</title>
+    <title>@yield('title', 'Finance Dashboard - Advanta Uganda Ltd')</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="{{ asset('images/favicon.png') }}" type="image/png">
 
     <style>
         :root {
-            --primary: #0dcaf0;
-            --primary-hover: #0bb5d4;
-            --sidebar-bg: #1e293b;
-            --sidebar-text: #e2e8f0;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --sidebar-bg: #1f2937;
+            --sidebar-text: #e5e7eb;
             --sidebar-hover: #fff;
             --bg: #f8fafc;
-            --card-bg: #ffffff;
         }
 
         body {
@@ -35,7 +33,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            background: linear-gradient(180deg, var(--sidebar-bg) 0%, #0f172a 100%);
+            background: linear-gradient(180deg, var(--sidebar-bg) 0%, #111827 100%);
             color: var(--sidebar-text);
             display: flex;
             flex-direction: column;
@@ -43,7 +41,6 @@
             transition: all 0.3s ease;
             z-index: 1000;
             overflow-y: auto;
-            box-shadow: 2px 0 15px rgba(0,0,0,0.2);
         }
 
         .sidebar-logo {
@@ -53,7 +50,6 @@
             padding: 1.5rem 1rem;
             border-bottom: 1px solid rgba(255,255,255,0.2);
             color: var(--primary);
-            background: rgba(255,255,255,0.05);
         }
 
         .sidebar a {
@@ -74,7 +70,6 @@
             background: var(--primary);
             color: var(--sidebar-hover);
             transform: translateX(4px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
         .sidebar-footer {
@@ -100,7 +95,6 @@
 
         .logout-button:hover {
             background: #dc2626;
-            transform: translateY(-2px);
         }
 
         .content {
@@ -108,38 +102,6 @@
             padding: 2rem;
             min-height: 100vh;
             background: var(--bg);
-        }
-
-        .mobile-toggle {
-            display: none;
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            font-size: 1.5rem;
-            color: var(--primary);
-            z-index: 1100;
-            cursor: pointer;
-            background: white;
-            border-radius: 8px;
-            padding: 0.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                left: -260px;
-            }
-            .sidebar.active {
-                left: 0;
-                box-shadow: 4px 0 20px rgba(0,0,0,0.3);
-            }
-            .content {
-                margin-left: 0;
-                padding: 1rem;
-            }
-            .mobile-toggle {
-                display: block;
-            }
         }
 
         .stat-card {
@@ -151,44 +113,45 @@
             transform: translateY(-5px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
-        .store-item-table {
-    max-height: 400px;
-    overflow-y: auto;
-}
-.store-item-row:hover {
-    background-color: #f8f9fa;
-}
-.selected-item-badge {
-    font-size: 0.75em;
-}
+
+        @media (max-width: 768px) {
+            .sidebar {
+                left: -260px;
+            }
+            .sidebar.active {
+                left: 0;
+            }
+            .content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
 
-<div class="mobile-toggle d-md-none"><i class="bi bi-list"></i></div>
-
 <div class="sidebar" id="sidebar">
-    <div class="sidebar-logo">📋 Project Manager</div>
+    <div class="sidebar-logo">💰 Finance</div>
 
     <div class="sidebar-content">
-        <a href="{{ route('project_manager.dashboard') }}" class="{{ request()->routeIs('project_manager.dashboard') ? 'active' : '' }}">
+        <a href="{{ route('finance.dashboard') }}" class="{{ request()->routeIs('finance.dashboard') ? 'active' : '' }}">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>
 
-        <a href="{{ route('project_manager.requisitions.index') }}" class="{{ request()->routeIs('project_manager.requisitions.*') ? 'active' : '' }}">
-            <i class="bi bi-file-earmark-text"></i> My Requisitions
+        <a href="{{ route('finance.payments.index') }}" class="{{ request()->routeIs('finance.payments.*') ? 'active' : '' }}">
+            <i class="bi bi-credit-card"></i> Payments
         </a>
 
-        <a href="{{ route('project_manager.requisitions.create') }}" class="{{ request()->routeIs('project_manager.requisitions.create') ? 'active' : '' }}">
-            <i class="bi bi-plus-circle"></i> Create Requisition
+        <a href="{{ route('finance.payments.pending') }}" class="{{ request()->routeIs('finance.payments.pending') ? 'active' : '' }}">
+            <i class="bi bi-clock"></i> Pending Payments
         </a>
 
-        <a href="{{ route('project_manager.requisitions.pending') }}" class="{{ request()->routeIs('project_manager.requisitions.pending') ? 'active' : '' }}">
-            <i class="bi bi-clock-history"></i> Pending Approvals
+        <a href="{{ route('finance.expenses.index') }}" class="{{ request()->routeIs('finance.expenses.*') ? 'active' : '' }}">
+            <i class="bi bi-cash-coin"></i> Expenses
         </a>
 
-        <a href="{{ route('project_manager.projects.index') }}" class="{{ request()->routeIs('project_manager.projects.*') ? 'active' : '' }}">
-            <i class="bi bi-folder2"></i> My Projects
+        <a href="{{ route('finance.reports.index') }}" class="{{ request()->routeIs('finance.reports.*') ? 'active' : '' }}">
+            <i class="bi bi-graph-up"></i> Financial Reports
         </a>
     </div>
 
@@ -208,20 +171,14 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
-    const toggle = document.querySelector('.mobile-toggle');
-    const sidebar = document.getElementById('sidebar');
-    if (toggle) {
-        toggle.addEventListener('click', () => sidebar.classList.toggle('active'));
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        $('.select2').select2({
-            width: '100%',
-            theme: 'bootstrap-5'
-        });
+    // Mobile sidebar toggle
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggle = document.querySelector('.mobile-toggle');
+        const sidebar = document.getElementById('sidebar');
+        if (toggle) {
+            toggle.addEventListener('click', () => sidebar.classList.toggle('active'));
+        }
     });
 </script>
 

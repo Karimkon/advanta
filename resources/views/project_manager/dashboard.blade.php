@@ -22,7 +22,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="card-subtitle text-muted mb-2">Total Requisitions</h6>
-                            <h2 class="fw-bold text-primary mb-1">{{ $requisitionStats->total }}</h2>
+                            <h2 class="fw-bold text-primary mb-1">{{ $requisitionStats['total'] }}</h2>
                             <small class="text-muted">All time</small>
                         </div>
                         <div class="icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3">
@@ -39,7 +39,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="card-subtitle text-muted mb-2">Pending</h6>
-                            <h2 class="fw-bold text-warning mb-1">{{ $requisitionStats->pending }}</h2>
+                            <h2 class="fw-bold text-warning mb-1">{{ $requisitionStats['pending'] }}</h2>
                             <small class="text-warning">Waiting approval</small>
                         </div>
                         <div class="icon-wrapper bg-warning bg-opacity-10 rounded-circle p-3">
@@ -56,7 +56,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="card-subtitle text-muted mb-2">Approved</h6>
-                            <h2 class="fw-bold text-success mb-1">{{ $requisitionStats->approved + $requisitionStats->operations_approved }}</h2>
+                            <h2 class="fw-bold text-success mb-1">{{ $requisitionStats['approved'] + $requisitionStats['operations_approved'] }}</h2>
                             <small class="text-success">Moving forward</small>
                         </div>
                         <div class="icon-wrapper bg-success bg-opacity-10 rounded-circle p-3">

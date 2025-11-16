@@ -1,4 +1,4 @@
-@extends('project_manager.layouts.app')
+@extends('engineer.layouts.app')
 
 @section('title', 'Create New Requisition')
 
@@ -10,13 +10,13 @@
                 <div class="card-header bg-white border-bottom">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Create New Requisition</h5>
-                        <a href="{{ route('project_manager.requisitions.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <a href="{{ route('engineer.requisitions.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-left"></i> Back to Requisitions
                         </a>
                     </div>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('project_manager.requisitions.store') }}" method="POST" enctype="multipart/form-data" id="requisitionForm">
+                    <form action="{{ route('engineer.requisitions.store') }}" method="POST" enctype="multipart/form-data" id="requisitionForm">
                         @csrf
                         
                         <!-- Basic Information -->
@@ -152,7 +152,7 @@
 
                         <!-- Submit Buttons -->
                         <div class="d-flex justify-content-between">
-                            <a href="{{ route('project_manager.requisitions.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="{{ route('engineer.requisitions.index') }}" class="btn btn-outline-secondary">Cancel</a>
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-circle"></i> Create Requisition
                             </button>
@@ -182,6 +182,8 @@
 
 @push('scripts')
 <script>
+// Use the same JavaScript code from project_manager/requisitions/create.blade.php
+// Copy the entire JavaScript section from that file here
 document.addEventListener('DOMContentLoaded', function() {
     let itemCount = 0;
     let currentStoreId = null;

@@ -38,7 +38,7 @@
                                 <tr>
                                     <th>Status:</th>
                                     <td>
-                                        <span class="badge bg-{{ $project->status === 'active' ? 'success' : 'secondary' }}">
+                                        <span class="badge bg-{{ $project->status === 'active' ? 'success' : ($project->status === 'completed' ? 'info' : 'secondary') }}">
                                             {{ ucfirst($project->status) }}
                                         </span>
                                     </td>
@@ -83,7 +83,7 @@
                         <div class="col-md-6">
                             <h6>Project Manager</h6>
                             @if($projectManager)
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center mb-3">
                                     <div class="bg-primary rounded-circle p-2 me-3">
                                         <i class="bi bi-person-fill text-white"></i>
                                     </div>
@@ -101,7 +101,7 @@
                         <div class="col-md-6">
                             <h6>Store Manager</h6>
                             @if($storeManager)
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center mb-3">
                                     <div class="bg-success rounded-circle p-2 me-3">
                                         <i class="bi bi-person-fill text-white"></i>
                                     </div>
@@ -113,6 +113,35 @@
                             @else
                                 <div class="text-muted">
                                     <i class="bi bi-exclamation-triangle"></i> No store manager assigned
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Engineers Section -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Assigned Engineers</h6>
+                            @if($engineers->count() > 0)
+                                <div class="row">
+                                    @foreach($engineers as $engineer)
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-warning rounded-circle p-2 me-3">
+                                                    <i class="bi bi-person-gear text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <strong>{{ $engineer->name }}</strong>
+                                                    <div class="text-muted small">{{ $engineer->email }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-muted text-center py-3">
+                                    <i class="bi bi-people display-4 d-block mb-2"></i>
+                                    No engineers assigned to this project
                                 </div>
                             @endif
                         </div>
@@ -137,6 +166,7 @@
                                 <div>
                                     <strong>{{ $store->name }}</strong>
                                     <div class="text-muted small">Code: {{ $store->code }}</div>
+                                    <div class="text-muted small">Location: {{ $store->address }}</div>
                                 </div>
                             </div>
                         @endforeach
@@ -168,6 +198,20 @@
                                 <i class="bi bi-shop display-6 d-block"></i>
                                 <strong>{{ $project->stores->count() }}</strong>
                                 <div class="small">Stores</div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="text-warning">
+                                <i class="bi bi-people display-6 d-block"></i>
+                                <strong>{{ $engineers->count() }}</strong>
+                                <div class="small">Engineers</div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="text-info">
+                                <i class="bi bi-person display-6 d-block"></i>
+                                <strong>{{ $project->users->count() }}</strong>
+                                <div class="small">Total Staff</div>
                             </div>
                         </div>
                     </div>

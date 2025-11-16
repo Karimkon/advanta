@@ -29,6 +29,12 @@ use App\Http\Controllers\Procurement\ProcurementLpoController;
 use App\Http\Controllers\Procurement\ProcurementSupplierController;
 use App\Http\Controllers\CEO\CEORequisitionController;
 use App\Http\Controllers\Stores\StoreInventoryController; 
+use App\Http\Controllers\Stores\StoreReleaseController;
+use App\Http\Controllers\Engineer\EngineerDashboardController;
+use App\Http\Controllers\Engineer\EngineerRequisitionController;    
+use App\Http\Controllers\Finance\PaymentController;
+use App\Http\Controllers\Finance\ExpenseController;
+use App\Http\Controllers\Finance\FinancialReportsController;            
    
 
 // ----------------------
@@ -239,6 +245,21 @@ Route::prefix('inventory')->name('inventory.')->group(function () {
     });
 });
 
+// API Routes for dynamic store inventory loading
+Route::get('/api/stores/{store}/inventory', function ($storeId) {
+    $store = \App\Models\Store::find($storeId);
+    
+    if (!$store) {
+        return response()->json(['error' => 'Store not found'], 404);
+    }
+    
+    $items = $store->inventoryItems()
+        ->where('quantity', '>', 0)
+        ->get(['name', 'quantity', 'unit', 'unit_price']);
+    
+    return response()->json(['items' => $items]);
+})->name('api.store.inventory');
+
 // OPERATIONS
 Route::middleware(['auth','role:operations'])->prefix('operations')->name('operations.')->group(function () {
     Route::get('/dashboard', [OperationsDashboardController::class,'index'])->name('dashboard');
@@ -293,6 +314,36 @@ Route::middleware(['auth','role:procurement'])->prefix('procurement')->name('pro
 // FINANCE
 Route::middleware(['auth','role:finance'])->prefix('finance')->name('finance.')->group(function () {
     Route::get('/dashboard', [FinanceDashboardController::class,'index'])->name('dashboard');
+    
+    // Payments
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('/', [PaymentController::class, 'index'])->name('index');
+        Route::get('/pending', [PaymentController::class, 'pending'])->name('pending');
+        Route::get('/create/{requisition}', [PaymentController::class, 'create'])->name('create');
+        Route::post('/store/{requisition}', [PaymentController::class, 'store'])->name('store');
+        Route::get('/{payment}', [PaymentController::class, 'show'])->name('show');
+        Route::get('/export/csv', [PaymentController::class, 'export'])->name('export');
+    });
+    
+    // Expenses
+    Route::prefix('expenses')->name('expenses.')->group(function () {
+        Route::get('/', [ExpenseController::class, 'index'])->name('index');
+        Route::get('/create', [ExpenseController::class, 'create'])->name('create');
+        Route::post('/', [ExpenseController::class, 'store'])->name('store');
+        Route::get('/{expense}', [ExpenseController::class, 'show'])->name('show');
+        Route::get('/{expense}/edit', [ExpenseController::class, 'edit'])->name('edit');
+        Route::put('/{expense}', [ExpenseController::class, 'update'])->name('update');
+        Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
+        Route::get('/reports/summary', [ExpenseController::class, 'reports'])->name('reports');
+        Route::get('/export/csv', [ExpenseController::class, 'export'])->name('export');
+    });
+    
+    // Financial Reports
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [FinancialReportsController::class, 'index'])->name('index');
+        Route::get('/project/{project}', [FinancialReportsController::class, 'projectReport'])->name('project');
+        Route::get('/export/financial-summary', [FinancialReportsController::class, 'exportFinancialSummary'])->name('export.summary');
+    });
 });
 
 // STORES
@@ -362,9 +413,23 @@ Route::middleware(['auth','role:project_manager'])->prefix('project-manager')->n
     });
 });
 
-// SITE MANAGER
-Route::middleware(['auth','role:site_manager'])->prefix('site-manager')->name('site_manager.')->group(function () {
-    Route::get('/dashboard', [SiteManagerDashboardController::class,'index'])->name('dashboard');
+// ENGINEER
+Route::middleware(['auth','role:engineer'])->prefix('engineer')->name('engineer.')->group(function () {
+    Route::get('/dashboard', [EngineerDashboardController::class,'index'])->name('dashboard');
+    
+    // Requisitions
+    Route::prefix('requisitions')->name('requisitions.')->group(function () {
+        Route::get('/', [EngineerRequisitionController::class, 'index'])->name('index');
+        Route::get('/create', [EngineerRequisitionController::class, 'create'])->name('create');
+        Route::post('/', [EngineerRequisitionController::class, 'store'])->name('store');
+        Route::get('/{requisition}', [EngineerRequisitionController::class, 'show'])->name('show');
+        Route::get('/pending', [EngineerRequisitionController::class, 'pending'])->name('pending');
+    });
+    
+    // Projects
+    Route::prefix('projects')->name('projects.')->group(function () {
+        Route::get('/', [EngineerProjectController::class, 'index'])->name('index');
+    });
 });
 
 // SUPPLIER

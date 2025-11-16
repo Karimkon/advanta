@@ -15,7 +15,7 @@ class StoresDashboardController extends Controller
     {
         $user = auth()->user();
         
-        // Get stores accessible by this user with proper relationships
+        // Get stores accessible by this user
         $stores = Store::with(['project', 'project.users'])
             ->where(function($query) use ($user) {
                 // Main store - only for main store manager (user ID 6)
@@ -37,7 +37,7 @@ class StoresDashboardController extends Controller
                 ->with('error', 'No stores assigned to your account. Please contact administration.');
         }
 
-        // Use the first (and only) store for this user
+        // Use the first store for this user
         $currentStore = $stores->first();
 
         // Get store statistics

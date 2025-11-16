@@ -32,20 +32,24 @@ class ProjectManagerRequisitionController extends Controller
         return view('project_manager.requisitions.index', compact('requisitions', 'projects'));
     }
 
-    public function create()
-    {
-        $user = auth()->user();
-        
-        // Get projects managed by this project manager
-        $projects = Project::whereHas('users', function($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->get();
+   public function create()
+{
+    $user = auth()->user();
+    
+    // Get projects managed by this project manager
+    $projects = Project::whereHas('users', function($query) use ($user) {
+        $query->where('user_id', $user->id);
+    })->get();
 
-        // Get project stores
-        $projectStores = Store::where('type', 'project')->get();
+    // Get project stores with their inventory
+    $projectStores = Store::whereHas('project.users', function($query) use ($user) {
+        $query->where('user_id', $user->id);
+    })->with(['inventoryItems' => function($query) {
+        $query->where('quantity', '>', 0);
+    }])->get();
 
-        return view('project_manager.requisitions.create', compact('projects', 'projectStores'));
-    }
+    return view('project_manager.requisitions.create', compact('projects', 'projectStores'));
+}
 
     public function store(Request $request)
     {

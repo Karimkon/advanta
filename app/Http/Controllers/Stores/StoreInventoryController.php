@@ -13,14 +13,43 @@ class StoreInventoryController extends Controller
 {
     public function index(Store $store)
     {
+        $user = auth()->user();
+        
+        // Authorization - check if user has access to this store
+        if (!$this->canAccessStore($user, $store)) {
+            abort(403, 'Unauthorized access to this store.');
+        }
+
         $inventoryItems = $store->inventoryItems()
             ->with(['logs' => function($query) {
                 $query->latest()->take(5);
             }])
             ->latest()
-            ->paginate(20);
+            ->get();
 
-        return view('stores.inventory.index', compact('store', 'inventoryItems'));
+        $stats = [
+            'total_items' => $store->getTotalItemsCount(),
+            'in_stock' => $store->inventoryItems()->where('quantity', '>', 0)->count(),
+            'low_stock' => $store->getLowStockItems()->count(),
+            'out_of_stock' => $store->getOutOfStockItems()->count(),
+        ];
+
+        return view('stores.inventory.index', compact('store', 'inventoryItems', 'stats'));
+    }
+
+    private function canAccessStore($user, $store)
+    {
+        // Main store manager can access main store
+        if ($user->id === 6 && $store->isMainStore()) {
+            return true;
+        }
+
+        // Project store users can access their project stores
+        if ($store->isProjectStore() && $store->project) {
+            return $store->project->users()->where('user_id', $user->id)->exists();
+        }
+
+        return false;
     }
 
     public function show(Store $store, InventoryItem $inventoryItem)

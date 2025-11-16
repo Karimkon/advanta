@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Project Manager Dashboard')</title>
+    <title>@yield('title', 'Engineer Dashboard')</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
@@ -14,8 +14,8 @@
 
     <style>
         :root {
-            --primary: #0dcaf0;
-            --primary-hover: #0bb5d4;
+            --primary: #f59e0b;
+            --primary-hover: #d97706;
             --sidebar-bg: #1e293b;
             --sidebar-text: #e2e8f0;
             --sidebar-hover: #fff;
@@ -151,16 +151,17 @@
             transform: translateY(-5px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
+
         .store-item-table {
-    max-height: 400px;
-    overflow-y: auto;
-}
-.store-item-row:hover {
-    background-color: #f8f9fa;
-}
-.selected-item-badge {
-    font-size: 0.75em;
-}
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .store-item-row:hover {
+            background-color: #f8f9fa;
+        }
+        .selected-item-badge {
+            font-size: 0.75em;
+        }
     </style>
 </head>
 <body>
@@ -168,26 +169,26 @@
 <div class="mobile-toggle d-md-none"><i class="bi bi-list"></i></div>
 
 <div class="sidebar" id="sidebar">
-    <div class="sidebar-logo">📋 Project Manager</div>
+    <div class="sidebar-logo">🏗️ Engineer</div>
 
     <div class="sidebar-content">
-        <a href="{{ route('project_manager.dashboard') }}" class="{{ request()->routeIs('project_manager.dashboard') ? 'active' : '' }}">
+        <a href="{{ route('engineer.dashboard') }}" class="{{ request()->routeIs('engineer.dashboard') ? 'active' : '' }}">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>
 
-        <a href="{{ route('project_manager.requisitions.index') }}" class="{{ request()->routeIs('project_manager.requisitions.*') ? 'active' : '' }}">
+        <a href="{{ route('engineer.requisitions.index') }}" class="{{ request()->routeIs('engineer.requisitions.*') ? 'active' : '' }}">
             <i class="bi bi-file-earmark-text"></i> My Requisitions
         </a>
 
-        <a href="{{ route('project_manager.requisitions.create') }}" class="{{ request()->routeIs('project_manager.requisitions.create') ? 'active' : '' }}">
+        <a href="{{ route('engineer.requisitions.create') }}" class="{{ request()->routeIs('engineer.requisitions.create') ? 'active' : '' }}">
             <i class="bi bi-plus-circle"></i> Create Requisition
         </a>
 
-        <a href="{{ route('project_manager.requisitions.pending') }}" class="{{ request()->routeIs('project_manager.requisitions.pending') ? 'active' : '' }}">
+        <a href="{{ route('engineer.requisitions.pending') }}" class="{{ request()->routeIs('engineer.requisitions.pending') ? 'active' : '' }}">
             <i class="bi bi-clock-history"></i> Pending Approvals
         </a>
 
-        <a href="{{ route('project_manager.projects.index') }}" class="{{ request()->routeIs('project_manager.projects.*') ? 'active' : '' }}">
+        <a href="{{ route('engineer.projects.index') }}" class="{{ request()->routeIs('engineer.projects.*') ? 'active' : '' }}">
             <i class="bi bi-folder2"></i> My Projects
         </a>
     </div>

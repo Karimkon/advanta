@@ -24,6 +24,7 @@
                             <th>Code</th>
                             <th>Location</th>
                             <th>Project Manager</th>
+                            <th>Engineers</th>
                             <th>Budget</th>
                             <th>Status</th>
                             <th>Start Date</th>
@@ -41,10 +42,23 @@
                                 <td>{{ $project->code }}</td>
                                 <td>{{ $project->location }}</td>
                                 <td>
-                                    @if($project->users->count() > 0)
-                                        {{ $project->users->first()->name }}
+                                    @php
+                                        $projectManager = $project->users()->where('role', 'project_manager')->first();
+                                    @endphp
+                                    @if($projectManager)
+                                        {{ $projectManager->name }}
                                     @else
                                         <span class="text-muted">Not assigned</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @php
+                                        $engineersCount = $project->users()->where('role', 'engineer')->count();
+                                    @endphp
+                                    @if($engineersCount > 0)
+                                        <span class="badge bg-warning">{{ $engineersCount }} engineer(s)</span>
+                                    @else
+                                        <span class="text-muted">None</span>
                                     @endif
                                 </td>
                                 <td>UGX {{ number_format($project->budget, 2) }}</td>
@@ -53,7 +67,8 @@
                                         {{ ucfirst($project->status) }}
                                     </span>
                                 </td>
-                                <td>{{ \Carbon\Carbon::parse($project->start_date)->format('M d, Y') }}</td>                                <td>
+                                <td>{{ \Carbon\Carbon::parse($project->start_date)->format('M d, Y') }}</td>
+                                <td>
                                     <div class="btn-group btn-group-sm">
                                         <a href="{{ route('admin.projects.show', $project) }}" 
                                            class="btn btn-outline-primary" title="View">
@@ -76,7 +91,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     <div class="text-muted">
                                         <i class="bi bi-folder-x display-4 d-block mb-2"></i>
                                         No projects found.

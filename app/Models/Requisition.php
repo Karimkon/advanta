@@ -145,6 +145,18 @@ class Requisition extends Model
         };
     }
 
+    public function supplier()
+{
+    return $this->hasOneThrough(
+        Supplier::class,
+        Lpo::class,
+        'requisition_id', // Foreign key on LPO table
+        'id',             // Foreign key on Supplier table  
+        'id',             // Local key on Requisition table
+        'supplier_id'     // Local key on LPO table
+    );
+}
+
     // Scope methods
     public function scopeStoreRequisitions($query)
     {

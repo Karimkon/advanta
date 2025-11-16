@@ -125,6 +125,22 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+
+                    <!-- Add Engineers Selection -->
+                    <div class="col-12">
+                        <label class="form-label">Assign Engineers (Optional)</label>
+                        <select name="engineer_ids[]" class="form-select select2 @error('engineer_ids') is-invalid @enderror" multiple>
+                            @foreach($engineers as $engineer)
+                                <option value="{{ $engineer->id }}" {{ in_array($engineer->id, old('engineer_ids', [])) ? 'selected' : '' }}>
+                                    {{ $engineer->name }} ({{ $engineer->email }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">Select engineers to assign to this project. They will be able to create requisitions for this project.</small>
+                        @error('engineer_ids')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
                 </div>
 
                 <div class="alert alert-info">
@@ -134,6 +150,7 @@
                         <li>A dedicated project store</li>
                         <li>Project manager assignment</li>
                         <li>Store manager assignment</li>
+                        <li>Engineer assignments (if selected)</li>
                     </ul>
                 </div>
 
@@ -145,4 +162,17 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    $(document).ready(function() {
+        // Initialize Select2 for engineers multi-select
+        $('.select2').select2({
+            placeholder: "Select engineers...",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+</script>
+@endpush
 @endsection
