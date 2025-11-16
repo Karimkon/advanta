@@ -2,47 +2,52 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'name','email','phone','password','role','shop_id','back_debt'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
+    protected $hidden = ['password','remember_token'];
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'back_debt' => 'decimal:2',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    // relationships
+    public function projects()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->belongsToMany(Project::class)->withTimestamps()->withPivot('role_on_project');
+    }
+
+    public function requisitions()
+    {
+        return $this->hasMany(Requisition::class, 'requested_by');
+    }
+
+    public function approvals()
+    {
+        return $this->hasMany(RequisitionApproval::class, 'approved_by');
+    }
+
+    public function receivedDeliveries()
+    {
+        return $this->hasMany(Delivery::class, 'received_by');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'paid_by');
+    }
+
+    public function inventoryLogs()
+    {
+        return $this->hasMany(InventoryLog::class);
     }
 }
