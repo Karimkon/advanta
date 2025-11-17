@@ -60,9 +60,15 @@ class Payment extends Model
         );
     }
 
-    // Alternative: Direct access to requisition through LPO
-    public function getRequisitionAttribute()
+    // Accessor for safe date formatting
+    public function getFormattedPaidOnAttribute()
     {
-        return $this->lpo->requisition ?? null;
+        return $this->paid_on ? $this->paid_on->format('M d, Y') : 'Not set';
+    }
+
+    // Scope for payments with dates
+    public function scopeWithDates($query)
+    {
+        return $query->whereNotNull('paid_on');
     }
 }

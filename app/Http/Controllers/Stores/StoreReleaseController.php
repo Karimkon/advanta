@@ -16,47 +16,90 @@ class StoreReleaseController extends Controller
 {
     public function index(Store $store)
     {
+        $user = auth()->user();
+        $stores = Store::all();
+        
+        // Authorization check
+        if (!$this->canAccessStore($user, $store)) {
+            abort(403, 'Unauthorized access to this store.');
+        }
+
+        // Get requisitions ready for release (approved and for this store)
         $pendingRequisitions = Requisition::where('store_id', $store->id)
             ->where('type', Requisition::TYPE_STORE)
-            ->where('status', Requisition::STATUS_PROJECT_MANAGER_APPROVED)
+            ->whereIn('status', [
+                Requisition::STATUS_PROJECT_MANAGER_APPROVED
+            ])
             ->with(['project', 'requester', 'items'])
             ->latest()
             ->paginate(20);
 
         $releases = StoreRelease::where('store_id', $store->id)
-            ->with(['requisition', 'requisition.project'])
+            ->with(['requisition', 'requisition.project', 'releasedBy'])
             ->latest()
             ->paginate(20);
 
-        return view('stores.releases.index', compact('store', 'pendingRequisitions', 'releases'));
+        return view('stores.releases.index', compact('store', 'pendingRequisitions', 'releases', 'stores'));
     }
 
-    public function create(Store $store, Requisition $requisition)
+
+    private function canAccessStore($user, $store)
     {
-        // Verify requisition belongs to this store and is ready for release
-        if ($requisition->store_id !== $store->id || 
-            $requisition->status !== Requisition::STATUS_PROJECT_MANAGER_APPROVED ||
-            $requisition->type !== Requisition::TYPE_STORE) {
-            abort(403, 'Invalid requisition for store release.');
+        // Main store manager (ID 6) can access main store
+        if ($user->id === 6 && $store->isMainStore()) {
+            return true;
         }
+
+        // Project store users can access their project stores
+        if ($store->isProjectStore() && $store->project) {
+            return $store->project->users()->where('user_id', $user->id)->exists();
+        }
+
+        return false;
+    }
+
+   public function create(Store $store, Requisition $requisition)
+    {
+        $stores = Store::all();
+
+        // Authorization check
+        if (!$this->canAccessStore(auth()->user(), $store)) {
+            abort(403, 'Unauthorized access to this store.');
+        }
+
+       if ($requisition->store_id !== $store->id || 
+        $requisition->status !== Requisition::STATUS_PROJECT_MANAGER_APPROVED ||
+        $requisition->type !== Requisition::TYPE_STORE) {
+                abort(403, 'Invalid requisition for store release.');
+            }
 
         $requisition->load(['items']);
         
-        // Check stock availability
+        // Check stock availability for each item
         foreach ($requisition->items as $item) {
+            // Try to find matching inventory item by name
             $inventoryItem = InventoryItem::where('store_id', $store->id)
-                ->where('name', $item->description)
+                ->where(function($query) use ($item) {
+                    $query->where('name', 'like', '%' . $item->description . '%')
+                          ->orWhere('description', 'like', '%' . $item->description . '%');
+                })
                 ->first();
             
             $item->available_stock = $inventoryItem ? $inventoryItem->quantity : 0;
             $item->can_fulfill = $inventoryItem && $inventoryItem->quantity >= $item->quantity;
+            $item->inventory_item = $inventoryItem;
         }
 
-        return view('stores.releases.create', compact('store', 'requisition'));
+        return view('stores.releases.create', compact('store', 'requisition', 'stores'));
     }
 
     public function store(Request $request, Store $store, Requisition $requisition)
     {
+        // Authorization check
+        if (!$this->canAccessStore(auth()->user(), $store)) {
+            abort(403, 'Unauthorized access to this store.');
+        }
+
         // Validation
         $request->validate([
             'items' => 'required|array',
@@ -70,7 +113,6 @@ class StoreReleaseController extends Controller
             $storeRelease = StoreRelease::create([
                 'requisition_id' => $requisition->id,
                 'store_id' => $store->id,
-                'project_id' => $requisition->project_id,
                 'released_by' => auth()->id(),
                 'released_at' => now(),
                 'status' => StoreRelease::STATUS_RELEASED,
@@ -78,6 +120,7 @@ class StoreReleaseController extends Controller
             ]);
 
             $totalReleased = 0;
+            $allItemsReleased = true;
 
             // Process each item
             foreach ($request->items as $itemId => $itemData) {
@@ -87,7 +130,7 @@ class StoreReleaseController extends Controller
                 if ($quantityReleased > 0) {
                     // Find inventory item
                     $inventoryItem = InventoryItem::where('store_id', $store->id)
-                        ->where('name', $requisitionItem->description)
+                        ->where('name', 'like', '%' . $requisitionItem->description . '%')
                         ->first();
 
                     if ($inventoryItem && $inventoryItem->quantity >= $quantityReleased) {
@@ -120,15 +163,18 @@ class StoreReleaseController extends Controller
                         ]);
 
                         $totalReleased += $quantityReleased;
+                    } else {
+                        $allItemsReleased = false;
                     }
+                } else {
+                    $allItemsReleased = false;
                 }
             }
 
-            // Update requisition status if all items are released
+            // Update requisition status
             if ($totalReleased > 0) {
-                $requisition->update([
-                    'status' => Requisition::STATUS_COMPLETED
-                ]);
+                $newStatus = $allItemsReleased ? Requisition::STATUS_COMPLETED : Requisition::STATUS_PARTIAL;
+                $requisition->update(['status' => $newStatus]);
             }
 
             DB::commit();
@@ -144,12 +190,18 @@ class StoreReleaseController extends Controller
 
     public function show(Store $store, StoreRelease $release)
     {
+        $stores = Store::all();
+        // Authorization check
+        if (!$this->canAccessStore(auth()->user(), $store)) {
+            abort(403, 'Unauthorized access to this store.');
+        }
+
         if ($release->store_id !== $store->id) {
             abort(403, 'Unauthorized access.');
         }
 
         $release->load(['items', 'items.inventoryItem', 'items.requisitionItem', 'requisition.project']);
 
-        return view('stores.releases.show', compact('store', 'release'));
+        return view('stores.releases.show', compact('store', 'release', 'stores'));
     }
 }

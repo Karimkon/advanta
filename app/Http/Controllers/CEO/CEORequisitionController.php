@@ -11,41 +11,43 @@ use Illuminate\Support\Facades\DB;
 
 class CEORequisitionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $requisitions = Requisition::whereIn('status', [
-            Requisition::STATUS_CEO_APPROVED,
-            Requisition::STATUS_LPO_ISSUED,
-            Requisition::STATUS_DELIVERED
-        ])
-        ->with(['project', 'requester', 'items', 'lpo', 'lpo.supplier'])
-        ->latest()
-        ->paginate(10);
+        $query = Requisition::with(['project', 'requester', 'items', 'lpo', 'lpo.supplier']);
+
+        // Apply status filter if provided
+        if ($request->status && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // Show all requisitions (not just specific statuses)
+        $requisitions = $query->latest()->paginate(20);
 
         return view('ceo.requisitions.index', compact('requisitions'));
     }
 
-    public function pending()
-    {
-        $pendingRequisitions = Requisition::where('status', Requisition::STATUS_CEO_APPROVED)
-            ->with(['project', 'requester', 'items', 'lpo', 'lpo.supplier'])
-            ->latest()
-            ->paginate(10);
+public function pending()
+{
+    // Show requisitions that need CEO approval (PROCUREMENT status with LPOs)
+    $pendingRequisitions = Requisition::where('status', Requisition::STATUS_PROCUREMENT)
+        ->whereHas('lpo', function($query) {
+            $query->where('status', 'draft'); // Only show requisitions with draft LPOs
+        })
+        ->with(['project', 'requester', 'items', 'lpo', 'lpo.supplier', 'lpo.items'])
+        ->latest()
+        ->paginate(20);
 
-        return view('ceo.requisitions.pending', compact('pendingRequisitions'));
-    }
+    \Log::info('CEO Pending Requisitions:', [
+        'count' => $pendingRequisitions->count(),
+        'requisitions' => $pendingRequisitions->pluck('id')
+    ]);
+
+    return view('ceo.requisitions.pending', compact('pendingRequisitions'));
+}
 
     public function show(Requisition $requisition)
     {
-        // Authorization - ensure requisition is in correct status for CEO
-        if (!in_array($requisition->status, [
-            Requisition::STATUS_CEO_APPROVED,
-            Requisition::STATUS_LPO_ISSUED,
-            Requisition::STATUS_DELIVERED
-        ])) {
-            abort(403, 'This requisition is not ready for CEO review.');
-        }
-
+        // CEO can view any requisition regardless of status
         $requisition->load([
             'project', 
             'requester', 
@@ -60,41 +62,48 @@ class CEORequisitionController extends Controller
     }
 
     public function approveRequisition(Requisition $requisition)
-    {
-        if ($requisition->status !== Requisition::STATUS_CEO_APPROVED) {
-            abort(403, 'Only CEO-approved status requisitions can be processed.');
-        }
+{
+    // Only approve requisitions in procurement status with LPOs
+    if ($requisition->status !== Requisition::STATUS_PROCUREMENT) {
+        return back()->with('error', 'Only requisitions in procurement status can be approved by CEO.');
+    }
 
-        $validated = request()->validate([
-            'comment' => 'nullable|string|max:500',
-            'approved_amount' => 'nullable|numeric|min:0'
+    if (!$requisition->lpo) {
+        return back()->with('error', 'This requisition does not have an LPO created yet.');
+    }
+
+    $validated = request()->validate([
+        'comment' => 'nullable|string|max:500',
+        'approved_amount' => 'nullable|numeric|min:0'
+    ]);
+
+    DB::beginTransaction();
+    try {
+        // Update requisition status to CEO_APPROVED
+        $requisition->update([
+            'status' => Requisition::STATUS_CEO_APPROVED
         ]);
 
-        DB::beginTransaction();
-        try {
-            // Update requisition status remains as CEO_APPROVED (LPO needs to be issued)
-            // The status will change when LPO is issued by procurement
+        // Create approval record
+        RequisitionApproval::create([
+            'requisition_id' => $requisition->id,
+            'approved_by' => auth()->id(),
+            'role' => 'ceo',
+            'action' => 'approved',
+            'comment' => $validated['comment'] ?? 'Approved by CEO',
+            'approved_amount' => $validated['approved_amount'] ?? $requisition->estimated_total,
+        ]);
 
-            // Create approval record
-            RequisitionApproval::create([
-                'requisition_id' => $requisition->id,
-                'approved_by' => auth()->id(),
-                'role' => 'ceo',
-                'action' => 'approved',
-                'comment' => $validated['comment'] ?? 'Approved by CEO',
-                'approved_amount' => $validated['approved_amount'] ?? $requisition->estimated_total,
-            ]);
+        DB::commit();
 
-            DB::commit();
+        return redirect()->route('ceo.requisitions.pending')
+            ->with('success', 'Requisition approved successfully! Procurement can now issue the LPO.');
 
-            return redirect()->route('ceo.requisitions.pending')
-                ->with('success', 'Requisition approved successfully! Procurement can now issue the LPO.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Failed to approve requisition: ' . $e->getMessage());
-        }
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Failed to approve requisition: ' . $e->getMessage());
     }
+}
 
     public function approveLpo(Lpo $lpo)
     {
@@ -146,8 +155,8 @@ class CEORequisitionController extends Controller
 
     public function rejectRequisition(Requisition $requisition)
     {
-        if ($requisition->status !== Requisition::STATUS_CEO_APPROVED) {
-            abort(403, 'Only CEO-approved status requisitions can be rejected.');
+        if ($requisition->status !== Requisition::STATUS_PROCUREMENT) {
+            abort(403, 'Only procurement status requisitions can be rejected by CEO.');
         }
 
         $validated = request()->validate([

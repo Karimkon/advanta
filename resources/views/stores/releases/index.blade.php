@@ -41,7 +41,11 @@
                                 <td><strong>{{ $requisition->ref }}</strong></td>
                                 <td>{{ $requisition->project->name ?? 'N/A' }}</td>
                                 <td>{{ $requisition->requester->name }}</td>
-                                <td>{{ $requisition->items->count() }} items</td>
+                                <td>
+                                    @foreach($requisition->items as $item)
+                                        <div>{{ $item->name }} ({{ $item->quantity }} {{ $item->unit }})</div>
+                                    @endforeach
+                                </td>
                                 <td>
                                     <span class="badge {{ $requisition->getUrgencyBadgeClass() }}">
                                         {{ ucfirst($requisition->urgency) }}

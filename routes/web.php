@@ -34,7 +34,10 @@ use App\Http\Controllers\Engineer\EngineerDashboardController;
 use App\Http\Controllers\Engineer\EngineerRequisitionController;    
 use App\Http\Controllers\Finance\PaymentController;
 use App\Http\Controllers\Finance\ExpenseController;
-use App\Http\Controllers\Finance\FinancialReportsController;            
+use App\Http\Controllers\Finance\FinancialReportsController;   
+use App\Http\Controllers\CEO\CEOFinancialReportsController;     
+use App\Http\Controllers\Stores\StockMovementController; 
+use App\Http\Controllers\CEO\CEOInventoryController;   
    
 
 // ----------------------
@@ -311,6 +314,55 @@ Route::middleware(['auth','role:procurement'])->prefix('procurement')->name('pro
     });
 });
 
+// Add to web.php temporarily
+Route::get('/debug/store-service/{lpo_id}', function($lpo_id) {
+    $lpo = \App\Models\Lpo::with(['items', 'requisition.project'])->find($lpo_id);
+    
+    if (!$lpo) {
+        return response()->json(['error' => 'LPO not found']);
+    }
+    
+    \Log::info('=== DEBUG STORE SERVICE ===');
+    \Log::info('LPO Details:', [
+        'lpo_id' => $lpo->id,
+        'project_id' => $lpo->requisition->project_id,
+        'project_name' => $lpo->requisition->project->name,
+        'items_count' => $lpo->items->count(),
+        'items' => $lpo->items->map(function($item) {
+            return [
+                'description' => $item->description,
+                'quantity' => $item->quantity,
+                'unit' => $item->unit,
+                'unit_price' => $item->unit_price
+            ];
+        })
+    ]);
+    
+    // Test the store service
+    try {
+        $storeService = new \App\Services\StoreService();
+        $result = $storeService->processDeliveredLpo($lpo);
+        
+        return response()->json([
+            'success' => true,
+            'lpo' => [
+                'id' => $lpo->id,
+                'project_id' => $lpo->requisition->project_id,
+                'items_count' => $lpo->items->count()
+            ],
+            'store_service_result' => $result,
+            'message' => 'Store service executed successfully'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+    }
+});
+
 // FINANCE
 Route::middleware(['auth','role:finance'])->prefix('finance')->name('finance.')->group(function () {
     Route::get('/dashboard', [FinanceDashboardController::class,'index'])->name('dashboard');
@@ -366,6 +418,14 @@ Route::middleware(['auth','role:stores'])->prefix('stores')->name('stores.')->gr
         Route::post('/{store}/requisition/{requisition}', [StoreReleaseController::class, 'store'])->name('store');
         Route::get('/{store}/{release}', [StoreReleaseController::class, 'show'])->name('show');
     });
+    
+
+     // Stock Movements 
+    Route::prefix('movements')->name('movements.')->group(function () {
+        Route::get('/{store}', [StockMovementController::class, 'index'])->name('index');
+        Route::get('/{store}/filter', [StockMovementController::class, 'filter'])->name('filter');
+        Route::get('/{store}/export', [StockMovementController::class, 'export'])->name('export');
+    });
 });
 
 // CEO
@@ -388,6 +448,23 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
             return view('ceo.lpos.index');
         })->name('index');
     });
+    
+    // Financial Reports - ADD THESE NEW ROUTES
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [CEOFinancialReportsController::class, 'index'])->name('index');
+        Route::get('/financial', [CEOFinancialReportsController::class, 'index'])->name('financial');
+        Route::get('/project/{project}', [CEOFinancialReportsController::class, 'projectReport'])->name('project');
+        Route::get('/requisitions', [CEOFinancialReportsController::class, 'requisitionsReport'])->name('requisitions');
+        Route::get('/export/summary', [CEOFinancialReportsController::class, 'exportFinancialSummary'])->name('export.summary');
+    });
+
+      // Inventory Overview - ADD THESE NEW ROUTES
+    Route::prefix('inventory')->name('inventory.')->group(function () {
+        Route::get('/', [CEOInventoryController::class, 'index'])->name('index');
+        Route::get('/store/{store}', [CEOInventoryController::class, 'storeDetail'])->name('store');
+        Route::get('/movements', [CEOInventoryController::class, 'stockMovements'])->name('movements');
+        Route::get('/export', [CEOInventoryController::class, 'exportInventoryReport'])->name('export');
+    });
 });
 
 // PROJECT MANAGER
@@ -399,10 +476,11 @@ Route::middleware(['auth','role:project_manager'])->prefix('project-manager')->n
         Route::get('/', [ProjectManagerRequisitionController::class, 'index'])->name('index');
         Route::get('/create', [ProjectManagerRequisitionController::class, 'create'])->name('create');
         Route::post('/', [ProjectManagerRequisitionController::class, 'store'])->name('store');
+        Route::get('/pending', [ProjectManagerRequisitionController::class, 'pending'])->name('pending'); // MOVED HERE - BEFORE {requisition}
         Route::get('/{requisition}', [ProjectManagerRequisitionController::class, 'show'])->name('show');
-        Route::get('/pending', [ProjectManagerRequisitionController::class, 'pending'])->name('pending'); // ADD THIS LINE
         Route::post('/{requisition}/approve', [ProjectManagerRequisitionController::class, 'approve'])->name('approve');
         Route::post('/{requisition}/reject', [ProjectManagerRequisitionController::class, 'reject'])->name('reject');
+        Route::post('/{requisition}/send-to-store', [ProjectManagerRequisitionController::class, 'sendToStore'])->name('send-to-store');
     });
     
     // Projects

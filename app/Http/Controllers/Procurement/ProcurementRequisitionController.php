@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Procurement;
 use App\Http\Controllers\Controller;
 use App\Models\Requisition;
 use App\Models\RequisitionApproval;
-use App\Models\Supplier;
 use App\Models\Lpo;
-use App\Models\LpoItem;
+use App\Models\LpoItem; 
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -19,9 +19,10 @@ class ProcurementRequisitionController extends Controller
             Requisition::STATUS_OPERATIONS_APPROVED,
             Requisition::STATUS_PROCUREMENT,
             Requisition::STATUS_CEO_APPROVED,
-            Requisition::STATUS_LPO_ISSUED
+            Requisition::STATUS_LPO_ISSUED,
+            Requisition::STATUS_DELIVERED
         ])
-        ->with(['project', 'requester', 'items', 'approvals', 'lpo'])
+        ->with(['project', 'requester', 'items', 'lpo'])
         ->latest()
         ->paginate(10);
 
@@ -38,93 +39,58 @@ class ProcurementRequisitionController extends Controller
         return view('procurement.requisitions.pending', compact('pendingRequisitions'));
     }
 
-    // ADD THIS METHOD - FIX THE ISSUE
     public function inProcurement()
-    {
-        $procurementRequisitions = Requisition::where('status', Requisition::STATUS_PROCUREMENT)
-            ->with(['project', 'requester', 'items', 'lpo'])
-            ->latest()
-            ->paginate(10);
-
-        return view('procurement.requisitions.in-procurement', compact('procurementRequisitions'));
-    }
-
-    public function show(Requisition $requisition)
 {
-    // Authorization - allow procurement to view requisitions in various statuses
-    if (!in_array($requisition->status, [
-        Requisition::STATUS_OPERATIONS_APPROVED,
+    $procurementRequisitions = Requisition::whereIn('status', [
         Requisition::STATUS_PROCUREMENT,
-        Requisition::STATUS_CEO_APPROVED,
-        Requisition::STATUS_LPO_ISSUED,
-        Requisition::STATUS_DELIVERED, // ADD THIS - Allow viewing delivered requisitions
-        Requisition::STATUS_COMPLETED  // ADD THIS - Allow viewing completed requisitions
-    ])) {
-        abort(403, 'This requisition is not ready for procurement processing.');
-    }
+        Requisition::STATUS_CEO_APPROVED
+    ])
+    ->with(['project', 'requester', 'items', 'lpo'])
+    ->latest()
+    ->paginate(10);
 
-    $requisition->load([
-        'project', 
-        'requester', 
-        'items', 
-        'approvals.approver',
-        'lpo',
-        'lpo.supplier'
-    ]);
-
-    $suppliers = Supplier::where('status', 'active')->get();
-
-    return view('procurement.requisitions.show', compact('requisition', 'suppliers'));
+    return view('procurement.requisitions.in-procurement', compact('procurementRequisitions'));
 }
 
-    public function sendToCEO(Requisition $requisition)
+    public function show(Requisition $requisition)
     {
-        // Authorization
-        if ($requisition->status !== Requisition::STATUS_PROCUREMENT) {
-            abort(403, 'Only procurement-processed requisitions can be sent to CEO.');
+        // Allow procurement to view requisitions they handle
+        $allowedStatuses = [
+            Requisition::STATUS_OPERATIONS_APPROVED,
+            Requisition::STATUS_PROCUREMENT,
+            Requisition::STATUS_CEO_APPROVED,
+            Requisition::STATUS_LPO_ISSUED,
+            Requisition::STATUS_DELIVERED
+        ];
+
+        if (!in_array($requisition->status, $allowedStatuses)) {
+            abort(403, 'This requisition is not available for procurement view.');
         }
 
-        $validated = request()->validate([
-            'comment' => 'nullable|string|max:500'
+        $requisition->load([
+            'project', 
+            'requester', 
+            'items', 
+            'approvals.approver',
+            'lpo',
+            'lpo.supplier',
+            'lpo.items'
         ]);
 
-        DB::beginTransaction();
-        try {
-            // Update requisition status
-            $requisition->update([
-                'status' => Requisition::STATUS_CEO_APPROVED
-            ]);
+        $suppliers = Supplier::all();
 
-            // Create approval record
-            RequisitionApproval::create([
-                'requisition_id' => $requisition->id,
-                'approved_by' => auth()->id(),
-                'role' => 'procurement',
-                'action' => 'forwarded',
-                'comment' => $validated['comment'] ?? 'Sent to CEO for final approval',
-            ]);
-
-            DB::commit();
-
-            return redirect()->route('procurement.requisitions.in-procurement')
-                ->with('success', 'Requisition sent to CEO for final approval!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Failed to send requisition to CEO: ' . $e->getMessage());
-        }
+        return view('procurement.requisitions.show', compact('requisition', 'suppliers'));
     }
 
     public function startProcurement(Requisition $requisition)
     {
-        // Authorization
         if ($requisition->status !== Requisition::STATUS_OPERATIONS_APPROVED) {
             abort(403, 'Only operations-approved requisitions can start procurement.');
         }
 
         DB::beginTransaction();
         try {
-            // Update requisition status
+            // Update requisition status to procurement
             $requisition->update([
                 'status' => Requisition::STATUS_PROCUREMENT
             ]);
@@ -134,14 +100,14 @@ class ProcurementRequisitionController extends Controller
                 'requisition_id' => $requisition->id,
                 'approved_by' => auth()->id(),
                 'role' => 'procurement',
-                'action' => 'started',
-                'comment' => 'Procurement process started - sourcing suppliers',
+                'action' => 'procurement_started',
+                'comment' => 'Procurement process initiated',
             ]);
 
             DB::commit();
 
             return redirect()->route('procurement.requisitions.show', $requisition)
-                ->with('success', 'Procurement process started! You can now create LPO.');
+                ->with('success', 'Procurement process started! Please send to CEO for approval.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -149,39 +115,103 @@ class ProcurementRequisitionController extends Controller
         }
     }
 
-  public function createLpo(Requisition $requisition)
+   public function sendToCEO(Requisition $requisition)
+{
+    if ($requisition->status !== Requisition::STATUS_PROCUREMENT) {
+        return back()->with('error', 'Only requisitions in procurement can be sent to CEO.');
+    }
+
+    \Log::info('Sending requisition to CEO:', [
+        'requisition_id' => $requisition->id,
+        'current_status' => $requisition->status
+    ]);
+
+    DB::beginTransaction();
+    try {
+        // Status remains as PROCUREMENT for CEO to see in pending approvals
+        // CEO will change status to CEO_APPROVED when they approve
+
+        // Create approval record to track sending to CEO
+        RequisitionApproval::create([
+            'requisition_id' => $requisition->id,
+            'approved_by' => auth()->id(),
+            'role' => 'procurement',
+            'action' => 'sent_to_ceo',
+            'comment' => 'Sent to CEO for final approval',
+        ]);
+
+        DB::commit();
+
+        \Log::info('Requisition sent to CEO successfully:', ['requisition_id' => $requisition->id]);
+
+        return redirect()->route('procurement.requisitions.show', $requisition)
+            ->with('success', 'Requisition sent to CEO for approval! The CEO can now review and approve it.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Failed to send to CEO:', [
+            'requisition_id' => $requisition->id,
+            'error' => $e->getMessage()
+        ]);
+        return back()->with('error', 'Failed to send to CEO: ' . $e->getMessage());
+    }
+}
+
+ public function createLpo(Requisition $requisition)
 {
     try {
+        \Log::info('Starting LPO creation for requisition:', [
+            'requisition_id' => $requisition->id,
+            'current_status' => $requisition->status,
+            'item_count' => $requisition->items->count()
+        ]);
+
         $supplier_id = request('supplier_id');
+        $delivery_date = request('delivery_date');
+        $terms = request('terms');
         $notes = request('notes');
         
         if (!$supplier_id) {
             return back()->with('error', 'Supplier is required.');
         }
 
+        if (!$delivery_date) {
+            return back()->with('error', 'Delivery date is required.');
+        }
+
         // Generate LPO number
         $lpoNumber = 'LPO-' . date('Ymd') . '-' . rand(1000, 9999);
 
-        // Calculate totals
-        $subtotal = $requisition->estimated_total;
-        $total = $subtotal;
+        DB::beginTransaction();
 
-        // Create LPO
+        // Create LPO - REMOVE prepared_by
         $lpo = Lpo::create([
             'lpo_number' => $lpoNumber,
             'requisition_id' => $requisition->id,
             'supplier_id' => $supplier_id,
+            // 'prepared_by' => auth()->id(), // REMOVE THIS LINE
             'status' => 'draft',
-            'subtotal' => $subtotal,
+            'subtotal' => $requisition->estimated_total,
             'tax' => 0,
             'other_charges' => 0,
-            'total' => $total,
+            'total' => $requisition->estimated_total,
+            'delivery_date' => $delivery_date,
+            'terms' => $terms,
             'notes' => $notes,
         ]);
 
+        \Log::info('LPO created:', ['lpo_id' => $lpo->id, 'lpo_number' => $lpoNumber]);
+
         // Create LPO items
+        $createdItems = 0;
         foreach ($requisition->items as $item) {
-            LpoItem::create([
+            \Log::info('Creating LPO item:', [
+                'item_name' => $item->name,
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price
+            ]);
+            
+            $lpoItem = LpoItem::create([
                 'lpo_id' => $lpo->id,
                 'inventory_item_id' => null,
                 'description' => $item->name,
@@ -190,11 +220,18 @@ class ProcurementRequisitionController extends Controller
                 'unit_price' => $item->unit_price,
                 'total_price' => $item->total_price,
             ]);
+            
+            if ($lpoItem) {
+                $createdItems++;
+                \Log::info('LPO item created successfully:', ['lpo_item_id' => $lpoItem->id]);
+            } else {
+                \Log::error('Failed to create LPO item for:', ['item_name' => $item->name]);
+            }
         }
 
-        // ✅ FIX: Update requisition status to CEO_APPROVED (not procurement)
-        $requisition->update([
-            'status' => Requisition::STATUS_CEO_APPROVED
+        \Log::info('LPO items creation summary:', [
+            'attempted' => $requisition->items->count(),
+            'created' => $createdItems
         ]);
 
         // Create approval record
@@ -202,55 +239,74 @@ class ProcurementRequisitionController extends Controller
             'requisition_id' => $requisition->id,
             'approved_by' => auth()->id(),
             'role' => 'procurement',
-            'action' => 'lpo_created',
-            'comment' => 'LPO created and sent to CEO for approval: ' . $lpoNumber,
+            'action' => 'lpo_created_pending_ceo',
+            'comment' => 'LPO created and ready for CEO approval: ' . $lpoNumber,
+        ]);
+
+        DB::commit();
+
+        \Log::info('LPO creation completed successfully', [
+            'requisition_id' => $requisition->id,
+            'lpo_id' => $lpo->id,
+            'items_created' => $createdItems
         ]);
 
         return redirect()->route('procurement.lpos.show', $lpo)
-            ->with('success', 'LPO created successfully! Sent to CEO for final approval.');
+            ->with('success', 'LPO created successfully! The CEO can now review and approve it.');
 
     } catch (\Exception $e) {
-        \Log::error('LPO Creation Error: ' . $e->getMessage());
+        DB::rollBack();
+        \Log::error('LPO Creation Error: ' . $e->getMessage(), [
+            'requisition_id' => $requisition->id,
+            'trace' => $e->getTraceAsString()
+        ]);
         return back()->with('error', 'Failed to create LPO: ' . $e->getMessage());
     }
 }
 
-    public function issueLpo(Lpo $lpo)
-    {
-        if ($lpo->status !== 'draft') {
-            abort(403, 'Only draft LPOs can be issued.');
-        }
 
-        DB::beginTransaction();
-        try {
-            // Update LPO status
-            $lpo->update([
-                'status' => 'issued',
-                'issue_date' => now(),
-            ]);
-
-            // Update requisition status
-            $lpo->requisition->update([
-                'status' => Requisition::STATUS_LPO_ISSUED
-            ]);
-
-            // Create approval record
-            RequisitionApproval::create([
-                'requisition_id' => $lpo->requisition_id,
-                'approved_by' => auth()->id(),
-                'role' => 'procurement',
-                'action' => 'lpo_issued',
-                'comment' => 'LPO issued to supplier: ' . $lpo->lpo_number,
-            ]);
-
-            DB::commit();
-
-            return redirect()->route('procurement.lpos.show', $lpo)
-                ->with('success', 'LPO issued to supplier successfully!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Failed to issue LPO: ' . $e->getMessage());
-        }
+public function issueLpo(Lpo $lpo)
+{
+    // Only issue draft LPOs for CEO-approved requisitions
+    if ($lpo->status !== 'draft') {
+        abort(403, 'Only draft LPOs can be issued.');
     }
+
+    if ($lpo->requisition->status !== Requisition::STATUS_CEO_APPROVED) {
+        abort(403, 'Only CEO-approved requisitions can have LPOs issued to suppliers.');
+    }
+
+    DB::beginTransaction();
+    try {
+        // Update LPO status - REMOVE issued_by
+        $lpo->update([
+            'status' => 'issued',
+            'issued_at' => now(),
+            // 'issued_by' => auth()->id(), // REMOVE THIS LINE
+        ]);
+
+        // Update requisition status
+        $lpo->requisition->update([
+            'status' => Requisition::STATUS_LPO_ISSUED
+        ]);
+
+        // Create approval record
+        RequisitionApproval::create([
+            'requisition_id' => $lpo->requisition_id,
+            'approved_by' => auth()->id(),
+            'role' => 'procurement',
+            'action' => 'lpo_issued',
+            'comment' => 'LPO issued to supplier: ' . $lpo->lpo_number,
+        ]);
+
+        DB::commit();
+
+        return redirect()->route('procurement.lpos.show', $lpo)
+            ->with('success', 'LPO issued to supplier successfully!');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Failed to issue LPO: ' . $e->getMessage());
+    }
+}
 }

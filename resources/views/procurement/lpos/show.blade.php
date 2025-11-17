@@ -78,7 +78,7 @@
                 </div>
             </div>
 
-            <!-- LPO Items -->
+            <!-- LPO Items - FIXED SECTION -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Order Items</h5>
@@ -88,8 +88,7 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Item Name</th>
-                                    <th>Description</th>
+                                    <th>Item Description</th>
                                     <th>Quantity</th>
                                     <th>Unit</th>
                                     <th>Unit Price</th>
@@ -97,20 +96,26 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($lpo->items as $item)
+                                @forelse($lpo->items as $item)
                                     <tr>
-                                        <td>{{ $item->name }}</td>
-                                        <td>{{ $item->description ?? '-' }}</td>
+                                        <td>{{ $item->description ?? 'No description' }}</td>
                                         <td>{{ $item->quantity }}</td>
                                         <td>{{ $item->unit }}</td>
                                         <td>UGX {{ number_format($item->unit_price, 2) }}</td>
                                         <td>UGX {{ number_format($item->total_price, 2) }}</td>
                                     </tr>
-                                @endforeach
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">
+                                            <i class="bi bi-exclamation-circle display-4 d-block mb-2"></i>
+                                            No items found in this LPO
+                                        </td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                             <tfoot class="table-light">
                                 <tr>
-                                    <td colspan="5" class="text-end"><strong>Grand Total:</strong></td>
+                                    <td colspan="4" class="text-end"><strong>Grand Total:</strong></td>
                                     <td><strong>UGX {{ number_format($lpo->items->sum('total_price'), 2) }}</strong></td>
                                 </tr>
                             </tfoot>
@@ -170,15 +175,21 @@
                             <strong>LPO Issued:</strong> Waiting for supplier delivery.
                         </div>
                         
-                        <form action="{{ route('procurement.lpos.mark-delivered', $lpo) }}" method="POST" class="d-grid">
-                            @csrf
-                            <button type="submit" class="btn btn-primary" 
-                                    onclick="return confirm('Mark this LPO as delivered?')">
-                                <i class="bi bi-check-circle"></i> Mark as Delivered
-                            </button>
-                        </form>
+                        @if($lpo->items->count() > 0)
+                            <form action="{{ route('procurement.lpos.mark-delivered', $lpo) }}" method="POST" class="d-grid">
+                                @csrf
+                                <button type="submit" class="btn btn-primary" 
+                                        onclick="return confirm('Mark this LPO as delivered? This will add items to project store inventory.')">
+                                    <i class="bi bi-check-circle"></i> Mark as Delivered
+                                </button>
+                            </form>
+                        @else
+                            <div class="alert alert-warning">
+                                <small>Cannot mark as delivered: No items found in this LPO.</small>
+                            </div>
+                        @endif
 
-                        @elseif($lpo->status === 'delivered')
+                    @elseif($lpo->status === 'delivered')
                         <div class="alert alert-success">
                             <strong>Delivered:</strong> Items received from supplier.
                         </div>
@@ -191,6 +202,13 @@
                     @endif
 
                     <hr class="my-3">
+
+                    <!-- Debug Info (remove in production) -->
+                    @if($lpo->items->count() === 0)
+                        <div class="alert alert-warning">
+                            <small><strong>Debug:</strong> No LPO items found. Items may not have been created properly.</small>
+                        </div>
+                    @endif
 
                     <!-- Related Requisition -->
                     <div class="text-center">
@@ -252,6 +270,7 @@
                             {{ ucfirst($lpo->requisition->urgency) }}
                         </span>
                     </p>
+                    <p class="mb-1"><strong>Requisition Items:</strong> {{ $lpo->requisition->items->count() }}</p>
                 </div>
             </div>
         </div>

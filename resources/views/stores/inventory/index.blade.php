@@ -14,9 +14,9 @@
             <a href="{{ route('stores.dashboard') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back to Dashboard
             </a>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adjustStockModal">
-                <i class="bi bi-plus-circle"></i> Adjust Stock
-            </button>
+            <a href="{{ route('stores.inventory.create', $store) }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add New Item
+            </a>
         </div>
     </div>
 
@@ -25,7 +25,7 @@
         <div class="col-md-3">
             <div class="card bg-primary text-white">
                 <div class="card-body text-center">
-                    <h4 class="mb-0">{{ $inventoryItems->total() }}</h4>
+                    <h4 class="mb-0">{{ $stats['total_items'] }}</h4>
                     <small>Total Items</small>
                 </div>
             </div>
@@ -33,7 +33,12 @@
         <div class="col-md-3">
             <div class="card bg-success text-white">
                 <div class="card-body text-center">
-                    <h4 class="mb-0">{{ $inventoryItems->where('stock_status', 'in_stock')->count() }}</h4>
+                    @php
+                        $inStockCount = $inventoryItems->filter(function($item) {
+                            return $item->stock_status === 'in_stock';
+                        })->count();
+                    @endphp
+                    <h4 class="mb-0">{{ $inStockCount }}</h4>
                     <small>In Stock</small>
                 </div>
             </div>
@@ -41,7 +46,12 @@
         <div class="col-md-3">
             <div class="card bg-warning text-white">
                 <div class="card-body text-center">
-                    <h4 class="mb-0">{{ $inventoryItems->where('stock_status', 'low_stock')->count() }}</h4>
+                    @php
+                        $lowStockCount = $inventoryItems->filter(function($item) {
+                            return $item->stock_status === 'low_stock';
+                        })->count();
+                    @endphp
+                    <h4 class="mb-0">{{ $lowStockCount }}</h4>
                     <small>Low Stock</small>
                 </div>
             </div>
@@ -49,7 +59,12 @@
         <div class="col-md-3">
             <div class="card bg-danger text-white">
                 <div class="card-body text-center">
-                    <h4 class="mb-0">{{ $inventoryItems->where('stock_status', 'out_of_stock')->count() }}</h4>
+                    @php
+                        $outOfStockCount = $inventoryItems->filter(function($item) {
+                            return $item->stock_status === 'out_of_stock';
+                        })->count();
+                    @endphp
+                    <h4 class="mb-0">{{ $outOfStockCount }}</h4>
                     <small>Out of Stock</small>
                 </div>
             </div>
@@ -161,6 +176,11 @@
                                     <div class="text-muted">
                                         <i class="bi bi-inbox display-4 d-block mb-2"></i>
                                         No inventory items found in this store.
+                                        <p class="mt-2">
+                                            <a href="{{ route('stores.inventory.create', $store) }}" class="btn btn-primary">
+                                                Add Your First Item
+                                            </a>
+                                        </p>
                                     </div>
                                 </td>
                             </tr>
@@ -175,60 +195,6 @@
                     {{ $inventoryItems->links() }}
                 </div>
             @endif
-        </div>
-    </div>
-</div>
-
-<!-- Global Adjust Stock Modal -->
-<div class="modal fade" id="adjustStockModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Inventory Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Item Name</label>
-                            <input type="text" class="form-control" placeholder="Enter item name">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">SKU</label>
-                            <input type="text" class="form-control" placeholder="Item SKU">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Category</label>
-                            <input type="text" class="form-control" placeholder="Item category">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Unit</label>
-                            <input type="text" class="form-control" placeholder="e.g., bags, pieces, kg">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Description</label>
-                            <textarea class="form-control" rows="2" placeholder="Item description"></textarea>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Initial Quantity</label>
-                            <input type="number" class="form-control" placeholder="0">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Unit Price</label>
-                            <input type="number" class="form-control" placeholder="0.00">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Reorder Level</label>
-                            <input type="number" class="form-control" placeholder="10">
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Add Item</button>
-            </div>
         </div>
     </div>
 </div>

@@ -103,13 +103,15 @@
                             <hr class="bg-white">
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-warning" href="{{ route('ceo.dashboard') }}">
-                                <i class="bi bi-graph-up"></i> Financial Overview
+                            <a class="nav-link {{ request()->routeIs('ceo.inventory.*') ? 'active' : '' }}" 
+                            href="{{ route('ceo.inventory.index') }}">
+                                <i class="bi bi-box-seam"></i>AlL Stores Inventory Overview
                             </a>
-                        </li>
+                        </li>   
                         <li class="nav-item">
-                            <a class="nav-link text-info" href="{{ route('ceo.dashboard') }}">
-                                <i class="bi bi-bar-chart"></i> Reports
+                            <a class="nav-link {{ request()->routeIs('ceo.reports.*') ? 'active' : '' }}" 
+                            href="{{ route('ceo.reports.index') }}">
+                                <i class="bi bi-bar-chart"></i> Financial Overview
                             </a>
                         </li>
                     </ul>

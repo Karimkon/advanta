@@ -13,6 +13,7 @@ class StoreInventoryController extends Controller
 {
     public function index(Store $store)
     {
+        $stores = Store::all();
         $user = auth()->user();
         
         // Authorization - check if user has access to this store
@@ -20,26 +21,28 @@ class StoreInventoryController extends Controller
             abort(403, 'Unauthorized access to this store.');
         }
 
+        // FIX: Use paginate() instead of get() to avoid Collection error
         $inventoryItems = $store->inventoryItems()
             ->with(['logs' => function($query) {
                 $query->latest()->take(5);
             }])
             ->latest()
-            ->get();
+            ->paginate(20); // Changed from get() to paginate(20)
 
         $stats = [
-            'total_items' => $store->getTotalItemsCount(),
-            'in_stock' => $store->inventoryItems()->where('quantity', '>', 0)->count(),
-            'low_stock' => $store->getLowStockItems()->count(),
-            'out_of_stock' => $store->getOutOfStockItems()->count(),
+            'total_items' => $store->inventoryItems()->count(),
+            'total_quantity' => $store->inventoryItems()->sum('quantity'),
+            'store_value' => $store->inventoryItems()->sum(DB::raw('quantity * unit_price')),
+            'low_stock_items' => $store->inventoryItems()->where('quantity', '<', DB::raw('reorder_level'))->count(),
+            'out_of_stock_items' => $store->inventoryItems()->where('quantity', '<=', 0)->count(),
         ];
 
-        return view('stores.inventory.index', compact('store', 'inventoryItems', 'stats'));
+        return view('stores.inventory.index', compact('store', 'inventoryItems', 'stats', 'stores'));
     }
 
     private function canAccessStore($user, $store)
     {
-        // Main store manager can access main store
+        // Main store manager (ID 6) can access main store
         if ($user->id === 6 && $store->isMainStore()) {
             return true;
         }
@@ -54,8 +57,14 @@ class StoreInventoryController extends Controller
 
     public function show(Store $store, InventoryItem $inventoryItem)
     {
+        // Verify the inventory item belongs to the store
         if ($inventoryItem->store_id !== $store->id) {
             abort(403, 'This inventory item does not belong to the selected store.');
+        }
+
+        // Authorization check
+        if (!$this->canAccessStore(auth()->user(), $store)) {
+            abort(403, 'Unauthorized access to this store.');
         }
 
         $inventoryItem->load(['logs.user']);
@@ -65,11 +74,19 @@ class StoreInventoryController extends Controller
 
     public function create(Store $store)
     {
+        if (!$this->canAccessStore(auth()->user(), $store)) {
+            abort(403, 'Unauthorized access to this store.');
+        }
+
         return view('stores.inventory.create', compact('store'));
     }
 
     public function store(Request $request, Store $store)
     {
+        if (!$this->canAccessStore(auth()->user(), $store)) {
+            abort(403, 'Unauthorized access to this store.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -122,8 +139,14 @@ class StoreInventoryController extends Controller
 
     public function adjustStock(Store $store, InventoryItem $inventoryItem, Request $request)
     {
+        // Verify the inventory item belongs to the store
         if ($inventoryItem->store_id !== $store->id) {
             abort(403, 'Unauthorized access.');
+        }
+
+        // Authorization check
+        if (!$this->canAccessStore(auth()->user(), $store)) {
+            abort(403, 'Unauthorized access to this store.');
         }
 
         $request->validate([
@@ -142,6 +165,9 @@ class StoreInventoryController extends Controller
                     $logType = 'in';
                     break;
                 case 'remove':
+                    if ($request->quantity > $oldQuantity) {
+                        return back()->with('error', 'Cannot remove more than available stock.');
+                    }
                     $newQuantity = max(0, $oldQuantity - $request->quantity);
                     $logType = 'out';
                     break;
@@ -149,6 +175,8 @@ class StoreInventoryController extends Controller
                     $newQuantity = $request->quantity;
                     $logType = 'adjustment';
                     break;
+                default:
+                    return back()->with('error', 'Invalid adjustment type.');
             }
 
             // Update inventory item

@@ -31,6 +31,7 @@ class Requisition extends Model
     const STATUS_CEO_APPROVED = 'ceo_approved';          // CEO approves purchase
     const STATUS_LPO_ISSUED = 'lpo_issued';              // LPO created for supplier
     const STATUS_DELIVERED = 'delivered';                // Items delivered by supplier
+    const STATUS_PAYMENT_COMPLETED = 'payment_completed';
     const STATUS_COMPLETED = 'completed';                // All done
     const STATUS_REJECTED = 'rejected';                  // Rejected at any stage
 
@@ -139,9 +140,19 @@ class Requisition extends Model
             self::STATUS_CEO_APPROVED => 'Ready for LPO Creation',
             self::STATUS_LPO_ISSUED => 'Waiting for Supplier Delivery',
             self::STATUS_DELIVERED => 'Waiting for Finance',
+            self::STATUS_PAYMENT_COMPLETED => 'Payment Completed',
             self::STATUS_COMPLETED => 'Completed',
             self::STATUS_REJECTED => 'Rejected',
-            default => 'Unknown'
+            
+              // Handle any legacy or unexpected statuses
+            'approved' => 'Approved',
+            'in_progress' => 'In Progress',
+            'processing' => 'Processing',
+            'issued' => 'LPO Issued',
+            'paid' => 'Paid',
+            'cancelled' => 'Cancelled',
+            
+            default => 'Processing'
         };
     }
 
@@ -192,8 +203,18 @@ class Requisition extends Model
             self::STATUS_CEO_APPROVED => 'bg-success',
             self::STATUS_LPO_ISSUED => 'bg-info',
             self::STATUS_DELIVERED => 'bg-primary',
+             self::STATUS_PAYMENT_COMPLETED => 'bg-success',
             self::STATUS_COMPLETED => 'bg-success',
             self::STATUS_REJECTED => 'bg-danger',
+            
+             // Handle legacy statuses
+            'approved' => 'bg-success',
+            'in_progress' => 'bg-info',
+            'processing' => 'bg-primary',
+            'issued' => 'bg-info',
+            'paid' => 'bg-success',
+            'cancelled' => 'bg-danger',
+            
             default => 'bg-secondary'
         };
     }

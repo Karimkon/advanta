@@ -46,9 +46,15 @@ class OperationsRequisitionController extends Controller
 
     public function show(Requisition $requisition)
     {
-        // Authorization - ensure requisition is in correct status for operations
-        if (!$requisition->canBeApprovedBy('operations')) {
-            abort(403, 'This requisition is not ready for operations approval.');
+        // FIXED: Allow Operations to view requisitions they can approve OR have already approved
+        $allowedStatuses = [
+            Requisition::STATUS_PROJECT_MANAGER_APPROVED, // Can approve these
+            Requisition::STATUS_OPERATIONS_APPROVED,      // Already approved these
+            Requisition::STATUS_PROCUREMENT               // Sent to procurement
+        ];
+
+        if (!in_array($requisition->status, $allowedStatuses)) {
+            abort(403, 'This requisition is not available for operations view.');
         }
 
         $requisition->load([
@@ -64,9 +70,9 @@ class OperationsRequisitionController extends Controller
 
     public function approve(Requisition $requisition)
     {
-        // Authorization
-        if (!$requisition->canBeApprovedBy('operations')) {
-            abort(403, 'This requisition is not ready for operations approval.');
+        // Authorization - only approve requisitions in project_manager_approved status
+        if ($requisition->status !== Requisition::STATUS_PROJECT_MANAGER_APPROVED) {
+            abort(403, 'Only project-manager-approved requisitions can be approved by operations.');
         }
 
         $validated = request()->validate([
@@ -104,9 +110,9 @@ class OperationsRequisitionController extends Controller
 
     public function reject(Requisition $requisition)
     {
-        // Authorization
-        if (!$requisition->canBeApprovedBy('operations')) {
-            abort(403, 'This requisition is not ready for operations approval.');
+        // Authorization - only reject requisitions in project_manager_approved status
+        if ($requisition->status !== Requisition::STATUS_PROJECT_MANAGER_APPROVED) {
+            abort(403, 'Only project-manager-approved requisitions can be rejected by operations.');
         }
 
         $validated = request()->validate([

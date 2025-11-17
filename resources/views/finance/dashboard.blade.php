@@ -154,7 +154,7 @@
                 </div>
             </div>
 
-            <!-- Recent Payments -->
+          <!-- Recent Payments -->
 @if($recentPayments->count() > 0)
 <div class="card border-0 shadow-sm mt-4">
     <div class="card-header bg-white">
@@ -178,13 +178,7 @@
                 <tbody>
                     @foreach($recentPayments as $payment)
                         <tr>
-                            <td>
-                                @if($payment->paid_on)
-                                    {{ $payment->paid_on->format('M d, Y') }}
-                                @else
-                                    <span class="text-muted">Not set</span>
-                                @endif
-                            </td>
+                            <td>{{ $payment->formatted_paid_on }}</td>
                             <td>{{ $payment->supplier->name ?? 'N/A' }}</td>
                             <td>
                                 <span class="badge bg-secondary text-capitalize">
@@ -232,31 +226,57 @@
                 </div>
             </div>
 
-            <!-- Project Spending Overview -->
-            <div class="card border-0 shadow-sm mt-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Project Spending</h5>
+           <!-- Project Spending Overview -->
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Project Spending</h5>
+    </div>
+    <div class="card-body">
+        @forelse($projectSpending as $project)
+            @php
+                $totalSpending = $project['total_payments'] + $project['total_expenses'];
+            @endphp
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                <div>
+                    <h6 class="mb-1">{{ $project['name'] }}</h6>
+                    <small class="text-muted">Total: UGX {{ number_format($totalSpending, 2) }}</small>
                 </div>
-                <div class="card-body">
-                    @forelse($projectSpending as $project)
-                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                            <div>
-                                <h6 class="mb-1">{{ $project['name'] }}</h6>
-                                <small class="text-muted">Total: UGX {{ number_format($project['total_payments'] + $project['total_expenses'], 2) }}</small>
-                            </div>
-                            <div class="text-end">
-                                <div class="text-success small">+UGX {{ number_format($project['total_payments'], 2) }}</div>
-                                <div class="text-danger small">-UGX {{ number_format($project['total_expenses'], 2) }}</div>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="text-center text-muted py-3">
-                            <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
-                            No project data available.
-                        </div>
-                    @endforelse
+                <div class="text-end">
+                    <div class="text-success small">+UGX {{ number_format($project['total_payments'], 2) }}</div>
+                    <div class="text-danger small">-UGX {{ number_format($project['total_expenses'], 2) }}</div>
                 </div>
             </div>
+        @empty
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
+                No project data available.
+            </div>
+        @endforelse
+        
+        <!-- Total Summary -->
+        @if($projectSpending->count() > 0)
+            @php
+                $grandTotalPayments = $projectSpending->sum('total_payments');
+                $grandTotalExpenses = $projectSpending->sum('total_expenses');
+                $grandTotal = $grandTotalPayments + $grandTotalExpenses;
+            @endphp
+            <div class="mt-3 pt-3 border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong>Grand Total:</strong>
+                    <strong>UGX {{ number_format($grandTotal, 2) }}</strong>
+                </div>
+                <div class="d-flex justify-content-between text-success small">
+                    <span>Total Payments:</span>
+                    <span>+UGX {{ number_format($grandTotalPayments, 2) }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-danger small">
+                    <span>Total Expenses:</span>
+                    <span>-UGX {{ number_format($grandTotalExpenses, 2) }}</span>
+                </div>
+            </div>
+        @endif
+    </div>
+</div>
         </div>
     </div>
 </div>

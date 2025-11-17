@@ -13,13 +13,16 @@ class Lpo extends Model
         'lpo_number',
         'requisition_id',
         'supplier_id',
-        'issued_by',
+        'prepared_by', // UNCOMMENT THIS
+        'issued_by',   // UNCOMMENT THIS
         'issued_at',
         'status',
         'subtotal',
         'tax',
         'other_charges',
         'total',
+        'delivery_date',
+        'terms',
         'notes'
     ];
 
@@ -29,7 +32,25 @@ class Lpo extends Model
         'other_charges' => 'decimal:2',
         'total' => 'decimal:2',
         'issued_at' => 'datetime',
+        'delivery_date' => 'datetime',
     ];
+
+    // UNCOMMENT THESE RELATIONSHIPS
+    public function preparer()
+    {
+        return $this->belongsTo(User::class, 'prepared_by');
+    }
+
+    public function issuer()
+    {
+        return $this->belongsTo(User::class, 'issued_by');
+    }
+
+    // Keep other relationships
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 
     public function supplier()
     {
@@ -49,16 +70,5 @@ class Lpo extends Model
     public function deliveries()
     {
         return $this->hasMany(Delivery::class);
-    }
-
-    // Add these missing relationships
-    public function preparer()
-    {
-        return $this->belongsTo(User::class, 'prepared_by');
-    }
-
-    public function issuer()
-    {
-        return $this->belongsTo(User::class, 'issued_by');
     }
 }

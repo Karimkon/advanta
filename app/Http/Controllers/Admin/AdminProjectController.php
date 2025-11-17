@@ -142,68 +142,78 @@ class AdminProjectController extends Controller
         ));
     }
 
-    public function update(Request $request, Project $project)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:projects,code,' . $project->id,
-            'description' => 'nullable|string',
-            'location' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'budget' => 'required|numeric|min:0',
-            'status' => 'required|in:planning,active,on_hold,completed,cancelled',
-            'project_manager_id' => 'required|exists:users,id',
-            'store_manager_id' => 'required|exists:users,id',
-            'engineer_ids' => 'nullable|array',
-            'engineer_ids.*' => 'exists:users,id',
+   public function update(Request $request, Project $project)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'code' => 'required|string|max:50|unique:projects,code,' . $project->id,
+        'description' => 'nullable|string',
+        'location' => 'required|string|max:255',
+        'start_date' => 'required|date',
+        'end_date' => 'nullable|date|after_or_equal:start_date',
+        'budget' => 'required|numeric|min:0',
+        'status' => 'required|in:planning,active,on_hold,completed,cancelled',
+        'project_manager_id' => 'required|exists:users,id',
+        'store_manager_id' => 'required|exists:users,id',
+        'engineer_ids' => 'nullable|array',
+        'engineer_ids.*' => 'exists:users,id',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        // Update project
+        $project->update([
+            'name' => $request->name,
+            'code' => $request->code,
+            'description' => $request->description,
+            'location' => $request->location,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'budget' => $request->budget,
+            'status' => $request->status,
         ]);
 
-        DB::beginTransaction();
-        try {
-            // Update project
-            $project->update([
-                'name' => $request->name,
-                'code' => $request->code,
-                'description' => $request->description,
-                'location' => $request->location,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
-                'budget' => $request->budget,
-                'status' => $request->status,
-            ]);
+        // Sync managers and engineers
+        $usersToSync = [
+            $request->project_manager_id => ['role_on_project' => 'project_manager'],
+            $request->store_manager_id => ['role_on_project' => 'store_manager']
+        ];
 
-            // Sync managers and engineers
-            $usersToSync = [
-                $request->project_manager_id => ['role_on_project' => 'project_manager'],
-                $request->store_manager_id => ['role_on_project' => 'store_manager']
-            ];
-
-            // Add engineers if selected
-            if ($request->has('engineer_ids')) {
-                foreach ($request->engineer_ids as $engineerId) {
-                    $usersToSync[$engineerId] = ['role_on_project' => 'engineer'];
-                }
+        // Add engineers if selected
+        if ($request->has('engineer_ids')) {
+            foreach ($request->engineer_ids as $engineerId) {
+                $usersToSync[$engineerId] = ['role_on_project' => 'engineer'];
             }
-
-            $project->users()->sync($usersToSync);
-
-            DB::commit();
-
-            $message = 'Project updated successfully';
-            if ($request->has('engineer_ids')) {
-                $message .= ' with ' . count($request->engineer_ids) . ' engineer(s) assigned';
-            }
-
-            return redirect()->route('admin.projects.index')
-                ->with('success', $message);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Failed to update project: ' . $e->getMessage());
         }
+
+        $project->users()->sync($usersToSync);
+
+        // ✅ FIX: Create store if it doesn't exist
+        if (!$project->stores()->exists()) {
+            Store::create([
+                'name' => $project->name . ' Store',
+                'code' => 'STORE-' . $project->code,
+                'type' => 'project',
+                'address' => $project->location,
+                'project_id' => $project->id,
+            ]);
+        }
+
+        DB::commit();
+
+        $message = 'Project updated successfully';
+        if ($request->has('engineer_ids')) {
+            $message .= ' with ' . count($request->engineer_ids) . ' engineer(s) assigned';
+        }
+
+        return redirect()->route('admin.projects.index')
+            ->with('success', $message);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Failed to update project: ' . $e->getMessage());
     }
-    
+}
     public function destroy(Project $project)
     {
         DB::beginTransaction();

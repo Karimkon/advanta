@@ -168,14 +168,17 @@ class ProjectManagerRequisitionController extends Controller
     {
         $user = auth()->user();
         
-        // Get requisitions from projects managed by this project manager that need approval
-        $pendingRequisitions = Requisition::whereHas('project.users', function($query) use ($user) {
-            $query->where('user_id', $user->id);
+        // Get pending requisitions that need project manager approval
+        $pendingRequisitions = Requisition::whereHas('project', function($query) use ($user) {
+            $query->whereHas('users', function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
         })
-        ->where('status', 'pending')
+        ->where('status', Requisition::STATUS_PENDING)
+        ->where('type', Requisition::TYPE_STORE) // Only store requisitions
         ->with(['project', 'requester', 'items'])
         ->latest()
-        ->paginate(10);
+        ->paginate(20);
 
         return view('project_manager.requisitions.pending', compact('pendingRequisitions'));
     }

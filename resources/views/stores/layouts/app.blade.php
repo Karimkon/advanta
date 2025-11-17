@@ -128,7 +128,8 @@
                         @endif
                         
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link {{ request()->routeIs('stores.movements.*') ? 'active' : '' }}" 
+                            href="{{ route('stores.movements.index', $userStores->first() ?? 1) }}">
                                 <i class="bi bi-arrow-left-right"></i> Stock Movements
                             </a>
                         </li>
