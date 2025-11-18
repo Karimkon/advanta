@@ -57,6 +57,7 @@ class StoreInventoryController extends Controller
 
     public function show(Store $store, InventoryItem $inventoryItem)
     {
+        $stores = Store::all();
         // Verify the inventory item belongs to the store
         if ($inventoryItem->store_id !== $store->id) {
             abort(403, 'This inventory item does not belong to the selected store.');
@@ -69,7 +70,7 @@ class StoreInventoryController extends Controller
 
         $inventoryItem->load(['logs.user']);
 
-        return view('stores.inventory.show', compact('store', 'inventoryItem'));
+        return view('stores.inventory.show', compact('store', 'inventoryItem', 'stores'));
     }
 
     public function create(Store $store)

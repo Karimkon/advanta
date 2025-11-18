@@ -14,13 +14,6 @@
             font-family: 'Inter', sans-serif;
         }
         
-        .adv-tile {
-            @apply bg-white shadow-md hover:shadow-xl 
-                   text-gray-700 font-semibold py-6 rounded-lg 
-                   transition-all duration-200 hover:bg-blue-50 
-                   hover:text-blue-700;
-        }
-        
         .gradient-bg {
             background: linear-gradient(-45deg, #0f172a, #1e293b, #0f2a1f, #1a0f2a);
             background-size: 400% 400%;
@@ -57,13 +50,44 @@
             transform: translateY(-10px) scale(1.05);
             box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         }
+        
+        .logo-container {
+            transition: all 0.3s ease;
+        }
+        
+        .logo-container:hover {
+            transform: scale(1.02);
+        }
     </style>
 </head>
 
 <body class="gradient-bg text-white min-h-screen flex items-center justify-center">
 
 <div class="max-w-6xl w-full mx-auto text-center p-8">
-    <div class="fade-in-up mb-8">
+    <!-- Logo Section - Choose one option below -->
+
+    <!-- Option 1: Rectangular logo with white background -->
+    <div class="fade-in-up mb-8 logo-container">
+        <div class="bg-white p-4 rounded-2xl inline-block mb-6 shadow-2xl">
+            <img src="{{ asset('images/advanta.jpg') }}" 
+                 alt="ADVANTA Logo" 
+                 class="h-16 w-auto mx-auto">
+        </div>
+        <h1 class="text-4xl font-extrabold mb-4 tracking-tight">
+            ADVANTA Uganda Limited – Project Management System
+        </h1>
+        <p class="text-lg text-gray-300 mb-10 max-w-3xl mx-auto">
+            Streamline projects, requisitions, LPOs, procurement, approvals, and reporting — all in one platform.
+        </p>
+    </div>
+
+    <!-- Option 2: If you prefer circular but with better styling, use this instead:
+    <div class="fade-in-up mb-8 logo-container">
+        <div class="bg-white p-3 rounded-full inline-block mb-6 shadow-2xl">
+            <img src="{{ asset('images/logo.png') }}" 
+                 alt="ADVANTA Logo" 
+                 class="h-20 w-20 rounded-full object-contain mx-auto">
+        </div>
         <h1 class="text-4xl font-extrabold mb-4 tracking-tight">
             ADVANTA – Project Management System
         </h1>
@@ -71,8 +95,9 @@
             Streamline projects, requisitions, LPOs, procurement, approvals, and reporting — all in one platform.
         </p>
     </div>
+    -->
 
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
         <a href="/admin/login" class="role-card group p-6 rounded-2xl text-center">
             <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">👑</div>
             <h4 class="text-lg font-bold mb-2 text-purple-300">Admin</h4>
@@ -119,6 +144,12 @@
             <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">🏗️</div>
             <h4 class="text-lg font-bold mb-2 text-yellow-300">Engineer</h4>
             <p class="text-sm text-gray-300">Site operations & requisitions</p>
+        </a>
+        
+        <a href="/manual" class="role-card group p-6 rounded-2xl text-center">
+            <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">📚</div>
+            <h4 class="text-lg font-bold mb-2 text-red-300">Read Manual</h4>
+            <p class="text-sm text-gray-300">System documentation</p>
         </a>
     </div>
 

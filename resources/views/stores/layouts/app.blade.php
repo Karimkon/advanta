@@ -134,19 +134,7 @@
                             </a>
                         </li>
                         
-                        <li class="nav-item mt-4">
-                            <hr class="bg-white">
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-warning" href="#">
-                                <i class="bi bi-graph-up"></i> Stock Reports
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-info" href="#">
-                                <i class="bi bi-exclamation-triangle"></i> Low Stock Alerts
-                            </a>
-                        </li>
+                      
                     </ul>
                 </div>
             </div>
