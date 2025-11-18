@@ -96,8 +96,10 @@
                 <h6 class="mb-3 text-primary">Staff Assignments</h6>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label">Project Manager <span class="text-danger">*</span></label>
-                        <select name="project_manager_id" class="form-select @error('project_manager_id') is-invalid @enderror" required>
+                        <label class="form-label">
+                            <i class="bi bi-person-badge text-primary"></i> Project Manager <span class="text-danger">*</span>
+                        </label>
+                        <select name="project_manager_id" class="form-select select2-single @error('project_manager_id') is-invalid @enderror" required>
                             <option value="">Select Project Manager</option>
                             @foreach($projectManagers as $manager)
                                 <option value="{{ $manager->id }}" {{ old('project_manager_id') == $manager->id ? 'selected' : '' }}>
@@ -111,8 +113,10 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">Store Manager <span class="text-danger">*</span></label>
-                        <select name="store_manager_id" class="form-select @error('store_manager_id') is-invalid @enderror" required>
+                        <label class="form-label">
+                            <i class="bi bi-shop text-success"></i> Store Manager <span class="text-danger">*</span>
+                        </label>
+                        <select name="store_manager_id" class="form-select select2-single @error('store_manager_id') is-invalid @enderror" required>
                             <option value="">Select Store Manager</option>
                             @foreach($storeManagers as $manager)
                                 <option value="{{ $manager->id }}" {{ old('store_manager_id') == $manager->id ? 'selected' : '' }}>
@@ -126,18 +130,38 @@
                         @enderror
                     </div>
 
-                    <!-- Add Engineers Selection -->
-                    <div class="col-12">
-                        <label class="form-label">Assign Engineers (Optional)</label>
-                        <select name="engineer_ids[]" class="form-select select2 @error('engineer_ids') is-invalid @enderror" multiple>
+                    <!-- Engineers Selection -->
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-person-gear text-warning"></i> Assign Engineers (Optional)
+                        </label>
+                        <select name="engineer_ids[]" class="form-select select2-multiple @error('engineer_ids') is-invalid @enderror" multiple>
                             @foreach($engineers as $engineer)
                                 <option value="{{ $engineer->id }}" {{ in_array($engineer->id, old('engineer_ids', [])) ? 'selected' : '' }}>
                                     {{ $engineer->name }} ({{ $engineer->email }})
                                 </option>
                             @endforeach
                         </select>
-                        <small class="text-muted">Select engineers to assign to this project. They will be able to create requisitions for this project.</small>
+                        <small class="text-muted">Engineers can create requisitions for this project</small>
                         @error('engineer_ids')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Surveyors Selection - NEW -->
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-building text-info"></i> Assign Surveyors (Optional)
+                        </label>
+                        <select name="surveyor_ids[]" class="form-select select2-multiple @error('surveyor_ids') is-invalid @enderror" multiple>
+                            @foreach($surveyors as $surveyor)
+                                <option value="{{ $surveyor->id }}" {{ in_array($surveyor->id, old('surveyor_ids', [])) ? 'selected' : '' }}>
+                                    {{ $surveyor->name }} ({{ $surveyor->email }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">Surveyors track construction progress and milestones</small>
+                        @error('surveyor_ids')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -148,15 +172,21 @@
                     <ul class="mb-0">
                         <li>A new project record</li>
                         <li>A dedicated project store</li>
+                        <li>Default construction milestones (Foundation, Substructure, Superstructure, Roofing, Finishing, Finalization)</li>
                         <li>Project manager assignment</li>
                         <li>Store manager assignment</li>
                         <li>Engineer assignments (if selected)</li>
+                        <li>Surveyor assignments (if selected)</li>
                     </ul>
                 </div>
 
                 <div class="text-end">
-                    <a href="{{ route('admin.projects.index') }}" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Create Project & Store</button>
+                    <a href="{{ route('admin.projects.index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Create Project & Store
+                    </button>
                 </div>
             </form>
         </div>
@@ -166,9 +196,16 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        // Initialize Select2 for engineers multi-select
-        $('.select2').select2({
-            placeholder: "Select engineers...",
+        // Initialize Select2 for single select dropdowns
+        $('.select2-single').select2({
+            placeholder: "Select...",
+            allowClear: true,
+            width: '100%'
+        });
+
+        // Initialize Select2 for multi-select dropdowns
+        $('.select2-multiple').select2({
+            placeholder: "Select...",
             allowClear: true,
             width: '100%'
         });

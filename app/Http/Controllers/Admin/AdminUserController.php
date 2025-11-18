@@ -27,7 +27,8 @@ class AdminUserController extends Controller
             'ceo',
             'project_manager',
             'engineer',
-            'supplier'
+            'supplier',
+            'surveyor'
         ];
 
         return view('admin.users.create', compact('roles'));
@@ -66,7 +67,8 @@ class AdminUserController extends Controller
             'ceo',
             'project_manager',
             'engineer',
-            'supplier'
+            'supplier',
+            'surveyor'
         ];
 
         return view('admin.users.edit', compact('user', 'roles'));

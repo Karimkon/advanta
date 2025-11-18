@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 // ----------------------
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminUserController;
-use App\Http\Controllers\Admin\AdminProjectController; // Add this
+use App\Http\Controllers\Admin\AdminProjectController; 
 use App\Http\Controllers\Operations\OperationsDashboardController;
 use App\Http\Controllers\Procurement\ProcurementDashboardController;
 use App\Http\Controllers\Finance\FinanceDashboardController;
@@ -39,12 +39,15 @@ use App\Http\Controllers\CEO\CEOFinancialReportsController;
 use App\Http\Controllers\Stores\StockMovementController; 
 use App\Http\Controllers\CEO\CEOInventoryController;   
 use App\Http\Controllers\Stores\StoreLpoController;
-   
+use App\Http\Controllers\Surveyor\SurveyorDashboardController;
+use App\Http\Controllers\Surveyor\SurveyorMilestoneController;
+use App\Http\Controllers\CEO\CEOMilestoneController;
 
 // ----------------------
 // Landing Page
 // ----------------------
 Route::get('/', fn () => view('welcome'))->name('welcome');
+Route::get('/manual', fn () => view('manual'))->name('manual');    
 
 // ====================================================
 // LOGIN VIEWS PER ROLE
@@ -58,6 +61,7 @@ Route::get('/ceo/login', fn() => view('ceo.auth.login'))->name('ceo.login');
 Route::get('/project/login', fn() => view('project_manager.auth.login'))->name('project_manager.login');
 Route::get('/engineer/login', fn() => view('engineer.auth.login'))->name('engineer.login');
 Route::get('/supplier/login', fn() => view('supplier.auth.login'))->name('supplier.login');
+Route::get('/surveyor/login', fn() => view('surveyor.auth.login'))->name('surveyor.login');
 
 // ====================================================
 // LOGIN SUBMIT PER ROLE (standard pattern)
@@ -121,6 +125,10 @@ Route::post('/project/login', fn(Request $r) =>
 Route::post('/engineer/login', fn(Request $r) => 
     roleLogin($r,'engineer','engineer.dashboard')
 )->name('engineer.login.submit');
+
+Route::post('/surveyor/login', fn(Request $r) => 
+    roleLogin($r,'surveyor','surveyor.dashboard')
+)->name('surveyor.login.submit');
 
 // SUPPLIER
 Route::post('/supplier/login', fn(Request $r) => 
@@ -481,6 +489,13 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
         Route::get('/movements', [CEOInventoryController::class, 'stockMovements'])->name('movements');
         Route::get('/export', [CEOInventoryController::class, 'exportInventoryReport'])->name('export');
     });
+
+    // CEO Milestone Routes
+    Route::prefix('milestones')->name('milestones.')->group(function () {
+        Route::get('/', [CEOMilestoneController::class, 'index'])->name('index');
+        Route::get('/project/{project}', [CEOMilestoneController::class, 'projectMilestones'])->name('project');
+        Route::get('/project/{project}/milestone/{milestone}', [CEOMilestoneController::class, 'show'])->name('show');
+    });
 });
 
 // PROJECT MANAGER
@@ -525,6 +540,20 @@ Route::middleware(['auth','role:engineer'])->prefix('engineer')->name('engineer.
     // Projects
     Route::prefix('projects')->name('projects.')->group(function () {
         Route::get('/', [EngineerProjectController::class, 'index'])->name('index');
+    });
+});
+
+// SURVEYOR
+Route::middleware(['auth','role:surveyor'])->prefix('surveyor')->name('surveyor.')->group(function () {
+    Route::get('/dashboard', [SurveyorDashboardController::class,'index'])->name('dashboard');
+    
+    // Milestones Management
+    Route::prefix('projects/{project}/milestones')->name('milestones.')->group(function () {
+        Route::get('/', [SurveyorMilestoneController::class, 'index'])->name('index');
+        Route::get('/{milestone}', [SurveyorMilestoneController::class, 'show'])->name('show');
+        Route::get('/{milestone}/edit', [SurveyorMilestoneController::class, 'edit'])->name('edit');
+        Route::put('/{milestone}', [SurveyorMilestoneController::class, 'update'])->name('update');
+         Route::delete('/{milestone}/photo', [SurveyorMilestoneController::class, 'removePhoto'])->name('remove-photo');
     });
 });
 

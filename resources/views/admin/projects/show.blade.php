@@ -76,14 +76,14 @@
             <!-- Staff Assignments -->
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
-                    <h6 class="mb-0">Staff Assignments</h6>
+                    <h6 class="mb-0"><i class="bi bi-people-fill"></i> Staff Assignments</h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Project Manager</h6>
+                            <h6><i class="bi bi-person-badge text-primary"></i> Project Manager</h6>
                             @if($projectManager)
-                                <div class="d-flex align-items-center mb-3">
+                                <div class="d-flex align-items-center mb-3 p-2 bg-light rounded">
                                     <div class="bg-primary rounded-circle p-2 me-3">
                                         <i class="bi bi-person-fill text-white"></i>
                                     </div>
@@ -99,9 +99,9 @@
                             @endif
                         </div>
                         <div class="col-md-6">
-                            <h6>Store Manager</h6>
+                            <h6><i class="bi bi-shop text-success"></i> Store Manager</h6>
                             @if($storeManager)
-                                <div class="d-flex align-items-center mb-3">
+                                <div class="d-flex align-items-center mb-3 p-2 bg-light rounded">
                                     <div class="bg-success rounded-circle p-2 me-3">
                                         <i class="bi bi-person-fill text-white"></i>
                                     </div>
@@ -121,12 +121,12 @@
                     <!-- Engineers Section -->
                     <div class="row mt-3">
                         <div class="col-12">
-                            <h6>Assigned Engineers</h6>
+                            <h6><i class="bi bi-person-gear text-warning"></i> Assigned Engineers</h6>
                             @if($engineers->count() > 0)
                                 <div class="row">
                                     @foreach($engineers as $engineer)
                                         <div class="col-md-6 mb-2">
-                                            <div class="d-flex align-items-center">
+                                            <div class="d-flex align-items-center p-2 bg-light rounded">
                                                 <div class="bg-warning rounded-circle p-2 me-3">
                                                     <i class="bi bi-person-gear text-white"></i>
                                                 </div>
@@ -139,9 +139,38 @@
                                     @endforeach
                                 </div>
                             @else
-                                <div class="text-muted text-center py-3">
-                                    <i class="bi bi-people display-4 d-block mb-2"></i>
+                                <div class="text-muted text-center py-3 bg-light rounded">
+                                    <i class="bi bi-people display-6 d-block mb-2"></i>
                                     No engineers assigned to this project
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Surveyors Section - NEW -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6><i class="bi bi-building text-info"></i> Assigned Surveyors</h6>
+                            @if($surveyors->count() > 0)
+                                <div class="row">
+                                    @foreach($surveyors as $surveyor)
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex align-items-center p-2 bg-light rounded">
+                                                <div class="bg-info rounded-circle p-2 me-3">
+                                                    <i class="bi bi-building text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <strong>{{ $surveyor->name }}</strong>
+                                                    <div class="text-muted small">{{ $surveyor->email }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-muted text-center py-3 bg-light rounded">
+                                    <i class="bi bi-building display-6 d-block mb-2"></i>
+                                    No surveyors assigned to this project
                                 </div>
                             @endif
                         </div>
@@ -154,12 +183,12 @@
             <!-- Project Store -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
-                    <h6 class="mb-0">Project Store</h6>
+                    <h6 class="mb-0"><i class="bi bi-shop"></i> Project Store</h6>
                 </div>
                 <div class="card-body">
                     @if($project->stores->count() > 0)
                         @foreach($project->stores as $store)
-                            <div class="d-flex align-items-center mb-3">
+                            <div class="d-flex align-items-center mb-3 p-2 bg-light rounded">
                                 <div class="bg-info rounded-circle p-2 me-3">
                                     <i class="bi bi-shop text-white"></i>
                                 </div>
@@ -171,7 +200,7 @@
                             </div>
                         @endforeach
                     @else
-                        <div class="text-muted text-center">
+                        <div class="text-muted text-center py-3 bg-light rounded">
                             <i class="bi bi-shop display-4 d-block mb-2"></i>
                             No store created for this project
                         </div>
@@ -182,36 +211,43 @@
             <!-- Quick Stats -->
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
-                    <h6 class="mb-0">Project Statistics</h6>
+                    <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Project Statistics</h6>
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-6 mb-3">
-                            <div class="text-primary">
-                                <i class="bi bi-file-text display-6 d-block"></i>
-                                <strong>{{ $project->requisitions->count() }}</strong>
-                                <div class="small">Requisitions</div>
+                            <div class="p-3 bg-primary bg-opacity-10 rounded">
+                                <i class="bi bi-file-text text-primary display-6 d-block"></i>
+                                <strong class="d-block mt-2">{{ $project->requisitions->count() }}</strong>
+                                <small class="text-muted">Requisitions</small>
                             </div>
                         </div>
                         <div class="col-6 mb-3">
-                            <div class="text-success">
-                                <i class="bi bi-shop display-6 d-block"></i>
-                                <strong>{{ $project->stores->count() }}</strong>
-                                <div class="small">Stores</div>
+                            <div class="p-3 bg-success bg-opacity-10 rounded">
+                                <i class="bi bi-shop text-success display-6 d-block"></i>
+                                <strong class="d-block mt-2">{{ $project->stores->count() }}</strong>
+                                <small class="text-muted">Stores</small>
                             </div>
                         </div>
                         <div class="col-6 mb-3">
-                            <div class="text-warning">
-                                <i class="bi bi-people display-6 d-block"></i>
-                                <strong>{{ $engineers->count() }}</strong>
-                                <div class="small">Engineers</div>
+                            <div class="p-3 bg-warning bg-opacity-10 rounded">
+                                <i class="bi bi-person-gear text-warning display-6 d-block"></i>
+                                <strong class="d-block mt-2">{{ $engineers->count() }}</strong>
+                                <small class="text-muted">Engineers</small>
                             </div>
                         </div>
                         <div class="col-6 mb-3">
-                            <div class="text-info">
-                                <i class="bi bi-person display-6 d-block"></i>
-                                <strong>{{ $project->users->count() }}</strong>
-                                <div class="small">Total Staff</div>
+                            <div class="p-3 bg-info bg-opacity-10 rounded">
+                                <i class="bi bi-building text-info display-6 d-block"></i>
+                                <strong class="d-block mt-2">{{ $surveyors->count() }}</strong>
+                                <small class="text-muted">Surveyors</small>
+                            </div>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <div class="p-3 bg-secondary bg-opacity-10 rounded">
+                                <i class="bi bi-people text-secondary display-6 d-block"></i>
+                                <strong class="d-block mt-2">{{ $project->users->count() }}</strong>
+                                <small class="text-muted">Total Staff</small>
                             </div>
                         </div>
                     </div>

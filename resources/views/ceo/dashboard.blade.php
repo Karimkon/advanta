@@ -206,6 +206,123 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Project Milestones Overview -->
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-flag text-info me-2"></i>
+            Project Milestones Overview
+        </h5>
+        <a href="{{ route('ceo.milestones.index') }}" class="btn btn-sm btn-outline-primary">View All Milestones</a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Project</th>
+                        <th>Progress</th>
+                        <th>Milestones</th>
+                        <th>Completion</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($projectMilestones as $project)
+                        <tr>
+                            <td>
+                                <strong>{{ $project['name'] }}</strong>
+                                @if($project['overdue_milestones'] > 0)
+                                    <span class="badge bg-danger ms-1">{{ $project['overdue_milestones'] }} overdue</span>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" 
+                                         style="width: {{ $project['completion_rate'] }}%">
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ $project['completion_rate'] }}%</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">
+                                    {{ $project['completed_milestones'] }}/{{ $project['total_milestones'] }}
+                                </span>
+                            </td>
+                            <td>
+                                @if($project['latest_milestone'])
+                                    <small class="text-muted">
+                                        {{ $project['latest_milestone']->title }}
+                                    </small>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ $project['status'] === 'active' ? 'success' : 'warning' }}">
+                                    {{ ucfirst($project['status']) }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ route('ceo.milestones.project', $project['id']) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    View Details
+                                </a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="bi bi-flag display-4 d-block mb-2"></i>
+                                No milestone data available.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Attention Needed Milestones -->
+@if($attentionMilestones->count() > 0)
+<div class="card shadow-sm mt-4 border-warning">
+    <div class="card-header bg-warning bg-opacity-10">
+        <h5 class="mb-0 text-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Milestones Needing Attention
+        </h5>
+    </div>
+    <div class="card-body">
+        @foreach($attentionMilestones as $milestone)
+            <div class="border-start border-3 border-warning ps-3 mb-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">{{ $milestone->title }}</h6>
+                        <p class="text-muted mb-1 small">{{ $milestone->project->name }}</p>
+                        <div class="d-flex align-items-center gap-3">
+                            <small class="text-warning">
+                                <i class="bi bi-calendar me-1"></i>
+                                Due: {{ $milestone->due_date->format('M d, Y') }}
+                            </small>
+                            <span class="badge bg-{{ $milestone->getStatusBadgeClass() }}">
+                                {{ ucfirst($milestone->status) }}
+                            </span>
+                            @if($milestone->completion_percentage > 0)
+                                <small class="text-info">
+                                    {{ $milestone->completion_percentage }}% Complete
+                                </small>
+                            @endif
+                        </div>
+                    </div>
+                    <a href="{{ route('ceo.milestones.show', ['project' => $milestone->project, 'milestone' => $milestone]) }}" 
+                       class="btn btn-sm btn-warning">Review</a>
+                </div>
+            </div>
+        @endforeach
+    </div>
+</div>
+@endif
         </div>
 
         <!-- Right Column -->

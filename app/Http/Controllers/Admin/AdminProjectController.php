@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\ProjectMilestone;
 use App\Models\User;
 use App\Models\Store;
 use Illuminate\Http\Request;
@@ -22,13 +23,15 @@ class AdminProjectController extends Controller
 
     public function create()
     {
-        // Get all project managers, store managers, and engineers
+        // Get all project managers, store managers, engineers, and surveyors
         $projectManagers = User::where('role', 'project_manager')->get();
         $storeManagers = User::where('role', 'stores')->get();
-        $engineers = User::where('role', 'engineer')->get(); // Add this line
+        $engineers = User::where('role', 'engineer')->get();
+        $surveyors = User::where('role', 'surveyor')->get(); // New
         
-        return view('admin.projects.create', compact('projectManagers', 'storeManagers', 'engineers'));
+        return view('admin.projects.create', compact('projectManagers', 'storeManagers', 'engineers', 'surveyors'));
     }
+
 
     public function store(Request $request)
     {
@@ -45,6 +48,8 @@ class AdminProjectController extends Controller
             'store_manager_id' => 'required|exists:users,id',
             'engineer_ids' => 'nullable|array',
             'engineer_ids.*' => 'exists:users,id',
+            'surveyor_ids' => 'nullable|array', // New
+            'surveyor_ids.*' => 'exists:users,id', // New
         ]);
 
         DB::beginTransaction();
@@ -74,6 +79,13 @@ class AdminProjectController extends Controller
                 }
             }
 
+            // Add surveyors if selected - NEW
+            if ($request->has('surveyor_ids')) {
+                foreach ($request->surveyor_ids as $surveyorId) {
+                    $project->users()->attach($surveyorId, ['role_on_project' => 'surveyor']);
+                }
+            }
+
             // Create project store
             $store = Store::create([
                 'name' => $project->name . ' Store',
@@ -83,11 +95,17 @@ class AdminProjectController extends Controller
                 'project_id' => $project->id,
             ]);
 
+            // Create default milestones for the project - NEW
+            $this->createDefaultMilestones($project);
+
             DB::commit();
 
-            $message = 'Project created successfully with associated store';
+            $message = 'Project created successfully with associated store and default milestones';
             if ($request->has('engineer_ids')) {
                 $message .= ' and ' . count($request->engineer_ids) . ' engineer(s) assigned';
+            }
+            if ($request->has('surveyor_ids')) {
+                $message .= ' and ' . count($request->surveyor_ids) . ' surveyor(s) assigned';
             }
 
             return redirect()->route('admin.projects.index')
@@ -100,16 +118,72 @@ class AdminProjectController extends Controller
         }
     }
 
-    public function show(Project $project)
+     /**
+     * Create default construction milestones for a project
+     */
+    private function createDefaultMilestones(Project $project)
     {
-        $project->load(['users', 'requisitions', 'stores']);
+        $milestones = [
+            [
+                'title' => 'Foundation (Omusingi)',
+                'description' => 'Ground excavation, footings, concrete base, and reinforcement setting',
+                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 30 days')),
+                'status' => 'pending',
+                'cost_estimate' => $project->budget * 0.15, // 15% of budget
+            ],
+            [
+                'title' => 'Substructure',
+                'description' => 'Work below ground floor level - retaining walls, basement, ground beams',
+                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 60 days')),
+                'status' => 'pending',
+                'cost_estimate' => $project->budget * 0.20, // 20% of budget
+            ],
+            [
+                'title' => 'Superstructure',
+                'description' => 'Above ground level - columns, beams, floors, walls, staircases',
+                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 120 days')),
+                'status' => 'pending',
+                'cost_estimate' => $project->budget * 0.25, // 25% of budget
+            ],
+            [
+                'title' => 'Roofing Level',
+                'description' => 'Trusses/slab roof and covering installation',
+                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 150 days')),
+                'status' => 'pending',
+                'cost_estimate' => $project->budget * 0.15, // 15% of budget
+            ],
+            [
+                'title' => 'Finishing Stages',
+                'description' => 'Plastering, flooring, windows, doors, electrical, plumbing, painting',
+                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 210 days')),
+                'status' => 'pending',
+                'cost_estimate' => $project->budget * 0.20, // 20% of budget
+            ],
+            [
+                'title' => 'Finalization',
+                'description' => 'External works, paving, drainage, landscaping, final inspection',
+                'due_date' => $project->end_date,
+                'status' => 'pending',
+                'cost_estimate' => $project->budget * 0.05, // 5% of budget
+            ],
+        ];
+
+        foreach ($milestones as $milestoneData) {
+            ProjectMilestone::create(array_merge($milestoneData, ['project_id' => $project->id]));
+        }
+    }
+
+     public function show(Project $project)
+    {
+        $project->load(['users', 'requisitions', 'stores', 'milestones']);
         
-        // Get project manager, store manager, and engineers
+        // Get project team members
         $projectManager = $project->users()->where('role', 'project_manager')->first();
         $storeManager = $project->users()->where('role', 'stores')->first();
         $engineers = $project->users()->where('role', 'engineer')->get();
+        $surveyors = $project->users()->where('role', 'surveyor')->get(); // New
         
-        return view('admin.projects.show', compact('project', 'projectManager', 'storeManager', 'engineers'));
+        return view('admin.projects.show', compact('project', 'projectManager', 'storeManager', 'engineers', 'surveyors'));
     }
 
      public function edit(Project $project)
@@ -117,14 +191,19 @@ class AdminProjectController extends Controller
         $projectManagers = User::where('role', 'project_manager')->get();
         $storeManagers = User::where('role', 'stores')->get();
         $engineers = User::where('role', 'engineer')->get();
+        $surveyors = User::where('role', 'surveyor')->get(); // New
         
-        // Fix the ambiguous column issue by specifying table names
+        // Get current team members
         $currentManager = $project->users()->where('users.role', 'project_manager')->first();
         $currentStoreManager = $project->users()->where('users.role', 'stores')->first();
         
-        // Fix: Specify the table for the pluck method
         $currentEngineers = $project->users()
             ->where('users.role', 'engineer')
+            ->pluck('users.id')
+            ->toArray();
+            
+        $currentSurveyors = $project->users() // New
+            ->where('users.role', 'surveyor')
             ->pluck('users.id')
             ->toArray();
             
@@ -135,85 +214,100 @@ class AdminProjectController extends Controller
             'projectManagers', 
             'storeManagers', 
             'engineers',
+            'surveyors',
             'currentManager', 
             'currentStoreManager',
             'currentEngineers',
+            'currentSurveyors',
             'currentStore'
         ));
     }
 
-   public function update(Request $request, Project $project)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'code' => 'required|string|max:50|unique:projects,code,' . $project->id,
-        'description' => 'nullable|string',
-        'location' => 'required|string|max:255',
-        'start_date' => 'required|date',
-        'end_date' => 'nullable|date|after_or_equal:start_date',
-        'budget' => 'required|numeric|min:0',
-        'status' => 'required|in:planning,active,on_hold,completed,cancelled',
-        'project_manager_id' => 'required|exists:users,id',
-        'store_manager_id' => 'required|exists:users,id',
-        'engineer_ids' => 'nullable|array',
-        'engineer_ids.*' => 'exists:users,id',
-    ]);
-
-    DB::beginTransaction();
-    try {
-        // Update project
-        $project->update([
-            'name' => $request->name,
-            'code' => $request->code,
-            'description' => $request->description,
-            'location' => $request->location,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'budget' => $request->budget,
-            'status' => $request->status,
+public function update(Request $request, Project $project)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:50|unique:projects,code,' . $project->id,
+            'description' => 'nullable|string',
+            'location' => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'budget' => 'required|numeric|min:0',
+            'status' => 'required|in:planning,active,on_hold,completed,cancelled',
+            'project_manager_id' => 'required|exists:users,id',
+            'store_manager_id' => 'required|exists:users,id',
+            'engineer_ids' => 'nullable|array',
+            'engineer_ids.*' => 'exists:users,id',
+            'surveyor_ids' => 'nullable|array', // New
+            'surveyor_ids.*' => 'exists:users,id', // New
         ]);
 
-        // Sync managers and engineers
-        $usersToSync = [
-            $request->project_manager_id => ['role_on_project' => 'project_manager'],
-            $request->store_manager_id => ['role_on_project' => 'store_manager']
-        ];
-
-        // Add engineers if selected
-        if ($request->has('engineer_ids')) {
-            foreach ($request->engineer_ids as $engineerId) {
-                $usersToSync[$engineerId] = ['role_on_project' => 'engineer'];
-            }
-        }
-
-        $project->users()->sync($usersToSync);
-
-        // ✅ FIX: Create store if it doesn't exist
-        if (!$project->stores()->exists()) {
-            Store::create([
-                'name' => $project->name . ' Store',
-                'code' => 'STORE-' . $project->code,
-                'type' => 'project',
-                'address' => $project->location,
-                'project_id' => $project->id,
+        DB::beginTransaction();
+        try {
+            // Update project
+            $project->update([
+                'name' => $request->name,
+                'code' => $request->code,
+                'description' => $request->description,
+                'location' => $request->location,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'budget' => $request->budget,
+                'status' => $request->status,
             ]);
+
+            // Sync managers, engineers, and surveyors
+            $usersToSync = [
+                $request->project_manager_id => ['role_on_project' => 'project_manager'],
+                $request->store_manager_id => ['role_on_project' => 'store_manager']
+            ];
+
+            // Add engineers if selected
+            if ($request->has('engineer_ids')) {
+                foreach ($request->engineer_ids as $engineerId) {
+                    $usersToSync[$engineerId] = ['role_on_project' => 'engineer'];
+                }
+            }
+
+            // Add surveyors if selected - NEW
+            if ($request->has('surveyor_ids')) {
+                foreach ($request->surveyor_ids as $surveyorId) {
+                    $usersToSync[$surveyorId] = ['role_on_project' => 'surveyor'];
+                }
+            }
+
+            $project->users()->sync($usersToSync);
+
+            // Create store if it doesn't exist
+            if (!$project->stores()->exists()) {
+                Store::create([
+                    'name' => $project->name . ' Store',
+                    'code' => 'STORE-' . $project->code,
+                    'type' => 'project',
+                    'address' => $project->location,
+                    'project_id' => $project->id,
+                ]);
+            }
+
+            DB::commit();
+
+            $message = 'Project updated successfully';
+            if ($request->has('engineer_ids')) {
+                $message .= ' with ' . count($request->engineer_ids) . ' engineer(s) assigned';
+            }
+            if ($request->has('surveyor_ids')) {
+                $message .= ' and ' . count($request->surveyor_ids) . ' surveyor(s) assigned';
+            }
+
+            return redirect()->route('admin.projects.index')
+                ->with('success', $message);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to update project: ' . $e->getMessage());
         }
-
-        DB::commit();
-
-        $message = 'Project updated successfully';
-        if ($request->has('engineer_ids')) {
-            $message .= ' with ' . count($request->engineer_ids) . ' engineer(s) assigned';
-        }
-
-        return redirect()->route('admin.projects.index')
-            ->with('success', $message);
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return back()->with('error', 'Failed to update project: ' . $e->getMessage());
     }
-}
+
     public function destroy(Project $project)
     {
         DB::beginTransaction();

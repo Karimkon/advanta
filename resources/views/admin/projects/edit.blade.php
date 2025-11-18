@@ -128,8 +128,10 @@
                     </div>
 
                     <!-- Engineers Selection -->
-                    <div class="col-12">
-                        <label class="form-label">Assign Engineers (Optional)</label>
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-person-gear text-warning"></i> Assign Engineers (Optional)
+                        </label>
                         <select name="engineer_ids[]" class="form-select select2 @error('engineer_ids') is-invalid @enderror" multiple>
                             @foreach($engineers as $engineer)
                                 <option value="{{ $engineer->id }}" {{ in_array($engineer->id, old('engineer_ids', $currentEngineers)) ? 'selected' : '' }}>
@@ -137,8 +139,26 @@
                                 </option>
                             @endforeach
                         </select>
-                        <small class="text-muted">Select engineers to assign to this project. They will be able to create requisitions for this project.</small>
+                        <small class="text-muted">Engineers can create requisitions for this project</small>
                         @error('engineer_ids')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Surveyors Selection - NEW -->
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-building text-info"></i> Assign Surveyors (Optional)
+                        </label>
+                        <select name="surveyor_ids[]" class="form-select select2 @error('surveyor_ids') is-invalid @enderror" multiple>
+                            @foreach($surveyors as $surveyor)
+                                <option value="{{ $surveyor->id }}" {{ in_array($surveyor->id, old('surveyor_ids', $currentSurveyors)) ? 'selected' : '' }}>
+                                    {{ $surveyor->name }} ({{ $surveyor->email }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">Surveyors track construction progress and milestones</small>
+                        @error('surveyor_ids')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -148,14 +168,16 @@
                     <h6><i class="bi bi-info-circle"></i> What will be updated:</h6>
                     <ul class="mb-0">
                         <li>Project information</li>
-                        <li>Staff assignments (Project Manager, Store Manager, Engineers)</li>
+                        <li>Staff assignments (Project Manager, Store Manager, Engineers, Surveyors)</li>
                         <li>All changes will be reflected immediately</li>
                     </ul>
                 </div>
 
                 <div class="text-end">
                     <a href="{{ route('admin.projects.index') }}" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Update Project</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Update Project
+                    </button>
                 </div>
             </form>
         </div>
@@ -165,9 +187,9 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        // Initialize Select2 for engineers multi-select
+        // Initialize Select2 for multi-select dropdowns
         $('.select2').select2({
-            placeholder: "Select engineers...",
+            placeholder: "Select...",
             allowClear: true,
             width: '100%'
         });

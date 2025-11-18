@@ -94,6 +94,13 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('ceo.milestones.*') ? 'active' : '' }}" 
+                            href="{{ route('ceo.milestones.index') }}">
+                                <i class="bi bi-flag me-2"></i>
+                                All Project Milestones
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('ceo.lpos.*') ? 'active' : '' }}" 
                                href="{{ route('ceo.lpos.index') }}">
                                 <i class="bi bi-receipt"></i> LPO Management

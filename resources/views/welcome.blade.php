@@ -58,15 +58,26 @@
         .logo-container:hover {
             transform: scale(1.02);
         }
+        
+        .manual-icon {
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .manual-icon:hover {
+            background: rgba(255,255,255,0.15);
+            transform: scale(1.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 
 <body class="gradient-bg text-white min-h-screen flex items-center justify-center">
 
 <div class="max-w-6xl w-full mx-auto text-center p-8">
-    <!-- Logo Section - Choose one option below -->
-
-    <!-- Option 1: Rectangular logo with white background -->
+    <!-- Logo Section -->
     <div class="fade-in-up mb-8 logo-container">
         <div class="bg-white p-4 rounded-2xl inline-block mb-6 shadow-2xl">
             <img src="{{ asset('images/advanta.jpg') }}" 
@@ -81,8 +92,7 @@
         </p>
     </div>
 
-   
-
+    <!-- Main Role Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
         <a href="/admin/login" class="role-card group p-6 rounded-2xl text-center">
             <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">👑</div>
@@ -132,15 +142,22 @@
             <p class="text-sm text-gray-300">Site operations & requisitions</p>
         </a>
         
-        <a href="/manual" class="role-card group p-6 rounded-2xl text-center">
-            <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">📚</div>
-            <h4 class="text-lg font-bold mb-2 text-red-300">Read Manual</h4>
-            <p class="text-sm text-gray-300">System documentation</p>
+        <!-- NEW: Surveyor Role Card -->
+        <a href="/surveyor/login" class="role-card group p-6 rounded-2xl text-center">
+            <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">📐</div>
+            <h4 class="text-lg font-bold mb-2 text-teal-300">Surveyor</h4>
+            <p class="text-sm text-gray-300">Track construction milestones</p>
         </a>
     </div>
 
+    <!-- Manual Icon at Bottom -->
     <div class="fade-in-up mt-12 text-center">
-        <div class="text-sm text-gray-400">
+        <a href="/manual" class="manual-icon inline-flex items-center gap-2 px-6 py-3 rounded-full text-gray-300 hover:text-white transition-all duration-300">
+            <i class="bi bi-book text-xl"></i>
+            <span class="font-medium">System Manual & Documentation</span>
+        </a>
+        
+        <div class="mt-8 text-sm text-gray-400">
             © {{ date('Y') }} Advanta Uganda Ltd. All rights reserved.
         </div>
     </div>
@@ -154,6 +171,11 @@
             card.style.animationDelay = `${index * 0.1}s`;
             card.classList.add('fade-in-up');
         });
+        
+        // Add animation to manual icon
+        const manualIcon = document.querySelector('.manual-icon');
+        manualIcon.style.animationDelay = '0.9s';
+        manualIcon.classList.add('fade-in-up');
     });
 </script>
 

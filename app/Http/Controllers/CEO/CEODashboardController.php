@@ -17,6 +17,10 @@ class CEODashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
+
+        $projectMilestones = $this->getProjectMilestonesOverview();
+        $attentionMilestones = $this->getAttentionMilestones();
+
         
         // Get requisitions pending CEO approval
         $pendingRequisitions = Requisition::where('status', Requisition::STATUS_PROCUREMENT)
@@ -78,7 +82,9 @@ class CEODashboardController extends Controller
             'financialStats',
             'projectPerformance',
             'recentFinancialActivities',
-            'monthlyTrends'
+            'monthlyTrends',
+            'projectMilestones',    
+            'attentionMilestones'
         ));
     }
 
@@ -203,4 +209,45 @@ class CEODashboardController extends Controller
             return collect(); // Return empty collection on error
         }
     }
+
+    private function getProjectMilestonesOverview()
+{
+    return Project::with(['milestones' => function($query) {
+            $query->where('status', '!=', 'completed')
+                  ->orderBy('due_date');
+        }])
+        ->whereHas('milestones')
+        ->get()
+        ->map(function($project) {
+            $totalMilestones = $project->milestones->count();
+            $completedMilestones = $project->milestones->where('status', 'completed')->count();
+            $overdueMilestones = $project->milestones->where('due_date', '<', now())
+                ->where('status', '!=', 'completed')
+                ->count();
+            
+            return [
+                'id' => $project->id,
+                'name' => $project->name,
+                'total_milestones' => $totalMilestones,
+                'completed_milestones' => $completedMilestones,
+                'overdue_milestones' => $overdueMilestones,
+                'completion_rate' => $totalMilestones > 0 ? round(($completedMilestones / $totalMilestones) * 100) : 0,
+                'latest_milestone' => $project->milestones->sortByDesc('due_date')->first(),
+                'status' => $project->status,
+            ];
+        })
+        ->sortByDesc('completion_rate')
+        ->take(5)
+        ->values();
+}
+
+private function getAttentionMilestones()
+{
+    return \App\Models\ProjectMilestone::with(['project'])
+        ->where('due_date', '<=', now()->addDays(7))
+        ->where('status', '!=', 'completed')
+        ->orderBy('due_date')
+        ->take(5)
+        ->get();
+}
 }
