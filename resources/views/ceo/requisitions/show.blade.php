@@ -20,6 +20,12 @@
             <a href="{{ route('ceo.requisitions.index') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
+            @if(in_array($requisition->status, ['procurement', 'ceo_approved']))
+                <a href="{{ route('ceo.requisitions.edit', $requisition) }}" 
+                   class="btn btn-outline-warning" title="Edit">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+            @endif
         </div>
     </div>
 
@@ -178,9 +184,9 @@
                     <h5 class="mb-0">CEO Actions</h5>
                 </div>
                 <div class="card-body">
-                    @if($requisition->status === 'ceo_approved')
-                        <div class="alert alert-info">
-                            <strong>Ready for Final Approval:</strong> You can approve this requisition and issue the LPO.
+                    @if($requisition->status === 'procurement')
+                        <div class="alert alert-warning">
+                            <strong>Pending Your Approval:</strong> This requisition is waiting for your approval.
                         </div>
 
                         <!-- Approve Requisition Form -->
@@ -199,8 +205,8 @@
                                        placeholder="Enter approved amount">
                             </div>
                             <button type="submit" class="btn btn-success w-100" 
-                                    onclick="return confirm('Approve this requisition and issue LPO?')">
-                                <i class="bi bi-check-circle"></i> Approve & Issue LPO
+                                    onclick="return confirm('Approve this requisition?')">
+                                <i class="bi bi-check-circle"></i> Approve Requisition
                             </button>
                         </form>
 
@@ -220,9 +226,9 @@
                             </button>
                         </form>
 
-                    @elseif($requisition->status === 'lpo_issued')
+                    @elseif($requisition->status === 'ceo_approved')
                         <div class="alert alert-success">
-                            <strong>Approved & Issued:</strong> LPO has been issued to supplier.
+                            <strong>Approved:</strong> You have approved this requisition.
                         </div>
                         
                         @if($requisition->lpo)
@@ -233,6 +239,25 @@
                                 </a>
                             </div>
                         @endif
+
+                    @elseif($requisition->status === 'lpo_issued')
+                        <div class="alert alert-info">
+                            <strong>LPO Issued:</strong> Purchase order has been issued to supplier.
+                        </div>
+                        
+                        @if($requisition->lpo)
+                            <div class="text-center">
+                                <a href="{{ route('procurement.lpos.show', $requisition->lpo) }}" 
+                                   class="btn btn-outline-primary w-100 mb-2" target="_blank">
+                                    <i class="bi bi-eye"></i> View LPO Details
+                                </a>
+                            </div>
+                        @endif
+
+                    @elseif($requisition->status === 'rejected')
+                        <div class="alert alert-danger">
+                            <strong>Rejected:</strong> This requisition has been rejected.
+                        </div>
 
                     @else
                         <div class="alert alert-info">
@@ -260,15 +285,24 @@
                                 'delivered' => ['icon' => '🚚', 'label' => 'Delivered'],
                                 'completed' => ['icon' => '🎉', 'label' => 'Completed']
                             ];
+                            
+                            $currentStatusIndex = array_search($requisition->status, array_keys($statuses));
                         @endphp
                         
                         @foreach($statuses as $status => $info)
-                            <div class="timeline-item {{ $requisition->status === $status ? 'active' : (array_search($status, array_keys($statuses)) < array_search($requisition->status, array_keys($statuses)) ? 'completed' : '') }}">
+                            @php
+                                $statusIndex = array_search($status, array_keys($statuses));
+                                $isCompleted = $statusIndex < $currentStatusIndex;
+                                $isCurrent = $status === $requisition->status;
+                                $isFuture = $statusIndex > $currentStatusIndex;
+                            @endphp
+                            
+                            <div class="timeline-item {{ $isCurrent ? 'active' : ($isCompleted ? 'completed' : '') }}">
                                 <div class="timeline-marker"></div>
                                 <div class="timeline-content">
                                     <span class="me-2">{{ $info['icon'] }}</span>
                                     <strong>{{ $info['label'] }}</strong>
-                                    @if($requisition->status === $status)
+                                    @if($isCurrent)
                                         <small class="text-success ms-2">Current</small>
                                     @endif
                                 </div>
@@ -315,6 +349,23 @@
 
 .timeline-content {
     padding-bottom: 10px;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.badge {
+    font-size: 0.75em;
+    padding: 0.35em 0.65em;
 }
 </style>
 @endsection

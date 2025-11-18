@@ -99,6 +99,7 @@
                                         <th>Project</th>
                                         <th>Type</th>
                                         <th>Amount</th>
+                                        <th>Actual Amount</th>
                                         <th>Status</th>
                                         <th>Date</th>
                                         <th>Action</th>
@@ -106,6 +107,10 @@
                                 </thead>
                                 <tbody>
                                     @foreach($recentRequisitions as $requisition)
+                                        @php
+                                            $showActualAmount = in_array($requisition->status, ['delivered', 'completed']) && 
+                                                              $requisition->actual_amount != $requisition->estimated_total;
+                                        @endphp
                                         <tr>
                                             <td><strong>{{ $requisition->ref }}</strong></td>
                                             <td>{{ $requisition->project->name }}</td>
@@ -114,7 +119,20 @@
                                                     {{ ucfirst($requisition->type) }}
                                                 </span>
                                             </td>
-                                            <td>UGX {{ number_format($requisition->estimated_total, 2) }}</td>
+                                            <td>
+                                                UGX {{ number_format($requisition->estimated_total, 2) }}
+                                                @if($showActualAmount)
+                                                    <br><small class="text-muted">Original</small>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($showActualAmount)
+                                                    <strong class="text-success">UGX {{ number_format($requisition->actual_amount, 2) }}</strong>
+                                                    <br><small class="text-success">Actual</small>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
                                             <td>
                                                 <span class="badge {{ $requisition->getStatusBadgeClass() }}">
                                                     {{ $requisition->getCurrentStage() }}

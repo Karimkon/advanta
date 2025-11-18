@@ -131,21 +131,24 @@ class EngineerRequisitionController extends Controller
         }
     }
 
-    public function show(Requisition $requisition)
-    {
-        // Authorization - ensure engineer owns this requisition
-        $this->authorizeRequisitionAccess($requisition);
-
-        $requisition->load([
-            'project', 
-            'requester', 
-            'items', 
-            'approvals.approver',
-            'store'
-        ]);
-
-        return view('engineer.requisitions.show', compact('requisition'));
+   // In your EngineerRequisitionController show method
+public function show(Requisition $requisition)
+{
+    // Verify the requisition belongs to the current engineer
+    if ($requisition->requested_by !== auth()->id()) {
+        abort(403, 'Unauthorized access to this requisition.');
     }
+
+    $requisition->load([
+        'project',
+        'items', 
+        'approvals.approver',
+        'lpo.items',
+        'lpo.receivedItems.lpoItem' // Add this line
+    ]);
+
+    return view('engineer.requisitions.show', compact('requisition'));
+}
 
     public function pending()
     {

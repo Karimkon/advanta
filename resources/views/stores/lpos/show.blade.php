@@ -1,33 +1,10 @@
-@extends('procurement.layouts.app')
+@extends('stores.layouts.app')
 
-@section('title', 'LPO ' . $lpo->lpo_number)
+@section('title', 'LPO ' . $lpo->lpo_number . ' - ' . $store->name)
 
 @section('content')
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-1">LPO: {{ $lpo->lpo_number }}</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{{ route('procurement.dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('procurement.lpos.index') }}">LPO Management</a></li>
-                    <li class="breadcrumb-item active">{{ $lpo->lpo_number }}</li>
-                </ol>
-            </nav>
-        </div>
-        <div class="btn-group">
-            <a href="{{ route('procurement.lpos.index') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back
-            </a>
-            <button class="btn btn-primary" onclick="window.print()">
-                <i class="bi bi-printer"></i> Print LPO
-            </button>
-        </div>
-    </div>
-
     <div class="row">
-        <!-- LPO Details -->
         <div class="col-lg-8">
             <!-- LPO Header -->
             <div class="card shadow-sm mb-4">
@@ -38,17 +15,19 @@
                             <p class="mb-1"><strong>LPO Number:</strong> {{ $lpo->lpo_number }}</p>
                             <p class="mb-1"><strong>Requisition:</strong> {{ $lpo->requisition->ref }}</p>
                             <p class="mb-1"><strong>Project:</strong> {{ $lpo->requisition->project->name }}</p>
-                            <p class="mb-1"><strong>Prepared By:</strong> {{ $lpo->preparer->name ?? 'N/A' }}</p>
+                            <p class="mb-1"><strong>Store:</strong> {{ $store->name }}</p>
                         </div>
                         <div class="col-md-6 text-end">
-                            <p class="mb-1"><strong>Date:</strong> {{ $lpo->created_at->format('M d, Y') }}</p>
                             <p class="mb-1"><strong>Status:</strong> 
-                                <span class="badge bg-{{ $lpo->status === 'issued' ? 'success' : ($lpo->status === 'delivered' ? 'info' : 'warning') }}">
+                                <span class="badge bg-{{ $lpo->status === 'issued' ? 'warning' : 'success' }}">
                                     {{ ucfirst($lpo->status) }}
                                 </span>
                             </p>
+                            <p class="mb-1"><strong>Created Date:</strong> {{ $lpo->created_at->format('M d, Y') }}</p>
                             @if($lpo->issue_date)
                                 <p class="mb-1"><strong>Issue Date:</strong> {{ $lpo->issue_date->format('M d, Y') }}</p>
+                            @else
+                                <p class="mb-1"><strong>Issue Date:</strong> <span class="text-muted">Not issued yet</span></p>
                             @endif
                             @if($lpo->delivery_date)
                                 <p class="mb-1"><strong>Delivery Date:</strong> {{ $lpo->delivery_date->format('M d, Y') }}</p>
@@ -78,7 +57,7 @@
                 </div>
             </div>
 
-            <!-- LPO Items - FIXED SECTION -->
+            <!-- LPO Items -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Order Items</h5>
@@ -96,22 +75,15 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($lpo->items as $item)
+                                @foreach($lpo->items as $item)
                                     <tr>
-                                        <td>{{ $item->description ?? 'No description' }}</td>
+                                        <td>{{ $item->description }}</td>
                                         <td>{{ $item->quantity }}</td>
                                         <td>{{ $item->unit }}</td>
                                         <td>UGX {{ number_format($item->unit_price, 2) }}</td>
                                         <td>UGX {{ number_format($item->total_price, 2) }}</td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="text-center py-4 text-muted">
-                                            <i class="bi bi-exclamation-circle display-4 d-block mb-2"></i>
-                                            No items found in this LPO
-                                        </td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                             <tfoot class="table-light">
                                 <tr>
@@ -159,56 +131,51 @@
                 <div class="card-body">
                     @if($lpo->status === 'draft')
                         <div class="alert alert-warning">
-                            <strong>Draft LPO:</strong> Ready to be issued to supplier.
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Draft LPO:</strong> Not yet issued to supplier.
                         </div>
-                        
-                        <form action="{{ route('procurement.lpos.issue', $lpo) }}" method="POST" class="d-grid mb-3">
-                            @csrf
-                            <button type="submit" class="btn btn-success" 
-                                    onclick="return confirm('Issue this LPO to supplier? This action cannot be undone.')">
-                                <i class="bi bi-send"></i> Issue LPO to Supplier
-                            </button>
-                        </form>
 
                     @elseif($lpo->status === 'issued')
                         <div class="alert alert-info">
+                            <i class="bi bi-truck"></i>
                             <strong>LPO Issued:</strong> Waiting for supplier delivery.
                         </div>
                         
+                        <a href="{{ route('stores.lpos.confirm-delivery', ['store' => $store, 'lpo' => $lpo]) }}" 
+                           class="btn btn-success w-100 mb-3">
+                            <i class="bi bi-check-circle"></i> Confirm Delivery
+                        </a>
 
                     @elseif($lpo->status === 'delivered')
                         <div class="alert alert-success">
-                            <strong>Delivered:</strong> Items received from supplier.
+                            <i class="bi bi-check-circle"></i>
+                            <strong>Delivered:</strong> Items received in store inventory.
                         </div>
                         
                         @if($lpo->delivery_date)
                             <p class="mb-1"><strong>Delivery Date:</strong> {{ $lpo->delivery_date->format('M d, Y') }}</p>
-                        @else
-                            <p class="mb-1"><strong>Delivery Date:</strong> <span class="text-muted">Not recorded</span></p>
+                        @endif
+                        @if($lpo->delivery_notes)
+                            <p class="mb-1"><strong>Delivery Notes:</strong> {{ $lpo->delivery_notes }}</p>
                         @endif
                     @endif
 
-                    <hr class="my-3">
+                    <hr>
 
-                    <!-- Debug Info (remove in production) -->
-                    @if($lpo->items->count() === 0)
-                        <div class="alert alert-warning">
-                            <small><strong>Debug:</strong> No LPO items found. Items may not have been created properly.</small>
-                        </div>
-                    @endif
-
-                    <!-- Related Requisition -->
-                    <div class="text-center">
-                        <a href="{{ route('procurement.requisitions.show', $lpo->requisition) }}" 
-                           class="btn btn-outline-primary w-100">
-                            <i class="bi bi-file-earmark-text"></i> View Requisition
+                    <!-- Navigation -->
+                    <div class="d-grid gap-2">
+                        <a href="{{ route('stores.lpos.index', $store) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-left"></i> Back to LPOs
+                        </a>
+                        <a href="{{ route('stores.dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-house"></i> Store Dashboard
                         </a>
                     </div>
                 </div>
             </div>
 
             <!-- LPO Timeline -->
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">LPO Timeline</h5>
                 </div>
@@ -243,21 +210,16 @@
                 </div>
             </div>
 
-            <!-- Requisition Summary -->
-            <div class="card shadow-sm mt-4">
+            <!-- Store Information -->
+            <div class="card shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Requisition Summary</h5>
+                    <h5 class="mb-0">Store Information</h5>
                 </div>
                 <div class="card-body">
-                    <p class="mb-1"><strong>Reference:</strong> {{ $lpo->requisition->ref }}</p>
-                    <p class="mb-1"><strong>Project:</strong> {{ $lpo->requisition->project->name }}</p>
-                    <p class="mb-1"><strong>Requested By:</strong> {{ $lpo->requisition->requester->name }}</p>
-                    <p class="mb-1"><strong>Urgency:</strong> 
-                        <span class="badge {{ $lpo->requisition->getUrgencyBadgeClass() }}">
-                            {{ ucfirst($lpo->requisition->urgency) }}
-                        </span>
-                    </p>
-                    <p class="mb-1"><strong>Requisition Items:</strong> {{ $lpo->requisition->items->count() }}</p>
+                    <p class="mb-1"><strong>Store:</strong> {{ $store->name }}</p>
+                    <p class="mb-1"><strong>Type:</strong> {{ $store->type }}</p>
+                    <p class="mb-1"><strong>Project:</strong> {{ $store->project->name }}</p>
+                    <p class="mb-1"><strong>Location:</strong> {{ $store->location ?? 'N/A' }}</p>
                 </div>
             </div>
         </div>
@@ -298,20 +260,6 @@
 
 .timeline-content {
     padding-bottom: 10px;
-}
-
-@media print {
-    .sidebar, .mobile-toggle, .btn-group {
-        display: none !important;
-    }
-    .content {
-        margin-left: 0 !important;
-        padding: 0 !important;
-    }
-    .card {
-        border: 1px solid #000 !important;
-        box-shadow: none !important;
-    }
 }
 </style>
 @endsection

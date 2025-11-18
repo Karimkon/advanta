@@ -4,8 +4,11 @@ namespace App\Http\Controllers\CEO;
 
 use App\Http\Controllers\Controller;
 use App\Models\Requisition;
+use App\Models\RequisitionItem; 
 use App\Models\RequisitionApproval;
 use App\Models\Lpo;
+use App\Models\LpoItem; 
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -188,5 +191,148 @@ public function pending()
             DB::rollBack();
             return back()->with('error', 'Failed to reject requisition: ' . $e->getMessage());
         }
+    }
+
+      public function edit(Requisition $requisition)
+    {
+        // Authorization - only allow editing of procurement and ceo_approved requisitions
+        $allowedStatuses = [
+            Requisition::STATUS_PROCUREMENT,
+            Requisition::STATUS_CEO_APPROVED
+        ];
+
+        if (!in_array($requisition->status, $allowedStatuses)) {
+            abort(403, 'Only requisitions in procurement or CEO-approved status can be edited.');
+        }
+
+        $requisition->load(['project', 'items', 'approvals', 'lpo']);
+        $suppliers = Supplier::all();
+
+        return view('ceo.requisitions.edit', compact('requisition', 'suppliers'));
+    }
+
+    public function update(Request $request, Requisition $requisition)
+    {
+        // Authorization - only allow editing of procurement and ceo_approved requisitions
+        $allowedStatuses = [
+            Requisition::STATUS_PROCUREMENT,
+            Requisition::STATUS_CEO_APPROVED
+        ];
+
+        if (!in_array($requisition->status, $allowedStatuses)) {
+            abort(403, 'Only requisitions in procurement or CEO-approved status can be edited.');
+        }
+
+        $validated = $request->validate([
+            'urgency' => 'required|in:low,medium,high',
+            'reason' => 'required|string|max:1000',
+            'items' => 'required|array|min:1',
+            'items.*.name' => 'required|string|max:255',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit' => 'required|string|max:50',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.notes' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Store old values for audit trail
+            $oldValues = [
+                'urgency' => $requisition->urgency,
+                'reason' => $requisition->reason,
+                'estimated_total' => $requisition->estimated_total,
+            ];
+
+            // Calculate new total
+            $estimatedTotal = 0;
+            foreach ($validated['items'] as $item) {
+                $estimatedTotal += $item['quantity'] * $item['unit_price'];
+            }
+
+            // Update requisition
+            $requisition->update([
+                'urgency' => $validated['urgency'],
+                'estimated_total' => $estimatedTotal,
+                'reason' => $validated['reason'],
+            ]);
+
+            // Delete existing items and create new ones
+            $requisition->items()->delete();
+            foreach ($validated['items'] as $itemData) {
+                RequisitionItem::create([
+                    'requisition_id' => $requisition->id,
+                    'name' => $itemData['name'],
+                    'quantity' => $itemData['quantity'],
+                    'unit' => $itemData['unit'],
+                    'unit_price' => $itemData['unit_price'],
+                    'total_price' => $itemData['quantity'] * $itemData['unit_price'],
+                    'notes' => $itemData['notes'] ?? null,
+                ]);
+            }
+
+            // Update LPO if it exists
+            if ($requisition->lpo) {
+                $requisition->lpo->update([
+                    'subtotal' => $estimatedTotal,
+                    'total' => $estimatedTotal,
+                ]);
+
+                // Update LPO items
+                $requisition->lpo->items()->delete();
+                foreach ($validated['items'] as $itemData) {
+                    LpoItem::create([
+                        'lpo_id' => $requisition->lpo->id,
+                        'inventory_item_id' => null,
+                        'description' => $itemData['name'],
+                        'quantity' => $itemData['quantity'],
+                        'unit' => $itemData['unit'],
+                        'unit_price' => $itemData['unit_price'],
+                        'total_price' => $itemData['quantity'] * $itemData['unit_price'],
+                    ]);
+                }
+            }
+
+            // Create edit approval record for audit trail
+            $changes = $this->getChangesDescription($oldValues, $requisition);
+            
+            RequisitionApproval::create([
+                'requisition_id' => $requisition->id,
+                'approved_by' => auth()->id(),
+                'role' => 'ceo',
+                'action' => 'edited',
+                'comment' => 'Requisition updated by CEO: ' . $changes,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('ceo.requisitions.show', $requisition)
+                ->with('success', 'Requisition updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to update requisition: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate description of changes for audit trail
+     */
+    private function getChangesDescription($oldValues, $requisition)
+    {
+        $changes = [];
+        
+        if ($oldValues['urgency'] != $requisition->urgency) {
+            $changes[] = "Urgency changed from {$oldValues['urgency']} to {$requisition->urgency}";
+        }
+        
+        if ($oldValues['estimated_total'] != $requisition->estimated_total) {
+            $changes[] = "Total amount changed from UGX " . number_format($oldValues['estimated_total'], 2) . " to UGX " . number_format($requisition->estimated_total, 2);
+        }
+        
+        if ($oldValues['reason'] != $requisition->reason) {
+            $changes[] = "Reason updated";
+        }
+        
+        return $changes ? implode(', ', $changes) : 'Details updated';
     }
 }

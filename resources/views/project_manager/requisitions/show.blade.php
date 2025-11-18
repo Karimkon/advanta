@@ -148,6 +148,14 @@
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Quick Actions</h5>
                 </div>
+
+                {{-- In the actions section --}}
+@if($requisition->canBeEdited())
+    <a href="{{ route('project_manager.requisitions.edit', $requisition) }}" 
+       class="btn btn-outline-warning btn-sm" title="Edit">
+        <i class="bi bi-pencil"></i> Edit
+    </a>
+@endif
                 <div class="card-body">
                     @if($requisition->status === 'pending' && $requisition->requested_by !== auth()->id())
                         <div class="alert alert-warning">

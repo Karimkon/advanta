@@ -7,6 +7,7 @@ use App\Models\Store;
 use App\Models\InventoryItem;
 use App\Models\StoreRelease;
 use App\Models\Requisition;
+use App\Models\Lpo;
 use Illuminate\Http\Request;
 
 class StoresDashboardController extends Controller
@@ -78,6 +79,13 @@ class StoresDashboardController extends Controller
             ->take(5)
             ->get();
 
+        // Get pending LPOs count - ADD THIS
+        $pendingLposCount = Lpo::whereHas('requisition', function($query) use ($currentStore) {
+                $query->where('project_id', $currentStore->project_id);
+            })
+            ->where('status', 'issued')
+            ->count();
+
         // Share pending count with layout
         view()->share('pendingCount', $pendingRequisitions->count());
 
@@ -88,7 +96,8 @@ class StoresDashboardController extends Controller
             'inventoryItems',
             'lowStockItems',
             'pendingRequisitions',
-            'recentReleases'
+            'recentReleases',
+            'pendingLposCount'
         ));
     }
 }

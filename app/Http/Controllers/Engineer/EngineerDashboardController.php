@@ -23,15 +23,20 @@ class EngineerDashboardController extends Controller
             ->where('status', 'pending')
             ->count();
         $approvedRequisitions = Requisition::where('requested_by', $user->id)
-            ->where('status', 'project_manager_approved')
+            ->whereIn('status', ['project_manager_approved', 'operations_approved', 'procurement', 'ceo_approved', 'in_progress'])
             ->count();
         
-        // Recent requisitions
+        // Recent requisitions with actual amounts
         $recentRequisitions = Requisition::where('requested_by', $user->id)
-            ->with(['project', 'items'])
+            ->with(['project', 'items', 'lpo.receivedItems'])
             ->latest()
             ->take(5)
-            ->get();
+            ->get()
+            ->map(function($requisition) {
+                // Calculate actual amount based on received quantities
+                $requisition->actual_amount = $this->calculateActualAmount($requisition);
+                return $requisition;
+            });
 
         return view('engineer.dashboard', compact(
             'projects',
@@ -40,5 +45,25 @@ class EngineerDashboardController extends Controller
             'approvedRequisitions',
             'recentRequisitions'
         ));
+    }
+
+    /**
+     * Calculate actual amount based on received quantities
+     */
+    private function calculateActualAmount($requisition)
+    {
+        if (!$requisition->lpo || !$requisition->lpo->receivedItems) {
+            return $requisition->estimated_total;
+        }
+
+        $actualAmount = 0;
+        
+        foreach ($requisition->lpo->receivedItems as $receivedItem) {
+            if ($receivedItem->lpoItem && $receivedItem->quantity_received > 0) {
+                $actualAmount += $receivedItem->quantity_received * $receivedItem->lpoItem->unit_price;
+            }
+        }
+
+        return $actualAmount > 0 ? $actualAmount : $requisition->estimated_total;
     }
 }

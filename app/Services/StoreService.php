@@ -7,11 +7,12 @@ use App\Models\InventoryItem;
 use App\Models\InventoryLog;
 use App\Models\Store;
 use App\Models\Project;
+use App\Models\LpoReceivedItem; 
 use Illuminate\Support\Facades\DB;
 
 class StoreService
 {
-    public function processDeliveredLpo(Lpo $lpo)
+     public function processDeliveredLpo(Lpo $lpo, $receivedItems = null)
     {
         DB::beginTransaction();
         try {
@@ -26,7 +27,23 @@ class StoreService
             }
 
             foreach ($lpo->items as $lpoItem) {
-                $this->addItemToStore($lpoItem, $store, $project, $lpo);
+                // Get the received quantity (default to full quantity if not specified)
+                $receivedQty = $receivedItems[$lpoItem->id]['quantity_received'] ?? $lpoItem->quantity;
+                $condition = $receivedItems[$lpoItem->id]['condition'] ?? 'good';
+                
+                if ($receivedQty > 0) {
+                    $this->addItemToStore($lpoItem, $store, $project, $lpo, $receivedQty, $condition);
+                    
+                    // Record what was actually received
+                    LpoReceivedItem::create([
+                        'lpo_id' => $lpo->id,
+                        'lpo_item_id' => $lpoItem->id,
+                        'quantity_ordered' => $lpoItem->quantity,
+                        'quantity_received' => $receivedQty,
+                        'condition' => $condition,
+                        'received_by' => auth()->id(),
+                    ]);
+                }
             }
 
             DB::commit();
@@ -38,7 +55,7 @@ class StoreService
         }
     }
 
-    private function addItemToStore($lpoItem, $store, $project, $lpo)
+    private function addItemToStore($lpoItem, $store, $project, $lpo, $receivedQty, $condition)
     {
         // Find existing inventory item or create new one
         $inventoryItem = InventoryItem::where('store_id', $store->id)
@@ -48,7 +65,7 @@ class StoreService
         if ($inventoryItem) {
             // Update existing item
             $oldQuantity = $inventoryItem->quantity;
-            $newQuantity = $oldQuantity + $lpoItem->quantity;
+            $newQuantity = $oldQuantity + $receivedQty;
             
             $inventoryItem->update([
                 'quantity' => $newQuantity,
@@ -63,14 +80,14 @@ class StoreService
                 'category' => 'General',
                 'unit_price' => $lpoItem->unit_price,
                 'unit' => $lpoItem->unit,
-                'quantity' => $lpoItem->quantity,
+                'quantity' => $receivedQty,
                 'reorder_level' => 10, // Default reorder level
                 'track_per_project' => true,
                 'store_id' => $store->id,
                 'project_id' => $project->id,
             ]);
             $oldQuantity = 0;
-            $newQuantity = $lpoItem->quantity;
+            $newQuantity = $receivedQty;
         }
 
         // Create inventory log
@@ -79,10 +96,11 @@ class StoreService
             'project_id' => $project->id,
             'user_id' => auth()->id(),
             'type' => 'in',
-            'quantity' => $lpoItem->quantity,
+            'quantity' => $receivedQty,
             'unit_price' => $lpoItem->unit_price,
             'balance_after' => $newQuantity,
-            'notes' => "LPO Delivery: {$lpo->lpo_number} - {$lpoItem->description}",
+            'notes' => "LPO Delivery: {$lpo->lpo_number} - {$lpoItem->description}" . 
+                      ($condition !== 'good' ? " (Condition: {$condition})" : ""),
         ]);
     }
 

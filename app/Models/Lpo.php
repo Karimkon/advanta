@@ -13,8 +13,8 @@ class Lpo extends Model
         'lpo_number',
         'requisition_id',
         'supplier_id',
-        'prepared_by', // UNCOMMENT THIS
-        'issued_by',   // UNCOMMENT THIS
+        'prepared_by',
+        'issued_by',
         'issued_at',
         'status',
         'subtotal',
@@ -35,7 +35,12 @@ class Lpo extends Model
         'delivery_date' => 'datetime',
     ];
 
-    // UNCOMMENT THESE RELATIONSHIPS
+    // Add an accessor for issue_date to maintain compatibility
+    public function getIssueDateAttribute()
+    {
+        return $this->issued_at;
+    }
+
     public function preparer()
     {
         return $this->belongsTo(User::class, 'prepared_by');
@@ -46,7 +51,6 @@ class Lpo extends Model
         return $this->belongsTo(User::class, 'issued_by');
     }
 
-    // Keep other relationships
     public function payments()
     {
         return $this->hasMany(Payment::class);
@@ -70,5 +74,10 @@ class Lpo extends Model
     public function deliveries()
     {
         return $this->hasMany(Delivery::class);
+    }
+
+    public function receivedItems()
+    {
+        return $this->hasMany(LpoReceivedItem::class);
     }
 }

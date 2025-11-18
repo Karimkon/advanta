@@ -146,6 +146,14 @@
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Quick Actions</h5>
                 </div>
+
+                {{-- In the actions section of operations/requisitions/show.blade.php --}}
+@if($requisition->status === 'project_manager_approved')
+    <a href="{{ route('operations.requisitions.edit', $requisition) }}" 
+       class="btn btn-outline-warning btn-sm" title="Edit">
+        <i class="bi bi-pencil"></i> Edit
+    </a>
+@endif
                 <div class="card-body">
                     @if($requisition->status === 'project_manager_approved')
                         <div class="alert alert-warning">

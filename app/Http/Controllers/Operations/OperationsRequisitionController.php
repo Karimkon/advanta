@@ -7,6 +7,7 @@ use App\Models\Requisition;
 use App\Models\RequisitionApproval;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\RequisitionItem; 
 
 class OperationsRequisitionController extends Controller
 {
@@ -178,5 +179,115 @@ class OperationsRequisitionController extends Controller
             DB::rollBack();
             return back()->with('error', 'Failed to send requisition to procurement: ' . $e->getMessage());
         }
+    }
+
+      public function edit(Requisition $requisition)
+    {
+        // Authorization - only allow editing of project_manager_approved requisitions
+        if ($requisition->status !== Requisition::STATUS_PROJECT_MANAGER_APPROVED) {
+            abort(403, 'Only project-manager-approved requisitions can be edited by operations.');
+        }
+
+        $requisition->load(['project', 'items', 'approvals']);
+
+        return view('operations.requisitions.edit', compact('requisition'));
+    }
+
+    public function update(Request $request, Requisition $requisition)
+    {
+        // Authorization - only allow editing of project_manager_approved requisitions
+        if ($requisition->status !== Requisition::STATUS_PROJECT_MANAGER_APPROVED) {
+            abort(403, 'Only project-manager-approved requisitions can be edited by operations.');
+        }
+
+        $validated = $request->validate([
+            'urgency' => 'required|in:low,medium,high',
+            'reason' => 'required|string|max:1000',
+            'items' => 'required|array|min:1',
+            'items.*.name' => 'required|string|max:255',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit' => 'required|string|max:50',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.notes' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Store old values for audit trail
+            $oldValues = [
+                'urgency' => $requisition->urgency,
+                'reason' => $requisition->reason,
+                'estimated_total' => $requisition->estimated_total,
+            ];
+
+            // Calculate new total
+            $estimatedTotal = 0;
+            foreach ($validated['items'] as $item) {
+                $estimatedTotal += $item['quantity'] * $item['unit_price'];
+            }
+
+            // Update requisition
+            $requisition->update([
+                'urgency' => $validated['urgency'],
+                'estimated_total' => $estimatedTotal,
+                'reason' => $validated['reason'],
+            ]);
+
+            // Delete existing items and create new ones
+            $requisition->items()->delete();
+            foreach ($validated['items'] as $itemData) {
+                RequisitionItem::create([
+                    'requisition_id' => $requisition->id,
+                    'name' => $itemData['name'],
+                    'quantity' => $itemData['quantity'],
+                    'unit' => $itemData['unit'],
+                    'unit_price' => $itemData['unit_price'],
+                    'total_price' => $itemData['quantity'] * $itemData['unit_price'],
+                    'notes' => $itemData['notes'] ?? null,
+                ]);
+            }
+
+            // Create edit approval record for audit trail
+            $changes = $this->getChangesDescription($oldValues, $requisition);
+            
+            RequisitionApproval::create([
+                'requisition_id' => $requisition->id,
+                'approved_by' => auth()->id(),
+                'role' => 'operations',
+                'action' => 'edited',
+                'comment' => 'Requisition updated by Operations: ' . $changes,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('operations.requisitions.show', $requisition)
+                ->with('success', 'Requisition updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to update requisition: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate description of changes for audit trail
+     */
+    private function getChangesDescription($oldValues, $requisition)
+    {
+        $changes = [];
+        
+        if ($oldValues['urgency'] != $requisition->urgency) {
+            $changes[] = "Urgency changed from {$oldValues['urgency']} to {$requisition->urgency}";
+        }
+        
+        if ($oldValues['estimated_total'] != $requisition->estimated_total) {
+            $changes[] = "Total amount changed from UGX " . number_format($oldValues['estimated_total'], 2) . " to UGX " . number_format($requisition->estimated_total, 2);
+        }
+        
+        if ($oldValues['reason'] != $requisition->reason) {
+            $changes[] = "Reason updated";
+        }
+        
+        return $changes ? implode(', ', $changes) : 'Details updated';
     }
 }

@@ -284,4 +284,145 @@ class ProjectManagerRequisitionController extends Controller
 
         return json_encode($attachments);
     }
+
+    public function edit(Requisition $requisition)
+    {
+        // Authorization - ensure project manager owns this requisition
+        $this->authorizeRequisitionAccess($requisition);
+
+        // Only allow editing of pending requisitions
+        if (!$requisition->canBeEdited()) {
+            return redirect()->route('project_manager.requisitions.show', $requisition)
+                ->with('error', 'Only pending requisitions can be edited.');
+        }
+
+        $user = auth()->user();
+        
+        // Get projects managed by this project manager
+        $projects = Project::whereHas('users', function($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->get();
+
+        // Get project stores with their inventory
+        $projectStores = Store::whereHas('project.users', function($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->get();
+
+        $requisition->load('items');
+
+        return view('project_manager.requisitions.edit', compact('requisition', 'projects', 'projectStores'));
+    }
+
+    public function update(Request $request, Requisition $requisition)
+    {
+        // Authorization - ensure project manager owns this requisition
+        $this->authorizeRequisitionAccess($requisition);
+
+        // Only allow editing of pending requisitions
+        if (!$requisition->canBeEdited()) {
+            return back()->with('error', 'Only pending requisitions can be edited.');
+        }
+
+        $validated = $request->validate([
+            'project_id' => 'required|exists:projects,id',
+            'urgency' => 'required|in:low,medium,high',
+            'reason' => 'required|string|max:1000',
+            'items' => 'required|array|min:1',
+            'items.*.name' => 'required|string|max:255',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit' => 'required|string|max:50',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.notes' => 'nullable|string|max:500',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'file|max:10240',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Calculate new total
+            $estimatedTotal = 0;
+            foreach ($validated['items'] as $item) {
+                $estimatedTotal += $item['quantity'] * $item['unit_price'];
+            }
+
+            // Store old values for audit trail
+            $oldValues = [
+                'project_id' => $requisition->project_id,
+                'urgency' => $requisition->urgency,
+                'reason' => $requisition->reason,
+                'estimated_total' => $requisition->estimated_total,
+            ];
+
+            // Update requisition
+            $requisition->update([
+                'project_id' => $validated['project_id'],
+                'urgency' => $validated['urgency'],
+                'estimated_total' => $estimatedTotal,
+                'reason' => $validated['reason'],
+                'attachments' => $this->handleAttachments($request, $requisition->attachments),
+            ]);
+
+            // Delete existing items and create new ones
+            $requisition->items()->delete();
+            foreach ($validated['items'] as $itemData) {
+                RequisitionItem::create([
+                    'requisition_id' => $requisition->id,
+                    'name' => $itemData['name'],
+                    'quantity' => $itemData['quantity'],
+                    'unit' => $itemData['unit'],
+                    'unit_price' => $itemData['unit_price'],
+                    'total_price' => $itemData['quantity'] * $itemData['unit_price'],
+                    'notes' => $itemData['notes'] ?? null,
+                ]);
+            }
+
+            // Create edit approval record for audit trail
+            $changes = $this->getChangesDescription($oldValues, $requisition);
+            
+            RequisitionApproval::create([
+                'requisition_id' => $requisition->id,
+                'approved_by' => auth()->id(),
+                'role' => 'project_manager',
+                'action' => 'edited',
+                'comment' => 'Requisition updated: ' . $changes,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('project_manager.requisitions.show', $requisition)
+                ->with('success', 'Requisition updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to update requisition: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate description of changes for audit trail
+     */
+    private function getChangesDescription($oldValues, $requisition)
+    {
+        $changes = [];
+        
+        if ($oldValues['project_id'] != $requisition->project_id) {
+            $oldProject = Project::find($oldValues['project_id']);
+            $newProject = Project::find($requisition->project_id);
+            $changes[] = "Project changed from {$oldProject->name} to {$newProject->name}";
+        }
+        
+        if ($oldValues['urgency'] != $requisition->urgency) {
+            $changes[] = "Urgency changed from {$oldValues['urgency']} to {$requisition->urgency}";
+        }
+        
+        if ($oldValues['estimated_total'] != $requisition->estimated_total) {
+            $changes[] = "Total amount changed from UGX " . number_format($oldValues['estimated_total'], 2) . " to UGX " . number_format($requisition->estimated_total, 2);
+        }
+        
+        if ($oldValues['reason'] != $requisition->reason) {
+            $changes[] = "Reason updated";
+        }
+        
+        return $changes ? implode(', ', $changes) : 'Details updated';
+    }
 }

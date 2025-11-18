@@ -20,6 +20,12 @@
             <a href="{{ route('procurement.requisitions.index') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
+            @if(in_array($requisition->status, ['procurement', 'ceo_approved']))
+                <a href="{{ route('procurement.requisitions.edit', $requisition) }}" 
+                   class="btn btn-outline-warning" title="Edit">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+            @endif
         </div>
     </div>
 
@@ -141,7 +147,7 @@
 
         <!-- Sidebar Actions -->
         <div class="col-lg-4">
-            <!-- Quick Actions -->
+            <!-- Procurement Actions -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Procurement Actions</h5>
@@ -160,72 +166,73 @@
                             </button>
                         </form>
 
-        @elseif($requisition->status === 'procurement')
-    <!-- STEP 2: Send to CEO for Approval -->
-    <div class="alert alert-info">
-        <strong>Step 2:</strong> Create LPO and send to CEO for approval.
-    </div>
+                    @elseif($requisition->status === 'procurement')
+                        <!-- STEP 2: Send to CEO for Approval -->
+                        <div class="alert alert-info">
+                            <strong>Step 2:</strong> Create LPO and send to CEO for approval.
+                        </div>
 
-    <!-- Show any errors or success messages -->
-    @if($errors->any())
-        <div class="alert alert-danger">
-            <strong>Form Errors:</strong>
-            <ul>
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+                        <!-- Show any errors or success messages -->
+                        @if($errors->any())
+                            <div class="alert alert-danger">
+                                <strong>Form Errors:</strong>
+                                <ul>
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
 
-    @if(session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
+                        @if(session('success'))
+                            <div class="alert alert-success">
+                                {{ session('success') }}
+                            </div>
+                        @endif
 
-    @if(session('error'))
-        <div class="alert alert-danger">
-            {{ session('error') }}
-        </div>
-    @endif
+                        @if(session('error'))
+                            <div class="alert alert-danger">
+                                {{ session('error') }}
+                            </div>
+                        @endif
 
-    <!-- Simple LPO Creation Form -->
-    <form action="{{ route('procurement.requisitions.create-lpo', $requisition) }}" method="POST">
-        @csrf
-        <div class="mb-3">
-            <label for="supplier_id" class="form-label">Select Supplier <span class="text-danger">*</span></label>
-            <select name="supplier_id" id="supplier_id" class="form-select" required>
-                <option value="">Choose Supplier</option>
-                @foreach($suppliers as $supplier)
-                    <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
-                @endforeach
-            </select>
-        </div>
-        
-        <div class="mb-3">
-            <label for="delivery_date" class="form-label">Delivery Date <span class="text-danger">*</span></label>
-            <input type="date" name="delivery_date" class="form-control" required 
-                   min="{{ date('Y-m-d', strtotime('+1 day')) }}">
-        </div>
-        
-        <div class="mb-3">
-            <label for="terms" class="form-label">Terms & Conditions</label>
-            <textarea name="terms" id="terms" class="form-control" rows="2" 
-                      placeholder="Payment terms, delivery terms, etc."></textarea>
-        </div>
-        
-        <div class="mb-3">
-            <label for="notes" class="form-label">Additional Notes</label>
-            <textarea name="notes" id="notes" class="form-control" rows="2" 
-                      placeholder="Any additional notes..."></textarea>
-        </div>
-        
-        <button type="submit" class="btn btn-success w-100" 
-                onclick="return confirm('Create LPO and send to CEO for approval?')">
-            <i class="bi bi-receipt"></i> Create LPO & Send to CEO
-        </button>
-    </form>
+                        <!-- Simple LPO Creation Form -->
+                        <form action="{{ route('procurement.requisitions.create-lpo', $requisition) }}" method="POST">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="supplier_id" class="form-label">Select Supplier <span class="text-danger">*</span></label>
+                                <select name="supplier_id" id="supplier_id" class="form-select" required>
+                                    <option value="">Choose Supplier</option>
+                                    @foreach($suppliers as $supplier)
+                                        <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="delivery_date" class="form-label">Delivery Date <span class="text-danger">*</span></label>
+                                <input type="date" name="delivery_date" class="form-control" required 
+                                       min="{{ date('Y-m-d', strtotime('+1 day')) }}">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="terms" class="form-label">Terms & Conditions</label>
+                                <textarea name="terms" id="terms" class="form-control" rows="2" 
+                                          placeholder="Payment terms, delivery terms, etc."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Additional Notes</label>
+                                <textarea name="notes" id="notes" class="form-control" rows="2" 
+                                          placeholder="Any additional notes..."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success w-100" 
+                                    onclick="return confirm('Create LPO and send to CEO for approval?')">
+                                <i class="bi bi-receipt"></i> Create LPO & Send to CEO
+                            </button>
+                        </form>
+
                     @elseif($requisition->status === 'ceo_approved')
                         <div class="alert alert-success">
                             <strong>CEO Approved:</strong> Ready to issue LPO to supplier.
@@ -253,27 +260,18 @@
                     @elseif($requisition->status === 'lpo_issued')
                         <div class="alert alert-primary">
                             <strong>LPO Issued:</strong> Waiting for supplier delivery.
+                            <br><small class="text-muted">Store personnel will confirm delivery when items are received.</small>
                         </div>
                         
                         @if($requisition->lpo)
                             <a href="{{ route('procurement.lpos.show', $requisition->lpo) }}" class="btn btn-info w-100 mb-2">
                                 <i class="bi bi-eye"></i> View LPO
                             </a>
-                            
-                            @if($requisition->lpo->status === 'issued')
-                                <form action="{{ route('procurement.lpos.mark-delivered', $requisition->lpo) }}" method="POST" class="d-grid">
-                                    @csrf
-                                    <button type="submit" class="btn btn-success" 
-                                            onclick="return confirm('Mark this LPO as delivered?')">
-                                        <i class="bi bi-check-circle"></i> Mark as Delivered
-                                    </button>
-                                </form>
-                            @endif
                         @endif
 
                     @elseif($requisition->status === 'delivered')
                         <div class="alert alert-success">
-                            <strong>Delivered:</strong> Items received from supplier.
+                            <strong>Delivered:</strong> Items received by store.
                         </div>
                         
                     @else
@@ -383,6 +381,23 @@
 
 .timeline-content {
     padding-bottom: 10px;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.badge {
+    font-size: 0.75em;
+    padding: 0.35em 0.65em;
 }
 </style>
 @endsection

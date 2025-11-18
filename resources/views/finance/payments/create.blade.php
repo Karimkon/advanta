@@ -38,18 +38,62 @@
                                 <p><strong>Supplier:</strong> {{ $requisition->supplier->name ?? 'N/A' }}</p>
                             </div>
                             <div class="col-md-6">
-                                <p><strong>Total Amount:</strong> UGX {{ number_format($requisition->estimated_total, 2) }}</p>
+                                <p><strong>Original Amount:</strong> UGX {{ number_format($requisition->estimated_total, 2) }}</p>
+                                <p><strong>Actual Received Value:</strong> UGX {{ number_format($actualAmount, 2) }}</p>
                                 <p><strong>LPO Number:</strong> {{ $requisition->lpo->lpo_number ?? 'N/A' }}</p>
                                 <p><strong>Created:</strong> {{ $requisition->created_at->format('M d, Y') }}</p>
                             </div>
                         </div>
+
+                        <!-- Received Items Summary -->
+                        @if($requisition->lpo && $requisition->lpo->receivedItems->count() > 0)
+                        <div class="alert alert-info mb-4">
+                            <h6><i class="bi bi-info-circle"></i> Delivery Summary</h6>
+                            <p class="mb-2">Payment should be based on actual received quantities:</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Ordered</th>
+                                            <th>Received</th>
+                                            <th>Unit Price</th>
+                                            <th>Actual Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($requisition->lpo->receivedItems as $receivedItem)
+                                            @if($receivedItem->lpoItem && $receivedItem->quantity_received > 0)
+                                            <tr>
+                                                <td>{{ $receivedItem->lpoItem->description }}</td>
+                                                <td>{{ $receivedItem->quantity_ordered }}</td>
+                                                <td class="{{ $receivedItem->quantity_received < $receivedItem->quantity_ordered ? 'text-warning' : 'text-success' }}">
+                                                    {{ $receivedItem->quantity_received }}
+                                                </td>
+                                                <td>UGX {{ number_format($receivedItem->lpoItem->unit_price, 2) }}</td>
+                                                <td class="fw-bold">UGX {{ number_format($receivedItem->quantity_received * $receivedItem->lpoItem->unit_price, 2) }}</td>
+                                            </tr>
+                                            @endif
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-success">
+                                            <td colspan="4" class="text-end"><strong>Total Actual Value:</strong></td>
+                                            <td><strong>UGX {{ number_format($actualAmount, 2) }}</strong></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        @endif
 
                         <!-- Payment Details -->
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="amount" class="form-label">Payment Amount *</label>
                                 <input type="number" step="0.01" class="form-control" id="amount" name="amount" 
-                                       value="{{ $requisition->estimated_total }}" required>
+                                       value="{{ $actualAmount }}" required>
+                                <small class="text-muted">Based on actual received quantities: UGX {{ number_format($actualAmount, 2) }}</small>
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -143,16 +187,14 @@
                         <strong>Supplier:</strong> {{ $requisition->supplier->name ?? 'N/A' }}
                     </div>
                     <div class="mb-3">
-                        <strong>Type:</strong> 
-                        <span class="badge bg-{{ $requisition->type === 'store' ? 'info' : 'primary' }}">
-                            {{ ucfirst($requisition->type) }}
-                        </span>
+                        <strong>Delivery Status:</strong> 
+                        <span class="badge bg-success">Delivered</span>
                     </div>
                     <div class="mb-3">
-                        <strong>Urgency:</strong> 
-                        <span class="badge {{ $requisition->urgency === 'high' ? 'bg-danger' : ($requisition->urgency === 'medium' ? 'bg-warning' : 'bg-secondary') }}">
-                            {{ ucfirst($requisition->urgency) }}
-                        </span>
+                        <strong>Original Total:</strong> UGX {{ number_format($requisition->estimated_total, 2) }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Actual Value:</strong> UGX {{ number_format($actualAmount, 2) }}
                     </div>
                     <div>
                         <strong>Created:</strong> {{ $requisition->created_at->format('M d, Y H:i') }}
@@ -160,28 +202,24 @@
                 </div>
             </div>
 
-            <!-- Items Summary -->
+            <!-- Delivery Details -->
+            @if($requisition->lpo && $requisition->lpo->receivedItems->count() > 0)
             <div class="card shadow-sm mt-4">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Requisition Items</h5>
+                    <h5 class="mb-0">Delivery Details</h5>
                 </div>
                 <div class="card-body">
-                    @foreach($requisition->items as $item)
-                        <div class="border-bottom pb-2 mb-2">
-                            <strong>{{ $item->name }}</strong><br>
-                            <small class="text-muted">
-                                {{ $item->quantity }} {{ $item->unit }} × UGX {{ number_format($item->unit_price, 2) }}
-                            </small><br>
-                            <small class="text-success">
-                                Total: UGX {{ number_format($item->total_price, 2) }}
-                            </small>
-                        </div>
-                    @endforeach
-                    <div class="mt-2 fw-bold">
-                        Grand Total: UGX {{ number_format($requisition->estimated_total, 2) }}
-                    </div>
+                    <p><strong>Delivery Date:</strong> {{ $requisition->lpo->delivery_date->format('M d, Y') }}</p>
+                    <p><strong>Received Items:</strong> {{ $requisition->lpo->receivedItems->where('quantity_received', '>', 0)->count() }}</p>
+                    <p><strong>Delivery Rate:</strong> 
+                        {{ number_format(($requisition->lpo->receivedItems->sum('quantity_received') / $requisition->lpo->receivedItems->sum('quantity_ordered')) * 100, 1) }}%
+                    </p>
+                    @if($requisition->lpo->delivery_notes)
+                        <p><strong>Delivery Notes:</strong> {{ $requisition->lpo->delivery_notes }}</p>
+                    @endif
                 </div>
             </div>
+            @endif
         </div>
     </div>
 </div>

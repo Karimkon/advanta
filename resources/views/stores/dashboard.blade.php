@@ -27,8 +27,6 @@
             No stores assigned to your account. Please contact administration.
         </div>
     @else
-       
-
         <!-- Quick Stats -->
         <div class="row mb-4">
             <div class="col-xl-2 col-md-4">
@@ -129,6 +127,92 @@
                                 <i class="bi bi-clock fs-4 text-secondary"></i>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Stats Row for LPOs -->
+        <div class="row mb-4">
+            <!-- Pending LPOs Card -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card shadow-sm border-warning h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">
+                            <i class="bi bi-truck"></i> LPOs Awaiting Delivery
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="text-warning">{{ $pendingLposCount ?? 0 }}</h3>
+                        <p class="mb-2">LPOs waiting for delivery confirmation</p>
+                        
+                        @if($pendingLposCount > 0)
+                            <a href="{{ route('stores.lpos.index', $currentStore) }}" class="btn btn-warning btn-sm">
+                                <i class="bi bi-arrow-right"></i> Manage Deliveries
+                            </a>
+                        @else
+                            <span class="text-muted">No pending deliveries</span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card shadow-sm border-primary h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="bi bi-lightning"></i> Quick Actions
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{{ route('stores.inventory.index', $currentStore) }}" class="btn btn-outline-primary btn-sm text-start">
+                                <i class="bi bi-box-seam"></i> Manage Inventory
+                            </a>
+                            <a href="{{ route('stores.releases.index', $currentStore) }}" class="btn btn-outline-primary btn-sm text-start">
+                                <i class="bi bi-arrow-up-right"></i> Process Releases
+                            </a>
+                            <a href="{{ route('stores.lpos.index', $currentStore) }}" class="btn btn-outline-primary btn-sm text-start">
+                                <i class="bi bi-truck"></i> LPO Deliveries
+                            </a>
+                            <a href="{{ route('stores.movements.index', $currentStore) }}" class="btn btn-outline-primary btn-sm text-start">
+                                <i class="bi bi-arrow-left-right"></i> Stock Movements
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Card -->
+            <div class="col-xl-6 col-md-12">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0">
+                            <i class="bi bi-activity"></i> Recent Activity
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        @if($recentReleases->count() > 0)
+                            <div class="list-group list-group-flush">
+                                @foreach($recentReleases->take(3) as $release)
+                                    <div class="list-group-item px-0">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1">Release #{{ $release->id }}</h6>
+                                                <small class="text-muted">For {{ $release->requisition->ref }}</small>
+                                            </div>
+                                            <span class="badge bg-success">{{ $release->created_at->diffForHumans() }}</span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="text-center text-muted py-3">
+                                <i class="bi bi-info-circle display-6"></i>
+                                <p class="mt-2 mb-0">No recent activity</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -246,54 +330,8 @@
                                             </td>
                                             <td>{{ $requisition->created_at->format('M d, Y') }}</td>
                                             <td>
-                                                <a href="#" class="btn btn-sm btn-outline-primary">Process</a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        <!-- Recent Store Releases -->
-        @if($recentReleases->count() > 0)
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Recent Store Releases</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Release ID</th>
-                                        <th>Requisition</th>
-                                        <th>Project</th>
-                                        <th>Status</th>
-                                        <th>Date</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($recentReleases as $release)
-                                        <tr>
-                                            <td><strong>#{{ $release->id }}</strong></td>
-                                            <td>{{ $release->requisition->ref }}</td>
-                                            <td>{{ $release->requisition->project->name ?? 'N/A' }}</td>
-                                            <td>
-                                                <span class="badge bg-{{ $release->status === 'released' ? 'success' : 'warning' }}">
-                                                    {{ ucfirst($release->status) }}
-                                                </span>
-                                            </td>
-                                            <td>{{ $release->created_at->format('M d, Y') }}</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-primary">View</button>
+                                                <a href="{{ route('stores.releases.create', ['store' => $currentStore, 'requisition' => $requisition]) }}" 
+                                                   class="btn btn-sm btn-outline-primary">Process</a>
                                             </td>
                                         </tr>
                                     @endforeach

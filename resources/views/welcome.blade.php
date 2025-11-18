@@ -81,21 +81,7 @@
         </p>
     </div>
 
-    <!-- Option 2: If you prefer circular but with better styling, use this instead:
-    <div class="fade-in-up mb-8 logo-container">
-        <div class="bg-white p-3 rounded-full inline-block mb-6 shadow-2xl">
-            <img src="{{ asset('images/logo.png') }}" 
-                 alt="ADVANTA Logo" 
-                 class="h-20 w-20 rounded-full object-contain mx-auto">
-        </div>
-        <h1 class="text-4xl font-extrabold mb-4 tracking-tight">
-            ADVANTA – Project Management System
-        </h1>
-        <p class="text-lg text-gray-300 mb-10 max-w-3xl mx-auto">
-            Streamline projects, requisitions, LPOs, procurement, approvals, and reporting — all in one platform.
-        </p>
-    </div>
-    -->
+   
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
         <a href="/admin/login" class="role-card group p-6 rounded-2xl text-center">

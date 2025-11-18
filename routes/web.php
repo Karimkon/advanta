@@ -38,6 +38,7 @@ use App\Http\Controllers\Finance\FinancialReportsController;
 use App\Http\Controllers\CEO\CEOFinancialReportsController;     
 use App\Http\Controllers\Stores\StockMovementController; 
 use App\Http\Controllers\CEO\CEOInventoryController;   
+use App\Http\Controllers\Stores\StoreLpoController;
    
 
 // ----------------------
@@ -273,6 +274,8 @@ Route::middleware(['auth','role:operations'])->prefix('operations')->name('opera
         Route::get('/pending', [OperationsRequisitionController::class, 'pending'])->name('pending');
         Route::get('/approved', [OperationsRequisitionController::class, 'approved'])->name('approved');
         Route::get('/{requisition}', [OperationsRequisitionController::class, 'show'])->name('show');
+         Route::get('/{requisition}/edit', [OperationsRequisitionController::class, 'edit'])->name('edit');
+    Route::put('/{requisition}', [OperationsRequisitionController::class, 'update'])->name('update');
         Route::post('/{requisition}/approve', [OperationsRequisitionController::class, 'approve'])->name('approve');
         Route::post('/{requisition}/reject', [OperationsRequisitionController::class, 'reject'])->name('reject');
         Route::post('/{requisition}/send-to-procurement', [OperationsRequisitionController::class, 'sendToProcurement'])->name('send-to-procurement');
@@ -289,6 +292,8 @@ Route::middleware(['auth','role:procurement'])->prefix('procurement')->name('pro
         Route::get('/pending', [ProcurementRequisitionController::class, 'pending'])->name('pending');
         Route::get('/in-procurement', [ProcurementRequisitionController::class, 'inProcurement'])->name('in-procurement');
         Route::get('/{requisition}', [ProcurementRequisitionController::class, 'show'])->name('show');
+        Route::get('/{requisition}/edit', [ProcurementRequisitionController::class, 'edit'])->name('edit');
+    Route::put('/{requisition}', [ProcurementRequisitionController::class, 'update'])->name('update'); 
         Route::post('/{requisition}/start-procurement', [ProcurementRequisitionController::class, 'startProcurement'])->name('start-procurement');
         Route::post('/{requisition}/send-to-ceo', [ProcurementRequisitionController::class, 'sendToCEO'])->name('send-to-ceo');
         Route::post('/{requisition}/create-lpo', [ProcurementRequisitionController::class, 'createLpo'])->name('create-lpo');
@@ -426,6 +431,15 @@ Route::middleware(['auth','role:stores'])->prefix('stores')->name('stores.')->gr
         Route::get('/{store}/filter', [StockMovementController::class, 'filter'])->name('filter');
         Route::get('/{store}/export', [StockMovementController::class, 'export'])->name('export');
     });
+
+    Route::prefix('lpos')->name('lpos.')->group(function () {
+    Route::get('/{store}', [StoreLpoController::class, 'index'])->name('index');
+    Route::get('/{store}/delivered', [StoreLpoController::class, 'delivered'])->name('delivered');
+    Route::get('/{store}/{lpo}', [StoreLpoController::class, 'show'])->name('show');
+    Route::get('/{store}/{lpo}/confirm-delivery', [StoreLpoController::class, 'confirmDelivery'])->name('confirm-delivery');
+    Route::post('/{store}/{lpo}/process-delivery', [StoreLpoController::class, 'processDelivery'])->name('process-delivery');
+});
+
 });
 
 // CEO
@@ -437,6 +451,8 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
         Route::get('/', [CEORequisitionController::class, 'index'])->name('index');
         Route::get('/pending', [CEORequisitionController::class, 'pending'])->name('pending');
         Route::get('/{requisition}', [CEORequisitionController::class, 'show'])->name('show');
+         Route::get('/{requisition}/edit', [CEORequisitionController::class, 'edit'])->name('edit');
+        Route::put('/{requisition}', [CEORequisitionController::class, 'update'])->name('update'); 
         Route::post('/{requisition}/approve', [CEORequisitionController::class, 'approveRequisition'])->name('approve');
         Route::post('/{requisition}/reject', [CEORequisitionController::class, 'rejectRequisition'])->name('reject');
         Route::post('/lpos/{lpo}/approve', [CEORequisitionController::class, 'approveLpo'])->name('lpos.approve');
@@ -478,6 +494,8 @@ Route::middleware(['auth','role:project_manager'])->prefix('project-manager')->n
         Route::post('/', [ProjectManagerRequisitionController::class, 'store'])->name('store');
         Route::get('/pending', [ProjectManagerRequisitionController::class, 'pending'])->name('pending'); // MOVED HERE - BEFORE {requisition}
         Route::get('/{requisition}', [ProjectManagerRequisitionController::class, 'show'])->name('show');
+        Route::get('/{requisition}/edit', [ProjectManagerRequisitionController::class, 'edit'])->name('edit'); // NEW
+    Route::put('/{requisition}', [ProjectManagerRequisitionController::class, 'update'])->name('update'); // NEW
         Route::post('/{requisition}/approve', [ProjectManagerRequisitionController::class, 'approve'])->name('approve');
         Route::post('/{requisition}/reject', [ProjectManagerRequisitionController::class, 'reject'])->name('reject');
         Route::post('/{requisition}/send-to-store', [ProjectManagerRequisitionController::class, 'sendToStore'])->name('send-to-store');
