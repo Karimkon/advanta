@@ -53,6 +53,32 @@ class SurveyorMilestoneController extends Controller
         return view('surveyor.milestones.edit', compact('project', 'milestone'));
     }
 
+     public function allMilestones()
+    {
+        $user = auth()->user();
+        
+        // Get all milestones from projects where user is surveyor
+        $milestones = ProjectMilestone::whereHas('project', function($query) use ($user) {
+                $query->whereHas('users', function($userQuery) use ($user) {
+                    $userQuery->where('user_id', $user->id)
+                             ->where('role_on_project', 'surveyor');
+                });
+            })
+            ->with('project')
+            ->orderBy('due_date')
+            ->get();
+
+        // Group by status for statistics
+        $statusCounts = [
+            'pending' => $milestones->where('status', 'pending')->count(),
+            'in_progress' => $milestones->where('status', 'in_progress')->count(),
+            'completed' => $milestones->where('status', 'completed')->count(),
+            'delayed' => $milestones->where('status', 'delayed')->count(),
+        ];
+
+        return view('surveyor.milestones.all', compact('milestones', 'statusCounts'));
+    }
+
     public function update(Request $request, Project $project, ProjectMilestone $milestone)
     {
         // Check if surveyor is assigned to this project

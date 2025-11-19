@@ -84,22 +84,22 @@
                                 </td>
                                 <td>{{ $lpo->created_at->format('M d, Y') }}</td>
                                 <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('procurement.lpos.show', $lpo) }}" 
-                                           class="btn btn-outline-primary" title="View">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        @if($lpo->status === 'draft')
-                                            <form action="{{ route('procurement.lpos.issue', $lpo) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-outline-success btn-sm"
-                                                        onclick="return confirm('Issue this LPO to supplier?')">
-                                                    <i class="bi bi-send"></i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
+    <div class="btn-group btn-group-sm">
+        <a href="{{ route('procurement.lpos.show', $lpo) }}" 
+           class="btn btn-outline-primary" title="View">
+            <i class="bi bi-eye"></i>
+        </a>
+        @if($lpo->status === 'draft' && $lpo->requisition->status === \App\Models\Requisition::STATUS_CEO_APPROVED)
+            <form action="{{ route('procurement.lpos.issue', $lpo) }}" method="POST" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn-outline-success btn-sm"
+                        onclick="return confirm('Issue this LPO to supplier?')">
+                    <i class="bi bi-send"></i>
+                </button>
+            </form>
+        @endif
+    </div>
+</td>
                             </tr>
                         @empty
                             <tr>

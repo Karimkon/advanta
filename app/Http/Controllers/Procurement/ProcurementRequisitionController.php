@@ -190,7 +190,7 @@ class ProcurementRequisitionController extends Controller
             'lpo_number' => $lpoNumber,
             'requisition_id' => $requisition->id,
             'supplier_id' => $supplier_id,
-            // 'prepared_by' => auth()->id(), // REMOVE THIS LINE
+            'prepared_by' => auth()->id(),
             'status' => 'draft',
             'subtotal' => $requisition->estimated_total,
             'tax' => 0,
@@ -279,11 +279,10 @@ public function issueLpo(Lpo $lpo)
 
     DB::beginTransaction();
     try {
-        // Update LPO status - REMOVE issued_by
         $lpo->update([
             'status' => 'issued',
             'issued_at' => now(),
-            // 'issued_by' => auth()->id(), // REMOVE THIS LINE
+            'issued_by' => auth()->id(),
         ]);
 
         // Update requisition status

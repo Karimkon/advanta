@@ -1,0 +1,351 @@
+@extends('admin.layouts.app')
+
+@section('title', $milestone->title . ' - ' . $project->name)
+
+@section('content')
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ $milestone->title }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.milestones.index') }}">All Milestones</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.milestones.project', $project) }}">{{ $project->name }}</a></li>
+                    <li class="breadcrumb-item active">{{ $milestone->title }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="btn-group">
+            <a href="{{ route('admin.milestones.project', $project) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Project
+            </a>
+            <a href="{{ route('admin.milestones.edit', ['project' => $project, 'milestone' => $milestone]) }}" 
+               class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit Milestone
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Milestone Details -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Milestone Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Project:</strong> {{ $project->name }}</p>
+                            <p><strong>Description:</strong> {{ $milestone->description }}</p>
+                            <p><strong>Due Date:</strong> {{ $milestone->due_date->format('M d, Y') }}</p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge {{ $milestone->getStatusBadgeClass() }}">
+                                    {{ ucfirst(str_replace('_', ' ', $milestone->status)) }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Estimated Cost:</strong> UGX {{ number_format($milestone->cost_estimate, 2) }}</p>
+                            <p><strong>Actual Cost:</strong> 
+                                @if($milestone->actual_cost)
+                                    UGX {{ number_format($milestone->actual_cost, 2) }}
+                                @else
+                                    <span class="text-muted">Not recorded</span>
+                                @endif
+                            </p>
+                            <p><strong>Completion:</strong> {{ $milestone->getProgressPercentage() }}%</p>
+                            @if($milestone->completed_at)
+                                <p><strong>Completed:</strong> {{ $milestone->completed_at->format('M d, Y') }}</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Progress Notes -->
+                    @if($milestone->progress_notes)
+                        <div class="mt-4">
+                            <strong>Progress Notes:</strong>
+                            <div class="border rounded p-3 mt-2 bg-light">
+                                {{ $milestone->progress_notes }}
+                            </div>
+                            <small class="text-muted">Last updated: {{ $milestone->updated_at->format('M d, Y H:i') }}</small>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Photo Documentation -->
+            @if($milestone->hasPhoto())
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-camera me-2"></i>Progress Photo
+                            @if($milestone->photo_caption)
+                                <small class="text-muted">- {{ $milestone->photo_caption }}</small>
+                            @endif
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="{{ $milestone->getPhotoUrl() }}" 
+                             alt="Milestone progress photo" 
+                             class="img-fluid rounded" 
+                             style="max-height: 400px;">
+                        <div class="mt-3">
+                            <a href="{{ $milestone->getPhotoUrl() }}" 
+                               target="_blank" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-zoom-in"></i> View Full Size
+                            </a>
+                            <small class="text-muted d-block mt-2">
+                                Photo uploaded: {{ $milestone->updated_at->format('M d, Y H:i') }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Progress Visualization -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Progress Tracking</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="position-relative d-inline-block">
+                            <div class="progress-circle-large" data-progress="{{ $milestone->getProgressPercentage() }}">
+                                <span class="progress-circle-value">{{ $milestone->getProgressPercentage() }}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Timeline -->
+                    <div class="timeline">
+                        <div class="timeline-item {{ $milestone->status === 'pending' ? 'active' : 'completed' }}">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Pending</strong>
+                                <small class="text-muted">Milestone created</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item {{ $milestone->status === 'in_progress' ? 'active' : ($milestone->status === 'completed' ? 'completed' : '') }}">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>In Progress</strong>
+                                @if($milestone->status === 'in_progress' || $milestone->status === 'completed')
+                                    <small class="text-muted">Work started</small>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="timeline-item {{ $milestone->status === 'completed' ? 'active' : '' }}">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Completed</strong>
+                                @if($milestone->completed_at)
+                                    <small class="text-muted">{{ $milestone->completed_at->format('M d, Y') }}</small>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Admin Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ route('admin.milestones.edit', ['project' => $project, 'milestone' => $milestone]) }}" 
+                           class="btn btn-warning">
+                            <i class="bi bi-pencil"></i> Edit Milestone
+                        </a>
+                        <a href="{{ route('admin.milestones.project', $project) }}" 
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-list-ul"></i> All Project Milestones
+                        </a>
+                        <button type="button" 
+                                class="btn btn-outline-danger" 
+                                onclick="confirmDelete()">
+                            <i class="bi bi-trash"></i> Delete Milestone
+                        </button>
+                        <a href="{{ route('admin.milestones.index') }}" 
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-flag"></i> All Projects
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Project Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Project:</strong> {{ $project->name }}</p>
+                    <p><strong>Location:</strong> {{ $project->location }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="badge bg-{{ $project->status === 'active' ? 'success' : 'warning' }}">
+                            {{ ucfirst($project->status) }}
+                        </span>
+                    </p>
+                    <p><strong>Budget:</strong> UGX {{ number_format($project->budget, 2) }}</p>
+                    <p><strong>Start Date:</strong> {{ $project->start_date->format('M d, Y') }}</p>
+                    @if($project->end_date)
+                        <p><strong>End Date:</strong> {{ $project->end_date->format('M d, Y') }}</p>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Deadline Alert -->
+            @if($milestone->isOverdue())
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Overdue!</strong> This milestone is past its due date.
+                </div>
+            @elseif($milestone->due_date->diffInDays(now()) <= 7)
+                <div class="alert alert-warning">
+                    <i class="bi bi-clock"></i>
+                    <strong>Due Soon!</strong> This milestone is due in {{ $milestone->due_date->diffInDays(now()) }} days.
+                </div>
+            @endif
+
+            <!-- Cost Comparison -->
+            @if($milestone->actual_cost)
+                <div class="card border-info">
+                    <div class="card-header bg-info bg-opacity-10">
+                        <h6 class="mb-0">Cost Analysis</h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Estimated:</strong> UGX {{ number_format($milestone->cost_estimate, 2) }}</p>
+                        <p><strong>Actual:</strong> UGX {{ number_format($milestone->actual_cost, 2) }}</p>
+                        @php
+                            $variance = $milestone->actual_cost - $milestone->cost_estimate;
+                            $variance_percent = $milestone->cost_estimate > 0 ? 
+                                round(($variance / $milestone->cost_estimate) * 100, 2) : 0;
+                        @endphp
+                        <p><strong>Variance:</strong> 
+                            <span class="text-{{ $variance < 0 ? 'success' : 'danger' }}">
+                                UGX {{ number_format(abs($variance), 2) }} 
+                                ({{ $variance_percent }}% {{ $variance < 0 ? 'under' : 'over' }})
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the milestone "<strong>{{ $milestone->title }}</strong>"?</p>
+                <p class="text-danger">This action cannot be undone. All progress data and photos will be permanently deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" action="{{ route('admin.milestones.destroy', ['project' => $project, 'milestone' => $milestone]) }}" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">Delete Milestone</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('styles')
+<style>
+.progress-circle-large {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: conic-gradient(#198754 var(--progress), #e9ecef 0deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.progress-circle-large::before {
+    content: '';
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+}
+
+.progress-circle-value {
+    position: relative;
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: #198754;
+    z-index: 1;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #dee2e6;
+    border: 3px solid #fff;
+}
+
+.timeline-item.active .timeline-marker {
+    background: #198754;
+    border-color: #198754;
+}
+
+.timeline-item.completed .timeline-marker {
+    background: #198754;
+    border-color: #198754;
+}
+</style>
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set progress circle value
+    const circle = document.querySelector('.progress-circle-large');
+    if (circle) {
+        const progress = circle.getAttribute('data-progress');
+        circle.style.setProperty('--progress', progress + '%');
+    }
+});
+
+function confirmDelete() {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+</script>
+@endpush

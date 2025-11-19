@@ -121,57 +121,66 @@ class AdminProjectController extends Controller
      /**
      * Create default construction milestones for a project
      */
-    private function createDefaultMilestones(Project $project)
-    {
-        $milestones = [
-            [
-                'title' => 'Foundation (Omusingi)',
-                'description' => 'Ground excavation, footings, concrete base, and reinforcement setting',
-                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 30 days')),
-                'status' => 'pending',
-                'cost_estimate' => $project->budget * 0.15, // 15% of budget
-            ],
-            [
-                'title' => 'Substructure',
-                'description' => 'Work below ground floor level - retaining walls, basement, ground beams',
-                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 60 days')),
-                'status' => 'pending',
-                'cost_estimate' => $project->budget * 0.20, // 20% of budget
-            ],
-            [
-                'title' => 'Superstructure',
-                'description' => 'Above ground level - columns, beams, floors, walls, staircases',
-                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 120 days')),
-                'status' => 'pending',
-                'cost_estimate' => $project->budget * 0.25, // 25% of budget
-            ],
-            [
-                'title' => 'Roofing Level',
-                'description' => 'Trusses/slab roof and covering installation',
-                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 150 days')),
-                'status' => 'pending',
-                'cost_estimate' => $project->budget * 0.15, // 15% of budget
-            ],
-            [
-                'title' => 'Finishing Stages',
-                'description' => 'Plastering, flooring, windows, doors, electrical, plumbing, painting',
-                'due_date' => date('Y-m-d', strtotime($project->start_date . ' + 210 days')),
-                'status' => 'pending',
-                'cost_estimate' => $project->budget * 0.20, // 20% of budget
-            ],
-            [
-                'title' => 'Finalization',
-                'description' => 'External works, paving, drainage, landscaping, final inspection',
-                'due_date' => $project->end_date,
-                'status' => 'pending',
-                'cost_estimate' => $project->budget * 0.05, // 5% of budget
-            ],
-        ];
+private function createDefaultMilestones(Project $project)
+{
+    $milestones = [
+        [
+            'title' => 'Foundation (Omusingi)',
+            'description' => 'Ground excavation, footings, concrete base, and reinforcement setting',
+            'due_date' => $project->start_date->copy()->addDays(30),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.15, // 15% of budget
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Substructure',
+            'description' => 'Work below ground floor level - retaining walls, basement, ground beams',
+            'due_date' => $project->start_date->copy()->addDays(60),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.20, // 20% of budget
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Superstructure',
+            'description' => 'Above ground level - columns, beams, floors, walls, staircases',
+            'due_date' => $project->start_date->copy()->addDays(120),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.25, // 25% of budget
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Roofing Level',
+            'description' => 'Trusses/slab roof and covering installation',
+            'due_date' => $project->start_date->copy()->addDays(150),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.15, // 15% of budget
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Finishing Stages',
+            'description' => 'Plastering, flooring, windows, doors, electrical, plumbing, painting',
+            'due_date' => $project->start_date->copy()->addDays(210),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.20, // 20% of budget
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Finalization',
+            'description' => 'External works, paving, drainage, landscaping, final inspection',
+            'due_date' => $project->end_date ?? $project->start_date->copy()->addDays(240),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.05, // 5% of budget
+            'completion_percentage' => 0
+        ],
+    ];
 
-        foreach ($milestones as $milestoneData) {
-            ProjectMilestone::create(array_merge($milestoneData, ['project_id' => $project->id]));
-        }
+    foreach ($milestones as $milestoneData) {
+        ProjectMilestone::create(array_merge($milestoneData, [
+            'project_id' => $project->id,
+            'completion_percentage' => 0
+        ]));
     }
+}
 
      public function show(Project $project)
     {

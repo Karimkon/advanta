@@ -27,14 +27,32 @@
     </div>
 
     <div class="row">
-        <!-- LPO Details -->
+        <!-- LPO Details - Main Content -->
         <div class="col-lg-8">
-            <!-- LPO Header -->
-            <div class="card shadow-sm mb-4">
+            <!-- Company Header -->
+            <div class="card shadow-sm mb-4 printable-section">
+                <div class="card-body text-center">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <img src="{{ asset('images/advanta.jpg') }}" alt="ADVANTA Logo" class="img-fluid" style="max-height: 80px;">
+                        </div>
+                        <div class="col-md-8">
+                            <h3 class="text-primary mb-1">ADVANTA UGANDA LIMITED</h3>
+                            <p class="text-muted mb-0">Project Management System</p>
+                            <p class="text-muted mb-0">LOCAL PURCHASE ORDER</p>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <h4 class="text-primary">{{ $lpo->lpo_number }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LPO Information -->
+            <div class="card shadow-sm mb-4 printable-section">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <h4 class="text-primary">LOCAL PURCHASE ORDER</h4>
                             <p class="mb-1"><strong>LPO Number:</strong> {{ $lpo->lpo_number }}</p>
                             <p class="mb-1"><strong>Requisition:</strong> {{ $lpo->requisition->ref }}</p>
                             <p class="mb-1"><strong>Project:</strong> {{ $lpo->requisition->project->name }}</p>
@@ -47,19 +65,14 @@
                                     {{ ucfirst($lpo->status) }}
                                 </span>
                             </p>
-                            @if($lpo->issue_date)
-                                <p class="mb-1"><strong>Issue Date:</strong> {{ $lpo->issue_date->format('M d, Y') }}</p>
-                            @endif
-                            @if($lpo->delivery_date)
-                                <p class="mb-1"><strong>Delivery Date:</strong> {{ $lpo->delivery_date->format('M d, Y') }}</p>
-                            @endif
+                            <p class="mb-1"><strong>Delivery Date:</strong> {{ $lpo->delivery_date->format('M d, Y') }}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Supplier Information -->
-            <div class="card shadow-sm mb-4">
+            <div class="card shadow-sm mb-4 printable-section">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Supplier Information</h5>
                 </div>
@@ -78,8 +91,8 @@
                 </div>
             </div>
 
-            <!-- LPO Items - FIXED SECTION -->
-            <div class="card shadow-sm mb-4">
+            <!-- LPO Items -->
+            <div class="card shadow-sm mb-4 printable-section">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Order Items</h5>
                 </div>
@@ -99,7 +112,7 @@
                                 @forelse($lpo->items as $item)
                                     <tr>
                                         <td>{{ $item->description ?? 'No description' }}</td>
-                                        <td>{{ $item->quantity }}</td>
+                                        <td>{{ number_format($item->quantity, 3) }}</td>
                                         <td>{{ $item->unit }}</td>
                                         <td>UGX {{ number_format($item->unit_price, 2) }}</td>
                                         <td>UGX {{ number_format($item->total_price, 2) }}</td>
@@ -126,7 +139,7 @@
 
             <!-- Terms & Conditions -->
             @if($lpo->terms)
-            <div class="card shadow-sm mb-4">
+            <div class="card shadow-sm mb-4 printable-section">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Terms & Conditions</h5>
                 </div>
@@ -138,7 +151,7 @@
 
             <!-- Notes -->
             @if($lpo->notes)
-            <div class="card shadow-sm">
+            <div class="card shadow-sm printable-section">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Additional Notes</h5>
                 </div>
@@ -149,26 +162,40 @@
             @endif
         </div>
 
-        <!-- Sidebar Actions -->
-        <div class="col-lg-4">
-            <!-- Quick Actions -->
+        <!-- Sidebar Actions - Hidden when printing -->
+        <div class="col-lg-4 non-printable">
+           <!-- Quick Actions -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">LPO Actions</h5>
                 </div>
                 <div class="card-body">
                     @if($lpo->status === 'draft')
-                        <div class="alert alert-warning">
-                            <strong>Draft LPO:</strong> Ready to be issued to supplier.
-                        </div>
-                        
-                        <form action="{{ route('procurement.lpos.issue', $lpo) }}" method="POST" class="d-grid mb-3">
-                            @csrf
-                            <button type="submit" class="btn btn-success" 
-                                    onclick="return confirm('Issue this LPO to supplier? This action cannot be undone.')">
-                                <i class="bi bi-send"></i> Issue LPO to Supplier
-                            </button>
-                        </form>
+                        @if($lpo->requisition->status === \App\Models\Requisition::STATUS_CEO_APPROVED)
+                            <div class="alert alert-success">
+                                <strong>CEO Approved:</strong> Ready to issue LPO to supplier.
+                            </div>
+                            
+                            <form action="{{ route('procurement.lpos.issue', $lpo) }}" method="POST" class="d-grid mb-3">
+                                @csrf
+                                <button type="submit" class="btn btn-success" 
+                                        onclick="return confirm('Issue this LPO to supplier? This action cannot be undone.')">
+                                    <i class="bi bi-send"></i> Issue LPO to Supplier
+                                </button>
+                            </form>
+                        @else
+                            <div class="alert alert-info">
+                                <strong>Waiting for CEO Approval:</strong> 
+                                This LPO has been sent to CEO for approval. The "Issue LPO" button will appear after CEO approval.
+                            </div>
+                            
+                            <div class="text-center">
+                                <a href="{{ route('procurement.requisitions.show', $lpo->requisition) }}" 
+                                   class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-eye"></i> View Requisition Status
+                                </a>
+                            </div>
+                        @endif
 
                     @elseif($lpo->status === 'issued')
                         <div class="alert alert-info">
@@ -190,13 +217,6 @@
 
                     <hr class="my-3">
 
-                    <!-- Debug Info (remove in production) -->
-                    @if($lpo->items->count() === 0)
-                        <div class="alert alert-warning">
-                            <small><strong>Debug:</strong> No LPO items found. Items may not have been created properly.</small>
-                        </div>
-                    @endif
-
                     <!-- Related Requisition -->
                     <div class="text-center">
                         <a href="{{ route('procurement.requisitions.show', $lpo->requisition) }}" 
@@ -210,14 +230,14 @@
             <!-- LPO Timeline -->
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">LPO Timeline</h5>
+                    <h5 class="mb-0">Delivery Timeline</h5>
                 </div>
                 <div class="card-body">
                     <div class="timeline">
                         <div class="timeline-item {{ $lpo->status === 'draft' ? 'active' : 'completed' }}">
                             <div class="timeline-marker"></div>
                             <div class="timeline-content">
-                                <strong>Draft Created</strong>
+                                <strong>LPO Created</strong>
                                 <small class="text-muted d-block">{{ $lpo->created_at->format('M d, Y') }}</small>
                             </div>
                         </div>
@@ -233,7 +253,7 @@
                         <div class="timeline-item {{ $lpo->status === 'delivered' ? 'active' : '' }}">
                             <div class="timeline-marker"></div>
                             <div class="timeline-content">
-                                <strong>Delivered</strong>
+                                <strong>Delivery Expected</strong>
                                 @if($lpo->delivery_date)
                                     <small class="text-muted d-block">{{ $lpo->delivery_date->format('M d, Y') }}</small>
                                 @endif
@@ -300,18 +320,140 @@
     padding-bottom: 10px;
 }
 
+/* Print Styles */
 @media print {
-    .sidebar, .mobile-toggle, .btn-group {
+    /* Hide non-essential elements */
+    .non-printable,
+    .btn-group,
+    .breadcrumb,
+    .sidebar,
+    .mobile-toggle,
+    .navbar,
+    .alert,
+    .timeline,
+    .card-header h5 {
         display: none !important;
     }
-    .content {
-        margin-left: 0 !important;
-        padding: 0 !important;
+    
+    /* Show only printable sections */
+    .printable-section {
+        display: block !important;
+        break-inside: avoid;
     }
+    
+    /* Adjust layout for printing */
+    .container-fluid {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+    
+    .row {
+        display: block !important;
+        margin: 0 !important;
+    }
+    
+    .col-lg-8 {
+        width: 100% !important;
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .col-lg-4 {
+        display: none !important;
+    }
+    
+    /* Card styling for print */
     .card {
         border: 1px solid #000 !important;
         box-shadow: none !important;
+        margin-bottom: 10px !important;
+        page-break-inside: avoid;
+    }
+    
+    .card-body {
+        padding: 10px !important;
+    }
+    
+    /* Table styling for print */
+    .table {
+        font-size: 12px !important;
+    }
+    
+    .table th,
+    .table td {
+        padding: 4px 8px !important;
+    }
+    
+    /* Reduce spacing */
+    .mb-4, .mb-1, .mb-0 {
+        margin-bottom: 5px !important;
+    }
+    
+    /* Header styling */
+    h2, h3, h4 {
+        margin: 5px 0 !important;
+    }
+    
+    /* Ensure single page */
+    body {
+        margin: 0.5cm !important;
+        font-size: 12px !important;
+        line-height: 1.2 !important;
+    }
+    
+    /* Optimize text for printing */
+    .text-primary {
+        color: #000 !important;
+    }
+    
+    .text-muted {
+        color: #666 !important;
+    }
+    
+    /* Badge styling for print */
+    .badge {
+        border: 1px solid #000 !important;
+        background: white !important;
+        color: black !important;
+        padding: 2px 6px !important;
     }
 }
+
+/* Additional compact styling for better fit */
+.print-compact .card-body {
+    padding: 8px !important;
+}
+
+.print-compact .table {
+    margin-bottom: 0 !important;
+}
+
+.print-compact h3 {
+    font-size: 1.2rem !important;
+}
+
+.print-compact h4 {
+    font-size: 1.1rem !important;
+}
 </style>
+
+<script>
+// Add compact class for printing
+document.addEventListener('DOMContentLoaded', function() {
+    // Add compact class to all printable sections before printing
+    window.addEventListener('beforeprint', function() {
+        document.querySelectorAll('.printable-section').forEach(function(section) {
+            section.classList.add('print-compact');
+        });
+    });
+    
+    // Remove compact class after printing
+    window.addEventListener('afterprint', function() {
+        document.querySelectorAll('.printable-section').forEach(function(section) {
+            section.classList.remove('print-compact');
+        });
+    });
+});
+</script>
 @endsection

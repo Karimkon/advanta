@@ -42,7 +42,10 @@ use App\Http\Controllers\Stores\StoreLpoController;
 use App\Http\Controllers\Surveyor\SurveyorDashboardController;
 use App\Http\Controllers\Surveyor\SurveyorMilestoneController;
 use App\Http\Controllers\CEO\CEOMilestoneController;
-
+use App\Http\Controllers\Admin\AdminMilestoneController;
+use App\Http\Controllers\Surveyor\SurveyorProjectController;
+use App\Http\Controllers\ProjectManager\ProjectManagerMilestoneController;  
+use App\Http\Controllers\CEO\CEOLpoController;
 // ----------------------
 // Landing Page
 // ----------------------
@@ -255,6 +258,19 @@ Route::prefix('inventory')->name('inventory.')->group(function () {
             return view('admin.reports.index');
         })->name('index');
     });
+
+    // ADMIN Milestone Routes - Full CRUD
+Route::prefix('milestones')->name('milestones.')->group(function () {
+    Route::get('/', [AdminMilestoneController::class, 'index'])->name('index');
+    Route::get('/project/{project}', [AdminMilestoneController::class, 'projectMilestones'])->name('project');
+    Route::get('/project/{project}/create', [AdminMilestoneController::class, 'create'])->name('create');
+    Route::post('/project/{project}', [AdminMilestoneController::class, 'store'])->name('store');
+    Route::get('/project/{project}/milestone/{milestone}', [AdminMilestoneController::class, 'show'])->name('show');
+    Route::get('/project/{project}/milestone/{milestone}/edit', [AdminMilestoneController::class, 'edit'])->name('edit');
+    Route::put('/project/{project}/milestone/{milestone}', [AdminMilestoneController::class, 'update'])->name('update');
+    Route::delete('/project/{project}/milestone/{milestone}', [AdminMilestoneController::class, 'destroy'])->name('destroy');
+    Route::delete('/project/{project}/milestone/{milestone}/photo', [AdminMilestoneController::class, 'removePhoto'])->name('remove-photo');
+});
 });
 
 // API Routes for dynamic store inventory loading
@@ -468,10 +484,9 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
     
     // LPOs
     Route::prefix('lpos')->name('lpos.')->group(function () {
-        Route::get('/', function () {
-            return view('ceo.lpos.index');
-        })->name('index');
-    });
+    Route::get('/', [CEOLpoController::class, 'index'])->name('index');
+    Route::get('/{lpo}', [CEOLpoController::class, 'show'])->name('show');
+});
     
     // Financial Reports - ADD THESE NEW ROUTES
     Route::prefix('reports')->name('reports.')->group(function () {
@@ -546,7 +561,8 @@ Route::middleware(['auth','role:engineer'])->prefix('engineer')->name('engineer.
 // SURVEYOR
 Route::middleware(['auth','role:surveyor'])->prefix('surveyor')->name('surveyor.')->group(function () {
     Route::get('/dashboard', [SurveyorDashboardController::class,'index'])->name('dashboard');
-    
+     Route::get('/projects', [SurveyorProjectController::class, 'index'])->name('projects.index');
+      Route::get('/milestones', [SurveyorMilestoneController::class, 'allMilestones'])->name('milestones.index');
     // Milestones Management
     Route::prefix('projects/{project}/milestones')->name('milestones.')->group(function () {
         Route::get('/', [SurveyorMilestoneController::class, 'index'])->name('index');

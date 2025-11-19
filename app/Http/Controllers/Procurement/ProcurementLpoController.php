@@ -30,8 +30,18 @@ class ProcurementLpoController extends Controller
             'requisition.requester',
             'supplier',
             'items',
-            'preparer'
+            'preparer',
+            'issuer',
         ]);
+
+           // Debug log to check the loaded data
+    \Log::info('LPO Show Data:', [
+        'lpo_id' => $lpo->id,
+        'prepared_by' => $lpo->prepared_by,
+        'preparer_loaded' => $lpo->relationLoaded('preparer'),
+        'preparer_name' => $lpo->preparer ? $lpo->preparer->name : 'NULL',
+        'all_relations' => $lpo->getRelations()
+    ]);
 
         return view('procurement.lpos.show', compact('lpo'));
     }

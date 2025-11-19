@@ -262,6 +262,14 @@ body {
                 </div>
             </div>
 
+            <li class="nav-item">
+    <a class="nav-link {{ request()->routeIs('admin.milestones.*') ? 'active' : '' }}" 
+       href="{{ route('admin.milestones.index') }}">
+        <i class="bi bi-flag me-2"></i>
+        Manage Milestones
+    </a>
+</li>
+
             <!-- Requisitions -->
             <div class="accordion-item">
                 <h2 class="accordion-header">
