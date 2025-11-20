@@ -49,22 +49,21 @@ public function pending()
 }
 
     public function show(Requisition $requisition)
-    {
-        // CEO can view any requisition regardless of status
-        $requisition->load([
-            'project', 
-            'requester', 
-            'items', 
-            'approvals.approver',
-            'lpo',
-            'lpo.supplier',
-            'lpo.items'
-        ]);
+{
+    // CEO can view any requisition regardless of status
+    $requisition->load([
+        'project', 
+        'requester', 
+        'items', 
+        'approvals.approver',
+        'lpo.supplier',
+        'lpo.items'
+    ]);
 
-        return view('ceo.requisitions.show', compact('requisition'));
-    }
+    return view('ceo.requisitions.show', compact('requisition'));
+}
 
-    public function approveRequisition(Requisition $requisition)
+public function approveRequisition(Requisition $requisition)
 {
     // Only approve requisitions in procurement status with LPOs
     if ($requisition->status !== Requisition::STATUS_PROCUREMENT) {
@@ -77,15 +76,102 @@ public function pending()
 
     $validated = request()->validate([
         'comment' => 'nullable|string|max:500',
-        'approved_amount' => 'nullable|numeric|min:0'
+        'approved_items' => 'required|array',
+        'approved_items.*' => 'boolean',
+        'approved_quantities' => 'required|array',
+        'approved_quantities.*' => 'numeric|min:0'
     ]);
 
     DB::beginTransaction();
     try {
-        // Update requisition status to CEO_APPROVED
+        // Calculate approved total and track changes
+        $approvedTotal = 0;
+        $approvedItems = [];
+        $modifications = [];
+
+        // Update requisition items based on CEO approval
+        foreach ($requisition->items as $item) {
+            $itemId = $item->id;
+            $isApproved = isset($validated['approved_items'][$itemId]) && $validated['approved_items'][$itemId];
+            $approvedQuantity = $validated['approved_quantities'][$itemId] ?? 0;
+
+            if ($isApproved && $approvedQuantity > 0) {
+                // Item is approved - update quantity if changed
+                $itemTotal = $approvedQuantity * $item->unit_price;
+                $approvedTotal += $itemTotal;
+                $approvedItems[] = $item->name;
+
+                // Track modifications if quantity changed
+                if ($approvedQuantity != $item->quantity) {
+                    $modifications[] = "{$item->name}: {$item->quantity} → {$approvedQuantity} {$item->unit}";
+                    
+                    // Update requisition item quantity
+                    $item->update([
+                        'quantity' => $approvedQuantity,
+                        'total_price' => $itemTotal
+                    ]);
+                } else {
+                    // Quantity unchanged, just add to approved items
+                    $approvedItems[] = $item->name;
+                }
+            } else {
+                // Item is not approved or quantity is 0 - DELETE from requisition
+                $modifications[] = "{$item->name}: REMOVED";
+                $item->delete(); // Remove from requisition
+            }
+        }
+
+        if ($approvedTotal == 0) {
+            return back()->with('error', 'Cannot approve requisition with zero total amount.');
+        }
+
+        // Update requisition with approved amount
         $requisition->update([
-            'status' => Requisition::STATUS_CEO_APPROVED
+            'status' => Requisition::STATUS_CEO_APPROVED,
+            'estimated_total' => $approvedTotal // Update the total to reflect approved amount
         ]);
+
+        // Update LPO with approved amounts
+        $lpo = $requisition->lpo;
+        $lpo->update([
+            'subtotal' => $approvedTotal,
+            'total' => $approvedTotal + $lpo->vat_amount, // Keep VAT calculation
+        ]);
+
+        // Update LPO items based on CEO approval
+        foreach ($requisition->items as $item) {
+            $itemId = $item->id;
+            $isApproved = isset($validated['approved_items'][$itemId]) && $validated['approved_items'][$itemId];
+            $approvedQuantity = $validated['approved_quantities'][$itemId] ?? 0;
+
+            $lpoItem = $lpo->items()->where('description', $item->name)->first();
+            
+            if ($lpoItem) {
+                if ($isApproved && $approvedQuantity > 0) {
+                    // Update LPO item with approved quantity
+                    $lpoItem->update([
+                        'quantity' => $approvedQuantity,
+                        'total_price' => $approvedQuantity * $item->unit_price,
+                    ]);
+                } else {
+                    // Remove item from LPO
+                    $lpoItem->delete();
+                }
+            }
+        }
+
+        // Remove LPO items that don't match any requisition items (for deleted items)
+        $requisitionItemNames = $requisition->items->pluck('name')->toArray();
+        $lpo->items()->whereNotIn('description', $requisitionItemNames)->delete();
+
+        // Build approval comment
+        $comment = $validated['comment'] ?? 'Approved by CEO';
+        if (!empty($modifications)) {
+            $comment .= " | Modifications: " . implode(', ', $modifications);
+        }
+        if (!empty($approvedItems)) {
+            $comment .= " | Approved items: " . implode(', ', $approvedItems);
+        }
 
         // Create approval record
         RequisitionApproval::create([
@@ -93,17 +179,22 @@ public function pending()
             'approved_by' => auth()->id(),
             'role' => 'ceo',
             'action' => 'approved',
-            'comment' => $validated['comment'] ?? 'Approved by CEO',
-            'approved_amount' => $validated['approved_amount'] ?? $requisition->estimated_total,
+            'comment' => $comment,
+            'approved_amount' => $approvedTotal,
         ]);
 
         DB::commit();
 
         return redirect()->route('ceo.requisitions.pending')
-            ->with('success', 'Requisition approved successfully! Procurement can now issue the LPO.');
+            ->with('success', 
+                "Requisition approved successfully! " .
+                count($approvedItems) . " items approved. " .
+                "Total: UGX " . number_format($approvedTotal, 2)
+            );
 
     } catch (\Exception $e) {
         DB::rollBack();
+        \Log::error('CEO Approval Error: ' . $e->getMessage());
         return back()->with('error', 'Failed to approve requisition: ' . $e->getMessage());
     }
 }

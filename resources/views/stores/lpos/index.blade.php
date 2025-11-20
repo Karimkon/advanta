@@ -58,10 +58,7 @@
                                                        class="btn btn-outline-primary" title="View LPO">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
-                                                    <a href="{{ route('stores.lpos.confirm-delivery', ['store' => $store, 'lpo' => $lpo]) }}" 
-                                                       class="btn btn-success" title="Confirm Delivery">
-                                                        <i class="bi bi-check-circle"></i> Confirm
-                                                    </a>
+                                                   
                                                 </div>
                                             </td>
                                         </tr>

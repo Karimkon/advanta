@@ -46,6 +46,8 @@ use App\Http\Controllers\Admin\AdminMilestoneController;
 use App\Http\Controllers\Surveyor\SurveyorProjectController;
 use App\Http\Controllers\ProjectManager\ProjectManagerMilestoneController;  
 use App\Http\Controllers\CEO\CEOLpoController;
+use App\Http\Controllers\StaffReportController;
+
 // ----------------------
 // Landing Page
 // ----------------------
@@ -321,6 +323,8 @@ Route::middleware(['auth','role:procurement'])->prefix('procurement')->name('pro
         Route::post('/{requisition}/start-procurement', [ProcurementRequisitionController::class, 'startProcurement'])->name('start-procurement');
         Route::post('/{requisition}/send-to-ceo', [ProcurementRequisitionController::class, 'sendToCEO'])->name('send-to-ceo');
         Route::post('/{requisition}/create-lpo', [ProcurementRequisitionController::class, 'createLpo'])->name('create-lpo');
+        Route::get('/{requisition}/create-lpo-page', [ProcurementRequisitionController::class, 'showCreateLpoPage'])
+                ->name('create-lpo-page');
     });
     
     // LPOs
@@ -571,6 +575,21 @@ Route::middleware(['auth','role:surveyor'])->prefix('surveyor')->name('surveyor.
         Route::put('/{milestone}', [SurveyorMilestoneController::class, 'update'])->name('update');
          Route::delete('/{milestone}/photo', [SurveyorMilestoneController::class, 'removePhoto'])->name('remove-photo');
     });
+});
+
+// Staff Reports Public Routes (no authentication required)
+Route::prefix('staff-reports')->name('staff-reports.')->group(function () {
+    Route::get('/submit', [StaffReportController::class, 'create'])->name('create');
+    Route::post('/submit', [StaffReportController::class, 'store'])->name('store');
+    Route::get('/success', [StaffReportController::class, 'success'])->name('success');
+});
+
+// Staff Reports Admin/CEO Routes (protected)
+Route::middleware(['auth', 'role:admin,ceo'])->prefix('staff-reports')->name('staff-reports.')->group(function () {
+    Route::get('/', [StaffReportController::class, 'index'])->name('index');
+    Route::get('/{staffReport}', [StaffReportController::class, 'show'])->name('show');
+    Route::delete('/{staffReport}', [StaffReportController::class, 'destroy'])->name('destroy');
+    Route::get('/{staffReport}/download/{index}', [StaffReportController::class, 'downloadAttachment'])->name('download.attachment');
 });
 
 // SUPPLIER

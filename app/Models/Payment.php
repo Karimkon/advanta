@@ -19,12 +19,15 @@ class Payment extends Model
         'amount',
         'paid_on',
         'reference',
-        'notes'
+        'notes',
+        'tax_amount', 
+        'vat_amount', 
     ];
-
-    protected $casts = [
-        'paid_on' => 'date',
+ protected $casts = [
         'amount' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'vat_amount' => 'decimal:2',
+        'paid_on' => 'date',
     ];
 
     public function supplier()
@@ -70,5 +73,34 @@ class Payment extends Model
     public function scopeWithDates($query)
     {
         return $query->whereNotNull('paid_on');
+    }
+
+    // NEW: Get payment breakdown
+    public function getPaymentBreakdown()
+    {
+        $subtotal = $this->amount - $this->vat_amount - $this->tax_amount;
+        
+        return [
+            'subtotal' => $subtotal,
+            'vat_amount' => $this->vat_amount,
+            'tax_amount' => $this->tax_amount,
+            'total' => $this->amount,
+        ];
+    }
+
+    // NEW: Check if payment includes VAT
+    public function hasVat()
+    {
+        return $this->vat_amount > 0;
+    }
+
+    // NEW: Get VAT percentage
+    public function getVatPercentage()
+    {
+        if ($this->vat_amount > 0 && $this->amount > 0) {
+            $subtotal = $this->amount - $this->vat_amount;
+            return $subtotal > 0 ? ($this->vat_amount / $subtotal) * 100 : 0;
+        }
+        return 0;
     }
 }

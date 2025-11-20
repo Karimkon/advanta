@@ -34,23 +34,23 @@ class PaymentController extends Controller
         return view('finance.payments.pending', compact('pendingRequisitions'));
     }
 
-    public function create($requisitionId)
+  public function create($requisitionId)
     {
         $requisition = Requisition::with([
             'project', 
             'lpo.supplier', 
             'lpo', 
             'lpo.items',
-            'lpo.receivedItems' // Load received items
+            'lpo.receivedItems.lpoItem'
         ])->findOrFail($requisitionId);
 
-        // Calculate actual amount based on received quantities
-        $actualAmount = $this->calculateActualAmount($requisition->lpo);
-
-        return view('finance.payments.create', compact('requisition', 'actualAmount'));
+        // Calculate actual amounts based on received quantities
+        $breakdown = $this->calculatePaymentBreakdown($requisition->lpo);
+        
+        return view('finance.payments.create', compact('requisition', 'breakdown'));
     }
 
-    public function store(Request $request, $requisitionId)
+      public function store(Request $request, $requisitionId)
     {
         $request->validate([
             'amount' => 'required|numeric|min:0',
@@ -58,29 +58,34 @@ class PaymentController extends Controller
             'payment_date' => 'required|date',
             'reference_number' => 'nullable|string',
             'tax_amount' => 'required|numeric|min:0',
+            'vat_amount' => 'required|numeric|min:0',
             'other_charges' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
-        $requisition = Requisition::with(['lpo.supplier', 'lpo.receivedItems'])->findOrFail($requisitionId);
+        $requisition = Requisition::with(['lpo.supplier', 'lpo.receivedItems.lpoItem'])->findOrFail($requisitionId);
 
-        // Debug: Check if supplier exists
         if (!$requisition->lpo || !$requisition->lpo->supplier) {
             return back()->with('error', 'Cannot process payment: Supplier information missing for this requisition.');
         }
 
-        // Calculate actual amount based on received quantities
-        $calculatedAmount = $this->calculateActualAmount($requisition->lpo);
+        // Calculate expected amounts based on actual received items
+        $expectedBreakdown = $this->calculatePaymentBreakdown($requisition->lpo);
         
-        // Warn if payment amount differs significantly from actual received amount
         $requestedAmount = $request->amount;
-        $difference = abs($requestedAmount - $calculatedAmount);
+        $expectedTotal = $expectedBreakdown['total'];
+        $difference = abs($requestedAmount - $expectedTotal);
         
-        if ($difference > 1000) { // Allow small rounding differences
-            \Log::warning("Payment amount mismatch for LPO {$requisition->lpo->lpo_number}: Requested UGX {$requestedAmount}, Calculated UGX {$calculatedAmount}");
+        // Log significant differences
+        if ($difference > 1000) {
+            \Log::warning("Payment amount mismatch for LPO {$requisition->lpo->lpo_number}", [
+                'requested' => $requestedAmount,
+                'expected' => $expectedTotal,
+                'difference' => $difference
+            ]);
         }
 
-        // Create payment linked to LPO and Supplier
+        // Create payment with VAT and tax information
         $payment = Payment::create([
             'lpo_id' => $requisition->lpo->id,
             'supplier_id' => $requisition->lpo->supplier_id,
@@ -90,17 +95,79 @@ class PaymentController extends Controller
             'amount' => $request->amount,
             'paid_on' => $request->payment_date,
             'reference' => $request->reference_number,
-            'notes' => $request->notes . ($difference > 1000 ? " [Note: Amount differs from received goods value]" : ""),
+            'notes' => $this->buildPaymentNotes($request, $expectedBreakdown, $difference),
             'tax_amount' => $request->tax_amount,
-            'other_charges' => $request->other_charges ?? 0,
+            'vat_amount' => $request->vat_amount,
         ]);
 
         // Update requisition status to completed
         $requisition->update(['status' => 'completed']);
 
-        return redirect()->route('finance.payments.index')
-            ->with('success', 'Payment processed successfully!');
+        return redirect()->route('finance.payments.show', $payment)
+            ->with('success', 'Payment processed successfully! VAT and tax amounts recorded.');
     }
+
+     /**
+     * Calculate payment breakdown based on received quantities and VAT
+     */
+    private function calculatePaymentBreakdown($lpo)
+    {
+        if (!$lpo || !$lpo->receivedItems) {
+            return [
+                'subtotal' => $lpo->subtotal ?? 0,
+                'vat_amount' => $lpo->vat_amount ?? 0,
+                'tax_amount' => 0,
+                'total' => $lpo->total ?? 0,
+            ];
+        }
+
+        $subtotal = 0;
+        $vatAmount = 0;
+        
+        foreach ($lpo->receivedItems as $receivedItem) {
+            if ($receivedItem->lpoItem && $receivedItem->quantity_received > 0) {
+                $itemTotal = $receivedItem->quantity_received * $receivedItem->lpoItem->unit_price;
+                $subtotal += $itemTotal;
+                
+                // Add VAT if applicable
+                if ($receivedItem->lpoItem->has_vat) {
+                    $vatAmount += $itemTotal * ($receivedItem->lpoItem->vat_rate / 100);
+                }
+            }
+        }
+
+        $total = $subtotal + $vatAmount;
+
+        return [
+            'subtotal' => $subtotal,
+            'vat_amount' => $vatAmount,
+            'tax_amount' => 0, // You can add tax calculation if needed
+            'total' => $total,
+            'vat_percentage' => $subtotal > 0 ? ($vatAmount / $subtotal) * 100 : 0,
+        ];
+    }
+
+     /**
+     * Build comprehensive payment notes
+     */
+    private function buildPaymentNotes($request, $expectedBreakdown, $difference)
+    {
+        $notes = $request->notes ?? '';
+        
+        $notes .= "\n\n--- PAYMENT BREAKDOWN ---";
+        $notes .= "\nSubtotal: UGX " . number_format($expectedBreakdown['subtotal'], 2);
+        $notes .= "\nVAT (" . number_format($expectedBreakdown['vat_percentage'], 1) . "%): UGX " . number_format($expectedBreakdown['vat_amount'], 2);
+        $notes .= "\nTax: UGX " . number_format($request->tax_amount, 2);
+        $notes .= "\nTotal: UGX " . number_format($request->amount, 2);
+        
+        if ($difference > 1000) {
+            $notes .= "\n\n⚠️ NOTE: Payment amount differs from expected value by UGX " . number_format($difference, 2);
+        }
+        
+        return $notes;
+    }
+
+
 
     public function show($id)
     {
@@ -116,7 +183,7 @@ class PaymentController extends Controller
     }
 
     /**
-     * Calculate actual payment amount based on received quantities
+     * Calculate actual payment amount based on received quantities INCLUDING VAT
      */
     private function calculateActualAmount($lpo)
     {
@@ -128,11 +195,39 @@ class PaymentController extends Controller
         
         foreach ($lpo->receivedItems as $receivedItem) {
             if ($receivedItem->lpoItem && $receivedItem->quantity_received > 0) {
-                $actualAmount += $receivedItem->quantity_received * $receivedItem->lpoItem->unit_price;
+                $itemTotal = $receivedItem->quantity_received * $receivedItem->lpoItem->unit_price;
+                
+                // Add VAT if applicable
+                if ($receivedItem->lpoItem->has_vat) {
+                    $itemTotal += $itemTotal * ($receivedItem->lpoItem->vat_rate / 100);
+                }
+                
+                $actualAmount += $itemTotal;
             }
         }
 
         return $actualAmount;
+    }
+
+     /**
+     * Calculate VAT amount based on received quantities
+     */
+    private function calculateVatAmount($lpo)
+    {
+        if (!$lpo || !$lpo->receivedItems) {
+            return $lpo->vat_amount ?? 0;
+        }
+
+        $vatAmount = 0;
+        
+        foreach ($lpo->receivedItems as $receivedItem) {
+            if ($receivedItem->lpoItem && $receivedItem->quantity_received > 0 && $receivedItem->lpoItem->has_vat) {
+                $itemTotal = $receivedItem->quantity_received * $receivedItem->lpoItem->unit_price;
+                $vatAmount += $itemTotal * ($receivedItem->lpoItem->vat_rate / 100);
+            }
+        }
+
+        return $vatAmount;
     }
 
     /**

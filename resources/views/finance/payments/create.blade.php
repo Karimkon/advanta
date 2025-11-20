@@ -39,61 +39,37 @@
                             </div>
                             <div class="col-md-6">
                                 <p><strong>Original Amount:</strong> UGX {{ number_format($requisition->estimated_total, 2) }}</p>
-                                <p><strong>Actual Received Value:</strong> UGX {{ number_format($actualAmount, 2) }}</p>
+                                <p><strong>Expected Total:</strong> UGX {{ number_format($breakdown['total'], 2) }}</p>
                                 <p><strong>LPO Number:</strong> {{ $requisition->lpo->lpo_number ?? 'N/A' }}</p>
-                                <p><strong>Created:</strong> {{ $requisition->created_at->format('M d, Y') }}</p>
                             </div>
                         </div>
 
-                        <!-- Received Items Summary -->
-                        @if($requisition->lpo && $requisition->lpo->receivedItems->count() > 0)
+                        <!-- VAT & Tax Breakdown -->
                         <div class="alert alert-info mb-4">
-                            <h6><i class="bi bi-info-circle"></i> Delivery Summary</h6>
-                            <p class="mb-2">Payment should be based on actual received quantities:</p>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Item</th>
-                                            <th>Ordered</th>
-                                            <th>Received</th>
-                                            <th>Unit Price</th>
-                                            <th>Actual Value</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($requisition->lpo->receivedItems as $receivedItem)
-                                            @if($receivedItem->lpoItem && $receivedItem->quantity_received > 0)
-                                            <tr>
-                                                <td>{{ $receivedItem->lpoItem->description }}</td>
-                                                <td>{{ $receivedItem->quantity_ordered }}</td>
-                                                <td class="{{ $receivedItem->quantity_received < $receivedItem->quantity_ordered ? 'text-warning' : 'text-success' }}">
-                                                    {{ $receivedItem->quantity_received }}
-                                                </td>
-                                                <td>UGX {{ number_format($receivedItem->lpoItem->unit_price, 2) }}</td>
-                                                <td class="fw-bold">UGX {{ number_format($receivedItem->quantity_received * $receivedItem->lpoItem->unit_price, 2) }}</td>
-                                            </tr>
-                                            @endif
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot>
-                                        <tr class="table-success">
-                                            <td colspan="4" class="text-end"><strong>Total Actual Value:</strong></td>
-                                            <td><strong>UGX {{ number_format($actualAmount, 2) }}</strong></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+                            <h6><i class="bi bi-calculator"></i> Expected Payment Breakdown</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Subtotal:</strong> UGX {{ number_format($breakdown['subtotal'], 2) }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>VAT Amount:</strong> UGX {{ number_format($breakdown['vat_amount'], 2) }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Total:</strong> UGX {{ number_format($breakdown['total'], 2) }}
+                                </div>
                             </div>
+                            @if($breakdown['vat_amount'] > 0)
+                            <small class="text-muted">VAT Rate: {{ number_format($breakdown['vat_percentage'], 1) }}%</small>
+                            @endif
                         </div>
-                        @endif
 
                         <!-- Payment Details -->
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="amount" class="form-label">Payment Amount *</label>
                                 <input type="number" step="0.01" class="form-control" id="amount" name="amount" 
-                                       value="{{ $actualAmount }}" required>
-                                <small class="text-muted">Based on actual received quantities: UGX {{ number_format($actualAmount, 2) }}</small>
+                                       value="{{ $breakdown['total'] }}" required>
+                                <small class="text-muted">Based on actual received quantities</small>
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -119,16 +95,19 @@
                                        placeholder="e.g., Bank reference, transaction ID">
                             </div>
 
+                            <!-- VAT and Tax Fields -->
+                            <div class="col-md-6 mb-3">
+                                <label for="vat_amount" class="form-label">VAT Amount *</label>
+                                <input type="number" step="0.01" class="form-control" id="vat_amount" name="vat_amount" 
+                                       value="{{ $breakdown['vat_amount'] }}" required>
+                                <small class="text-muted">VAT amount based on received items</small>
+                            </div>
+
                             <div class="col-md-6 mb-3">
                                 <label for="tax_amount" class="form-label">Tax Amount *</label>
                                 <input type="number" step="0.01" class="form-control" id="tax_amount" name="tax_amount" 
                                        value="0" required>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="other_charges" class="form-label">Other Charges</label>
-                                <input type="number" step="0.01" class="form-control" id="other_charges" name="other_charges" 
-                                       value="0">
+                                <small class="text-muted">Other taxes (if applicable)</small>
                             </div>
 
                             <div class="col-12 mb-3">
@@ -139,23 +118,32 @@
                         </div>
 
                         <!-- Total Calculation -->
-                        <div class="alert alert-info">
+                        <div class="alert alert-warning">
                             <div class="d-flex justify-content-between">
                                 <strong>Payment Amount:</strong>
-                                <span id="payment_amount_display">UGX 0.00</span>
+                                <span id="payment_amount_display">UGX {{ number_format($breakdown['total'], 2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <strong>VAT Amount:</strong>
+                                <span id="vat_amount_display">UGX {{ number_format($breakdown['vat_amount'], 2) }}</span>
                             </div>
                             <div class="d-flex justify-content-between">
                                 <strong>Tax Amount:</strong>
                                 <span id="tax_amount_display">UGX 0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between">
-                                <strong>Other Charges:</strong>
-                                <span id="other_charges_display">UGX 0.00</span>
-                            </div>
                             <hr>
                             <div class="d-flex justify-content-between fw-bold">
                                 <strong>Total Amount:</strong>
-                                <span id="total_amount_display">UGX 0.00</span>
+                                <span id="total_amount_display">UGX {{ number_format($breakdown['total'], 2) }}</span>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-light border">
+                            <div class="text-center">
+                                <strong>Amount in Words:</strong>
+                                <p class="mb-0 fst-italic" id="amount_in_words">
+                                    {{-- This will be populated by JavaScript --}}
+                                </p>
                             </div>
                         </div>
 
@@ -194,57 +182,109 @@
                         <strong>Original Total:</strong> UGX {{ number_format($requisition->estimated_total, 2) }}
                     </div>
                     <div class="mb-3">
-                        <strong>Actual Value:</strong> UGX {{ number_format($actualAmount, 2) }}
+                        <strong>Expected Payment:</strong> UGX {{ number_format($breakdown['total'], 2) }}
                     </div>
-                    <div>
-                        <strong>Created:</strong> {{ $requisition->created_at->format('M d, Y H:i') }}
+                    @if($breakdown['vat_amount'] > 0)
+                    <div class="mb-3">
+                        <strong>Includes VAT:</strong> UGX {{ number_format($breakdown['vat_amount'], 2) }}
                     </div>
-                </div>
-            </div>
-
-            <!-- Delivery Details -->
-            @if($requisition->lpo && $requisition->lpo->receivedItems->count() > 0)
-            <div class="card shadow-sm mt-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Delivery Details</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Delivery Date:</strong> {{ $requisition->lpo->delivery_date->format('M d, Y') }}</p>
-                    <p><strong>Received Items:</strong> {{ $requisition->lpo->receivedItems->where('quantity_received', '>', 0)->count() }}</p>
-                    <p><strong>Delivery Rate:</strong> 
-                        {{ number_format(($requisition->lpo->receivedItems->sum('quantity_received') / $requisition->lpo->receivedItems->sum('quantity_ordered')) * 100, 1) }}%
-                    </p>
-                    @if($requisition->lpo->delivery_notes)
-                        <p><strong>Delivery Notes:</strong> {{ $requisition->lpo->delivery_notes }}</p>
                     @endif
                 </div>
             </div>
-            @endif
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        function calculateTotal() {
-            const amount = parseFloat(document.getElementById('amount').value) || 0;
-            const taxAmount = parseFloat(document.getElementById('tax_amount').value) || 0;
-            const otherCharges = parseFloat(document.getElementById('other_charges').value) || 0;
-            const total = amount + taxAmount + otherCharges;
+document.addEventListener('DOMContentLoaded', function() {
+    function calculateTotal() {
+        const amount = parseFloat(document.getElementById('amount').value) || 0;
+        const vatAmount = parseFloat(document.getElementById('vat_amount').value) || 0;
+        const taxAmount = parseFloat(document.getElementById('tax_amount').value) || 0;
+        const total = amount;
 
-            document.getElementById('payment_amount_display').textContent = 'UGX ' + amount.toLocaleString('en-US', {minimumFractionDigits: 2});
-            document.getElementById('tax_amount_display').textContent = 'UGX ' + taxAmount.toLocaleString('en-US', {minimumFractionDigits: 2});
-            document.getElementById('other_charges_display').textContent = 'UGX ' + otherCharges.toLocaleString('en-US', {minimumFractionDigits: 2});
-            document.getElementById('total_amount_display').textContent = 'UGX ' + total.toLocaleString('en-US', {minimumFractionDigits: 2});
+        document.getElementById('payment_amount_display').textContent = 'UGX ' + amount.toLocaleString('en-US', {minimumFractionDigits: 2});
+        document.getElementById('vat_amount_display').textContent = 'UGX ' + vatAmount.toLocaleString('en-US', {minimumFractionDigits: 2});
+        document.getElementById('tax_amount_display').textContent = 'UGX ' + taxAmount.toLocaleString('en-US', {minimumFractionDigits: 2});
+        document.getElementById('total_amount_display').textContent = 'UGX ' + total.toLocaleString('en-US', {minimumFractionDigits: 2});
+        
+        // Update amount in words
+        document.getElementById('amount_in_words').textContent = convertAmountToWords(total);
+    }
+
+    // Amount to words conversion function
+    function convertAmountToWords(amount) {
+        if (amount === 0) return 'Zero Uganda Shillings Only';
+        
+        const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+        const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+        const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+        
+        function convertThreeDigits(num) {
+            let words = '';
+            
+            // Hundreds
+            if (num >= 100) {
+                words += units[Math.floor(num / 100)] + ' Hundred ';
+                num %= 100;
+            }
+            
+            // Tens and units
+            if (num >= 20) {
+                words += tens[Math.floor(num / 10)] + ' ';
+                num %= 10;
+            } else if (num >= 10) {
+                words += teens[num - 10] + ' ';
+                num = 0;
+            }
+            
+            // Units
+            if (num > 0) {
+                words += units[num] + ' ';
+            }
+            
+            return words.trim();
         }
+        
+        let shillings = Math.floor(amount);
+        let cents = Math.round((amount - shillings) * 100);
+        
+        let words = '';
+        
+        // Millions
+        if (shillings >= 1000000) {
+            words += convertThreeDigits(Math.floor(shillings / 1000000)) + ' Million ';
+            shillings %= 1000000;
+        }
+        
+        // Thousands
+        if (shillings >= 1000) {
+            words += convertThreeDigits(Math.floor(shillings / 1000)) + ' Thousand ';
+            shillings %= 1000;
+        }
+        
+        // Hundreds
+        if (shillings > 0) {
+            words += convertThreeDigits(shillings) + ' ';
+        }
+        
+        words += 'Uganda Shillings';
+        
+        // Cents
+        if (cents > 0) {
+            words += ' and ' + convertThreeDigits(cents) + ' Cents';
+        }
+        
+        return words + ' Only';
+    }
 
-        // Add event listeners
-        document.getElementById('amount').addEventListener('input', calculateTotal);
-        document.getElementById('tax_amount').addEventListener('input', calculateTotal);
-        document.getElementById('other_charges').addEventListener('input', calculateTotal);
-
-        // Initial calculation
-        calculateTotal();
-    });
+    // Add event listeners
+    document.getElementById('amount').addEventListener('input', calculateTotal);
+    document.getElementById('vat_amount').addEventListener('input', calculateTotal);
+    document.getElementById('tax_amount').addEventListener('input', calculateTotal);
+    
+    // Initialize on page load
+    calculateTotal();
+});
 </script>
 @endsection

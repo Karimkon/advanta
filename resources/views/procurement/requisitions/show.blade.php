@@ -166,73 +166,48 @@
                             </button>
                         </form>
 
-                    @elseif($requisition->status === 'procurement')
-                        <!-- STEP 2: Send to CEO for Approval -->
-                        <div class="alert alert-info">
-                            <strong>Step 2:</strong> Create LPO and send to CEO for approval.
-                        </div>
+                   @elseif($requisition->status === 'procurement')
+    <!-- STEP 2: Send to CEO for Approval -->
+    <div class="alert alert-info">
+        <strong>Step 2:</strong> Create LPO with VAT configuration and send to CEO for approval.
+    </div>
 
-                        <!-- Show any errors or success messages -->
-                        @if($errors->any())
-                            <div class="alert alert-danger">
-                                <strong>Form Errors:</strong>
-                                <ul>
-                                    @foreach($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
+    <!-- Show any errors or success messages -->
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <strong>Form Errors:</strong>
+            <ul>
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
-                        @if(session('success'))
-                            <div class="alert alert-success">
-                                {{ session('success') }}
-                            </div>
-                        @endif
+    @if(session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
+        </div>
+    @endif
 
-                        @if(session('error'))
-                            <div class="alert alert-danger">
-                                {{ session('error') }}
-                            </div>
-                        @endif
+    @if(session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
 
-                        <!-- Simple LPO Creation Form -->
-                        <form action="{{ route('procurement.requisitions.create-lpo', $requisition) }}" method="POST">
-                            @csrf
-                            <div class="mb-3">
-                                <label for="supplier_id" class="form-label">Select Supplier <span class="text-danger">*</span></label>
-                                <select name="supplier_id" id="supplier_id" class="form-select" required>
-                                    <option value="">Choose Supplier</option>
-                                    @foreach($suppliers as $supplier)
-                                        <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="delivery_date" class="form-label">Delivery Date <span class="text-danger">*</span></label>
-                                <input type="date" name="delivery_date" class="form-control" required 
-                                       min="{{ date('Y-m-d', strtotime('+1 day')) }}">
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="terms" class="form-label">Terms & Conditions</label>
-                                <textarea name="terms" id="terms" class="form-control" rows="2" 
-                                          placeholder="Payment terms, delivery terms, etc."></textarea>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="notes" class="form-label">Additional Notes</label>
-                                <textarea name="notes" id="notes" class="form-control" rows="2" 
-                                          placeholder="Any additional notes..."></textarea>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-success w-100" 
-                                    onclick="return confirm('Create LPO and send to CEO for approval?')">
-                                <i class="bi bi-receipt"></i> Create LPO & Send to CEO
-                            </button>
-                        </form>
-
+    <!-- NEW: Link to dedicated LPO creation page with VAT configuration -->
+    <div class="text-center">
+        <a href="{{ route('procurement.requisitions.create-lpo-page', $requisition) }}" 
+           class="btn btn-success btn-lg w-100">
+            <i class="bi bi-receipt"></i> Create LPO with VAT Configuration
+        </a>
+        
+        <p class="text-muted mt-2 small">
+            <i class="bi bi-info-circle"></i>
+            You'll be able to configure VAT for each item before sending to CEO
+        </p>
+    </div>
                     @elseif($requisition->status === 'ceo_approved')
                         <div class="alert alert-success">
                             <strong>CEO Approved:</strong> Ready to issue LPO to supplier.

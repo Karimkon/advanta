@@ -9,7 +9,7 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-white border-bottom">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Create New Requisition</h5>
+                        <h5 class="mb-0"><strong>Create New Requisition</strong></h5>
                         <a href="{{ route('engineer.requisitions.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-left"></i> Back to Requisitions
                         </a>
@@ -124,7 +124,7 @@
                         <!-- Items Section -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6>Requisition Items <span class="text-danger">*</span></h6>
+                                <h6><strong>Requisition Items</strong> <span class="text-danger">*</span></h6>
                                 <div>
                                     <button type="button" class="btn btn-outline-primary btn-sm" id="addCustomItem">
                                         <i class="bi bi-plus-circle"></i> Add Custom Item
@@ -177,13 +177,111 @@
 .selected-item-badge {
     font-size: 0.75em;
 }
+
+/* Color-coded item borders */
+.item-row {
+    border-width: 3px !important;
+    border-style: solid !important;
+    transition: all 0.3s ease;
+}
+
+.custom-item {
+    border-color: #0d6efd !important; /* Blue for custom items */
+    background-color: #f8f9ff;
+}
+
+.store-item-added {
+    border-color: #198754 !important; /* Green for store items */
+    background-color: #f8fff9;
+}
+
+.new-item-highlight {
+    animation: pulse-highlight 2s ease-in-out;
+    border-color: #ffc107 !important; /* Yellow for newly added items */
+    background-color: #fffbf0;
+}
+
+@keyframes pulse-highlight {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+    }
+}
+
+.item-type-indicator {
+    position: absolute;
+    top: -8px;
+    left: 15px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: white;
+}
+
+.custom-item .item-type-indicator {
+    background: #0d6efd;
+    content: "CUSTOM ITEM";
+}
+
+.store-item-added .item-type-indicator {
+    background: #198754;
+    content: "FROM STORE";
+}
+
+.item-row {
+    position: relative;
+    padding-top: 15px !important;
+}
+
+.item-row::before {
+    content: attr(data-item-type);
+    position: absolute;
+    top: -8px;
+    left: 15px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: white;
+    z-index: 10;
+}
+
+.custom-item::before {
+    content: "CUSTOM ITEM";
+    background: #0d6efd;
+}
+
+.store-item-added::before {
+    content: "FROM STORE";
+    background: #198754;
+}
+
+/* Store items table styling */
+.store-item-selected {
+    background-color: #e8f5e8 !important;
+    border-left: 4px solid #198754;
+}
+
+.store-item-quantity:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+.store-item-notes:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
 </style>
 @endpush
 
 @push('scripts')
 <script>
-// Use the same JavaScript code from project_manager/requisitions/create.blade.php
-// Copy the entire JavaScript section from that file here
 document.addEventListener('DOMContentLoaded', function() {
     let itemCount = 0;
     let currentStoreId = null;
@@ -432,6 +530,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.item-select-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 toggleItemInputs(this, this.checked);
+                const row = this.closest('tr');
+                if (this.checked) {
+                    row.classList.add('store-item-selected');
+                } else {
+                    row.classList.remove('store-item-selected');
+                }
             });
         });
 
@@ -450,6 +554,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelectorAll('.item-select-checkbox').forEach(checkbox => {
                     checkbox.checked = true;
                     toggleItemInputs(checkbox, true);
+                    checkbox.closest('tr').classList.add('store-item-selected');
                 });
             });
         }
@@ -526,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const itemIndex = itemCount + index;
                 
                 itemsHTML += `
-                    <div class="item-row border rounded p-3 mb-3 store-item-added">
+                    <div class="item-row border rounded p-3 mb-3 store-item-added new-item-highlight" data-item-type="FROM STORE">
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="form-label">Item Name</label>
@@ -575,6 +680,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reinitialize calculations
             initializeCalculations();
             
+            // Remove highlight animation after 2 seconds
+            setTimeout(() => {
+                document.querySelectorAll('.new-item-highlight').forEach(item => {
+                    item.classList.remove('new-item-highlight');
+                });
+            }, 2000);
+            
             // Show success message
             alert(`Added ${selectedItems.length} item(s) to requisition`);
             
@@ -582,6 +694,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.item-select-checkbox:checked').forEach(checkbox => {
                 checkbox.checked = false;
                 toggleItemInputs(checkbox, false);
+                checkbox.closest('tr').classList.remove('store-item-selected');
             });
             document.getElementById('select-all-checkbox').checked = false;
             
@@ -601,7 +714,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function showCustomItemForm() {
         const itemsContainer = document.getElementById('items-container');
         const customItemRow = `
-            <div class="item-row border rounded p-3 mb-3 custom-item">
+            <div class="item-row border rounded p-3 mb-3 custom-item new-item-highlight" data-item-type="CUSTOM ITEM">
                 <div class="row g-2">
                     <div class="col-md-4">
                         <label class="form-label">Item Name</label>
@@ -636,13 +749,21 @@ document.addEventListener('DOMContentLoaded', function() {
         itemsContainer.innerHTML = customItemRow;
         itemCount = 1;
         initializeCalculations();
+        
+        // Remove highlight animation after 2 seconds
+        setTimeout(() => {
+            document.querySelectorAll('.new-item-highlight').forEach(item => {
+                item.classList.remove('new-item-highlight');
+            });
+        }, 2000);
     }
     
     // Add custom item
     function addCustomItem() {
         const itemsContainer = document.getElementById('items-container');
         const newRow = document.createElement('div');
-        newRow.className = 'item-row border rounded p-3 mb-3 custom-item';
+        newRow.className = 'item-row border rounded p-3 mb-3 custom-item new-item-highlight';
+        newRow.setAttribute('data-item-type', 'CUSTOM ITEM');
         newRow.innerHTML = `
             <div class="row g-2">
                 <div class="col-md-4">
@@ -679,6 +800,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add event listeners to new inputs
         addCalculationListeners(newRow);
+        
+        // Remove highlight animation after 2 seconds
+        setTimeout(() => {
+            newRow.classList.remove('new-item-highlight');
+        }, 2000);
     }
     
     // Add custom item button

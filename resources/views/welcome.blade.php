@@ -85,7 +85,9 @@
                  class="h-16 w-auto mx-auto">
         </div>
         <h1 class="text-4xl font-extrabold mb-4 tracking-tight">
-            ADVANTA Uganda Limited – Project Management System
+            Advanta Uganda Limited 
+            <br>
+            Project Management System
         </h1>
         <p class="text-lg text-gray-300 mb-10 max-w-3xl mx-auto">
             Streamline projects, requisitions, LPOs, procurement, approvals, and reporting — all in one platform.
@@ -145,9 +147,15 @@
         <!-- NEW: Surveyor Role Card -->
         <a href="/surveyor/login" class="role-card group p-6 rounded-2xl text-center">
             <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">📐</div>
-            <h4 class="text-lg font-bold mb-2 text-teal-300">Surveyor</h4>
+            <h4 class="text-lg font-bold mb-2 text-teal-300">Project Milestones</h4>
             <p class="text-sm text-gray-300">Track construction milestones</p>
         </a>
+
+        <a href="/staff-reports/submit" class="role-card group p-6 rounded-2xl text-center">
+    <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">📝</div>
+    <h4 class="text-lg font-bold mb-2 text-lime-300">Staff Reports</h4>
+    <p class="text-sm text-gray-300">Submit daily/weekly reports</p>
+</a>
     </div>
 
     <!-- Manual Icon at Bottom -->

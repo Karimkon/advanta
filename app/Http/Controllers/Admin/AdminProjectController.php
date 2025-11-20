@@ -124,52 +124,313 @@ class AdminProjectController extends Controller
 private function createDefaultMilestones(Project $project)
 {
     $milestones = [
+        // PRELIMINARIES
         [
-            'title' => 'Foundation (Omusingi)',
-            'description' => 'Ground excavation, footings, concrete base, and reinforcement setting',
+            'title' => 'Insurances',
+            'description' => 'Project insurance setup and documentation',
+            'due_date' => $project->start_date->copy()->addDays(7),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.02,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Mobilization',
+            'description' => 'Mobilization of tools, equipment, manpower and resources',
+            'due_date' => $project->start_date->copy()->addDays(10),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.03,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Site Hoarding',
+            'description' => 'Hoarding and securing of construction site',
+            'due_date' => $project->start_date->copy()->addDays(14),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.01,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Land Scaping and Clearance',
+            'description' => 'Site clearance and land preparation',
+            'due_date' => $project->start_date->copy()->addDays(21),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.02,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Site Facilities Setup',
+            'description' => 'Site Offices, Stores, Dormitories, Latrine Set up',
+            'due_date' => $project->start_date->copy()->addDays(25),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.015,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Setting and Layout',
+            'description' => 'Site setting out and layout marking',
             'due_date' => $project->start_date->copy()->addDays(30),
             'status' => 'pending',
-            'cost_estimate' => $project->budget * 0.15, // 15% of budget
+            'cost_estimate' => $project->budget * 0.005,
+            'completion_percentage' => 0
+        ],
+
+        // SUB-STRUCTURE
+        [
+            'title' => 'Foundation Excavations',
+            'description' => 'Excavation works for foundations',
+            'due_date' => $project->start_date->copy()->addDays(35),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.04,
             'completion_percentage' => 0
         ],
         [
-            'title' => 'Substructure',
-            'description' => 'Work below ground floor level - retaining walls, basement, ground beams',
+            'title' => 'Foundation Walls',
+            'description' => 'Construction of foundation walls',
+            'due_date' => $project->start_date->copy()->addDays(42),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.05,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Footings and Bases',
+            'description' => 'Concrete footings and base construction',
+            'due_date' => $project->start_date->copy()->addDays(48),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.06,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Slab Casting',
+            'description' => 'Concrete slab casting for substructure',
+            'due_date' => $project->start_date->copy()->addDays(55),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.03,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Splash Appron',
+            'description' => 'Splash apron construction',
+            'due_date' => $project->start_date->copy()->addDays(58),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.01,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'First Fixtures M&E',
+            'description' => 'First mechanical and electrical fixtures installation',
             'due_date' => $project->start_date->copy()->addDays(60),
             'status' => 'pending',
-            'cost_estimate' => $project->budget * 0.20, // 20% of budget
+            'cost_estimate' => $project->budget * 0.01,
+            'completion_percentage' => 0
+        ],
+
+        // SUPER STRUCTURE
+        [
+            'title' => 'Walling',
+            'description' => 'Construction of walls and partitions',
+            'due_date' => $project->start_date->copy()->addDays(70),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.07,
             'completion_percentage' => 0
         ],
         [
-            'title' => 'Superstructure',
-            'description' => 'Above ground level - columns, beams, floors, walls, staircases',
+            'title' => 'Ring Beams',
+            'description' => 'Ring beam construction and installation',
+            'due_date' => $project->start_date->copy()->addDays(80),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.04,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Columns',
+            'description' => 'Column construction and reinforcement',
+            'due_date' => $project->start_date->copy()->addDays(85),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.05,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Plastering',
+            'description' => 'Internal and external plastering works',
+            'due_date' => $project->start_date->copy()->addDays(100),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.03,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Doors Installation',
+            'description' => 'Installation of doors and frames',
+            'due_date' => $project->start_date->copy()->addDays(105),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.02,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Windows Installation',
+            'description' => 'Installation of windows and frames',
+            'due_date' => $project->start_date->copy()->addDays(108),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.02,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Second Fixtures M&E',
+            'description' => 'Second phase mechanical and electrical fixtures',
+            'due_date' => $project->start_date->copy()->addDays(112),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.015,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Joinery and Fittings',
+            'description' => 'Joinery works and fittings installation',
+            'due_date' => $project->start_date->copy()->addDays(115),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.015,
+            'completion_percentage' => 0
+        ],
+
+        // ROOFING
+        [
+            'title' => 'Batten and Trusses',
+            'description' => 'Roof batten and trusses installation',
             'due_date' => $project->start_date->copy()->addDays(120),
             'status' => 'pending',
-            'cost_estimate' => $project->budget * 0.25, // 25% of budget
+            'cost_estimate' => $project->budget * 0.04,
             'completion_percentage' => 0
         ],
         [
-            'title' => 'Roofing Level',
-            'description' => 'Trusses/slab roof and covering installation',
+            'title' => 'Facial Boards',
+            'description' => 'Facial boards installation',
+            'due_date' => $project->start_date->copy()->addDays(125),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.02,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Roof Covering',
+            'description' => 'Main roof covering installation',
+            'due_date' => $project->start_date->copy()->addDays(135),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.06,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Eves Installation',
+            'description' => 'Eaves construction and finishing',
+            'due_date' => $project->start_date->copy()->addDays(140),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.02,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Gutters Installation',
+            'description' => 'Rainwater gutters and downpipes installation',
+            'due_date' => $project->start_date->copy()->addDays(145),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.01,
+            'completion_percentage' => 0
+        ],
+
+        // FINISHING
+        [
+            'title' => 'Floor Finishing',
+            'description' => 'Floor finishes and tiling works',
             'due_date' => $project->start_date->copy()->addDays(150),
             'status' => 'pending',
-            'cost_estimate' => $project->budget * 0.15, // 15% of budget
+            'cost_estimate' => $project->budget * 0.05,
             'completion_percentage' => 0
         ],
         [
-            'title' => 'Finishing Stages',
-            'description' => 'Plastering, flooring, windows, doors, electrical, plumbing, painting',
+            'title' => 'Wall Finishing',
+            'description' => 'Wall finishes and painting',
+            'due_date' => $project->start_date->copy()->addDays(160),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.04,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Final Fittings M&E',
+            'description' => 'Final mechanical and electrical fittings',
+            'due_date' => $project->start_date->copy()->addDays(170),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.06,
+            'completion_percentage' => 0
+        ],
+
+        // EXTERNAL WORKS
+        [
+            'title' => 'Landscaping',
+            'description' => 'Landscaping and garden works',
+            'due_date' => $project->start_date->copy()->addDays(180),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.03,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Wall Fence',
+            'description' => 'Perimeter wall fence construction',
+            'due_date' => $project->start_date->copy()->addDays(185),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.02,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Paving',
+            'description' => 'Paving and hard landscaping',
+            'due_date' => $project->start_date->copy()->addDays(190),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.02,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Gardening',
+            'description' => 'Garden setup and planting',
+            'due_date' => $project->start_date->copy()->addDays(195),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.01,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Water Tanks',
+            'description' => 'Water tank installation and setup',
+            'due_date' => $project->start_date->copy()->addDays(200),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.01,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Generator House',
+            'description' => 'Generator house provisions and setup',
+            'due_date' => $project->start_date->copy()->addDays(205),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.005,
+            'completion_percentage' => 0
+        ],
+        [
+            'title' => 'Site Cleaning',
+            'description' => 'Final site cleaning and house keeping',
             'due_date' => $project->start_date->copy()->addDays(210),
             'status' => 'pending',
-            'cost_estimate' => $project->budget * 0.20, // 20% of budget
+            'cost_estimate' => $project->budget * 0.005,
+            'completion_percentage' => 0
+        ],
+
+        // HAND OVER
+        [
+            'title' => 'Commissioning',
+            'description' => 'Systems commissioning and testing',
+            'due_date' => $project->start_date->copy()->addDays(215),
+            'status' => 'pending',
+            'cost_estimate' => $project->budget * 0.02,
             'completion_percentage' => 0
         ],
         [
-            'title' => 'Finalization',
-            'description' => 'External works, paving, drainage, landscaping, final inspection',
-            'due_date' => $project->end_date ?? $project->start_date->copy()->addDays(240),
+            'title' => 'Handover',
+            'description' => 'Final project handover to client',
+            'due_date' => $project->end_date ?? $project->start_date->copy()->addDays(220),
             'status' => 'pending',
-            'cost_estimate' => $project->budget * 0.05, // 5% of budget
+            'cost_estimate' => $project->budget * 0.03,
             'completion_percentage' => 0
         ],
     ];

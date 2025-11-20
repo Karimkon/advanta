@@ -65,10 +65,10 @@ class Requisition extends Model
         return $this->hasMany(RequisitionApproval::class);
     }
 
-    public function lpo()
-    {
-        return $this->hasOne(Lpo::class);
-    }
+   public function lpo()
+{
+    return $this->hasOne(Lpo::class)->latest();
+}
 
     public function storeRelease()
     {

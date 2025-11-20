@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="mb-1">Welcome, {{ auth()->user()->name }}</h2>
+            <h2 class="mb-1">Welcome, <strong>{{ auth()->user()->name }}</strong></h2>
             <p class="text-muted mb-0">Project Manager Dashboard - Overview of your projects and requisitions</p>
         </div>
         <a href="{{ route('project_manager.requisitions.create') }}" class="btn btn-primary">
@@ -21,7 +21,7 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
-                            <h6 class="card-subtitle text-muted mb-2">Total Requisitions</h6>
+                            <h6 class="card-subtitle text-muted mb-2"><strong>Total Requisitions</strong></h6>
                             <h2 class="fw-bold text-primary mb-1">{{ $requisitionStats['total'] }}</h2>
                             <small class="text-muted">All time</small>
                         </div>
@@ -90,7 +90,7 @@
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">My Recent Requisitions</h5>
+                    <h2 class="mb-0"><strong>My Recent Requisitions</strong></h2>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">

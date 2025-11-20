@@ -77,10 +77,10 @@
                 </div>
             </div>
 
-            <!-- Items -->
+            <!-- Original Items -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Requisition Items</h5>
+                    <h5 class="mb-0">Original Requisition Items</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -99,7 +99,7 @@
                                 @foreach($requisition->items as $item)
                                     <tr>
                                         <td>{{ $item->name }}</td>
-                                        <td>{{ $item->quantity }}</td>
+                                        <td>{{ number_format($item->quantity, 3) }}</td>
                                         <td>{{ $item->unit }}</td>
                                         <td>UGX {{ number_format($item->unit_price, 2) }}</td>
                                         <td>UGX {{ number_format($item->total_price, 2) }}</td>
@@ -118,35 +118,120 @@
                 </div>
             </div>
 
-            <!-- LPO Information -->
+            <!-- LPO Information with VAT Details -->
             @if($requisition->lpo)
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">LPO Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p><strong>LPO Number:</strong> {{ $requisition->lpo->lpo_number }}</p>
-                                <p><strong>Supplier:</strong> {{ $requisition->lpo->supplier->name ?? 'N/A' }}</p>
-                                <p><strong>Status:</strong> 
-                                    <span class="badge bg-{{ $requisition->lpo->status === 'issued' ? 'success' : 'warning' }}">
-                                        {{ ucfirst($requisition->lpo->status) }}
-                                    </span>
-                                </p>
-                            </div>
-                            <div class="col-md-6">
-                                <p><strong>Total Amount:</strong> UGX {{ number_format($requisition->lpo->total, 2) }}</p>
-                                @if($requisition->lpo->delivery_date)
-                                    <p><strong>Delivery Date:</strong> {{ $requisition->lpo->delivery_date->format('M d, Y') }}</p>
-                                @endif
-                                @if($requisition->lpo->notes)
-                                    <p><strong>Notes:</strong> {{ $requisition->lpo->notes }}</p>
-                                @endif
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">LPO Information with VAT Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>LPO Number:</strong> {{ $requisition->lpo->lpo_number }}</p>
+                            <p><strong>Supplier:</strong> {{ $requisition->lpo->supplier->name ?? 'N/A' }}</p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge bg-{{ $requisition->lpo->status === 'issued' ? 'success' : 'warning' }}">
+                                    {{ ucfirst($requisition->lpo->status) }}
+                                </span>
+                            </p>
+                            <p><strong>Prepared By:</strong> {{ $requisition->lpo->preparer->name ?? 'N/A' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <!-- VAT Financial Summary -->
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Financial Summary with VAT</h6>
+                                    <p class="mb-1"><strong>Subtotal (Excluding VAT):</strong> UGX {{ number_format($requisition->lpo->subtotal, 2) }}</p>
+                                    <p class="mb-1"><strong>VAT Amount (18%):</strong> UGX {{ number_format($requisition->lpo->vat_amount, 2) }}</p>
+                                    <p class="mb-1"><strong>Other Charges:</strong> UGX {{ number_format($requisition->lpo->other_charges, 2) }}</p>
+                                    <p class="mb-0"><strong>Grand Total:</strong> UGX {{ number_format($requisition->lpo->total, 2) }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    
+                    @if($requisition->lpo->delivery_date)
+                        <p class="mt-3 mb-1"><strong>Delivery Date:</strong> {{ $requisition->lpo->delivery_date->format('M d, Y') }}</p>
+                    @endif
+                    @if($requisition->lpo->terms)
+                        <p class="mb-1"><strong>Terms:</strong> {{ $requisition->lpo->terms }}</p>
+                    @endif
+                    @if($requisition->lpo->notes)
+                        <p class="mb-0"><strong>Notes:</strong> {{ $requisition->lpo->notes }}</p>
+                    @endif
                 </div>
+            </div>
+
+            <!-- LPO Items with VAT Status -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">LPO Items with VAT Configuration</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item Description</th>
+                                    <th>Quantity</th>
+                                    <th>Unit</th>
+                                    <th>Unit Price</th>
+                                    <th>VAT Status</th>
+                                    <th>Total (Excl. VAT)</th>
+                                    <th>VAT Amount</th>
+                                    <th>Total (Incl. VAT)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($requisition->lpo->items as $item)
+                                    <tr>
+                                        <td>{{ $item->description ?? 'No description' }}</td>
+                                        <td>{{ number_format($item->quantity, 3) }}</td>
+                                        <td>{{ $item->unit }}</td>
+                                        <td>UGX {{ number_format($item->unit_price, 2) }}</td>
+                                        <td>
+                                            @if($item->has_vat)
+                                                <span class="badge bg-success">18% VAT Included</span>
+                                            @else
+                                                <span class="badge bg-secondary">No VAT</span>
+                                            @endif
+                                        </td>
+                                        <td>UGX {{ number_format($item->total_price, 2) }}</td>
+                                        <td>
+                                            @if($item->has_vat)
+                                                UGX {{ number_format($item->total_price * 0.18, 2) }}
+                                            @else
+                                                UGX 0.00
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($item->has_vat)
+                                                UGX {{ number_format($item->total_price * 1.18, 2) }}
+                                            @else
+                                                UGX {{ number_format($item->total_price, 2) }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="5" class="text-end"><strong>Subtotal:</strong></td>
+                                    <td><strong>UGX {{ number_format($requisition->lpo->subtotal, 2) }}</strong></td>
+                                    <td><strong>UGX {{ number_format($requisition->lpo->vat_amount, 2) }}</strong></td>
+                                    <td><strong>UGX {{ number_format($requisition->lpo->total, 2) }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="8" class="text-end small text-muted">
+                                        VAT Summary: {{ $requisition->lpo->items->where('has_vat', true)->count() }} items with VAT, 
+                                        {{ $requisition->lpo->items->where('has_vat', false)->count() }} items without VAT
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
             @endif
 
             <!-- Approval History -->
@@ -178,41 +263,135 @@
 
         <!-- Sidebar Actions -->
         <div class="col-lg-4">
-            <!-- CEO Actions -->
+            <!-- CEO Approval Actions -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">CEO Actions</h5>
+                    <h5 class="mb-0">CEO Approval Actions</h5>
                 </div>
                 <div class="card-body">
                     @if($requisition->status === 'procurement')
                         <div class="alert alert-warning">
-                            <strong>Pending Your Approval:</strong> This requisition is waiting for your approval.
+                            <strong>Pending Your Approval:</strong> Review and adjust items before approval.
                         </div>
 
-                        <!-- Approve Requisition Form -->
-                        <form action="{{ route('ceo.requisitions.approve', $requisition) }}" method="POST" class="mb-3">
+                        <!-- Item-Level Approval Form -->
+                        <form action="{{ route('ceo.requisitions.approve', $requisition) }}" method="POST" id="ceoApprovalForm">
                             @csrf
-                            <div class="mb-3">
-                                <label for="comment" class="form-label">Approval Comment (Optional)</label>
-                                <textarea name="comment" id="comment" class="form-control" rows="3" 
-                                          placeholder="Add any comments for approval..."></textarea>
+                            
+                            <!-- Item Approval Controls -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Approve/Modify Items</h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0">
+                                            <thead class="table-secondary">
+                                                <tr>
+                                                    <th width="5%" class="text-center">Approve</th>
+                                                    <th width="25%">Item</th>
+                                                    <th width="10%">Req Qty</th>
+                                                    <th width="12%">Approve Qty</th>
+                                                    <th width="8%">Unit</th>
+                                                    <th width="15%">Unit Price</th>
+                                                    <th width="15%">Total</th>
+                                                    <th width="10%" class="text-center">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($requisition->items as $index => $item)
+                                                <tr class="item-row" data-item-id="{{ $item->id }}">
+                                                    <td class="text-center">
+                                                        <div class="form-check">
+                                                            <input type="checkbox" 
+                                                                   name="approved_items[{{ $item->id }}]" 
+                                                                   value="1" 
+                                                                   class="form-check-input item-approval-checkbox"
+                                                                   data-item-id="{{ $item->id }}"
+                                                                   checked>
+                                                        </div>
+                                                    </td>
+                                                    <td class="small">{{ Str::limit($item->name, 20) }}</td>
+                                                    <td class="text-center">{{ number_format($item->quantity, 3) }}</td>
+                                                    <td>
+                                                        <input type="number" 
+                                                               name="approved_quantities[{{ $item->id }}]" 
+                                                               class="form-control form-control-sm approved-quantity"
+                                                               value="{{ $item->quantity }}"
+                                                               min="0" 
+                                                               max="{{ $item->quantity }}"
+                                                               step="0.001"
+                                                               data-original-quantity="{{ $item->quantity }}"
+                                                               data-item-id="{{ $item->id }}"
+                                                               data-unit-price="{{ $item->unit_price }}">
+                                                    </td>
+                                                    <td class="text-center small">{{ $item->unit }}</td>
+                                                    <td class="small">UGX {{ number_format($item->unit_price, 2) }}</td>
+                                                    <td>
+                                                        <span class="approved-total small fw-bold text-success" data-item-id="{{ $item->id }}">
+                                                            UGX {{ number_format($item->total_price, 2) }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" 
+                                                                class="btn btn-outline-danger btn-sm remove-item-btn"
+                                                                data-item-id="{{ $item->id }}"
+                                                                title="Remove this item">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label for="approved_amount" class="form-label">Approved Amount</label>
-                                <input type="number" name="approved_amount" id="approved_amount" 
-                                       class="form-control" step="0.01" min="0"
-                                       value="{{ $requisition->estimated_total }}"
-                                       placeholder="Enter approved amount">
+
+                            <!-- Approval Summary -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="card bg-light">
+                                        <div class="card-body py-3">
+                                            <h6 class="card-title mb-2">Approval Summary</h6>
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <p class="mb-1 small"><strong>Original Total:</strong></p>
+                                                    <p class="mb-1 small"><strong>Approved Total:</strong></p>
+                                                    <p class="mb-0 small"><strong>Items Approved:</strong></p>
+                                                </div>
+                                                <div class="col-6 text-end">
+                                                    <p class="mb-1 small" id="original-total">UGX {{ number_format($requisition->estimated_total, 2) }}</p>
+                                                    <p class="mb-1 small"><span id="approved-total" class="text-success fw-bold">UGX {{ number_format($requisition->estimated_total, 2) }}</span></p>
+                                                    <p class="mb-0 small"><span id="approved-count" class="fw-bold">{{ $requisition->items->count() }}</span> of {{ $requisition->items->count() }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <button type="submit" class="btn btn-success w-100" 
-                                    onclick="return confirm('Approve this requisition?')">
-                                <i class="bi bi-check-circle"></i> Approve Requisition
-                            </button>
+
+                            <div class="mb-3">
+                                <label for="comment" class="form-label">Approval Comments</label>
+                                <textarea name="comment" id="comment" class="form-control" rows="2" 
+                                          placeholder="Add comments about your approval decisions..."></textarea>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success" id="approveBtn">
+                                    <i class="bi bi-check-circle"></i> Approve Selected Items
+                                </button>
+                                
+                                <button type="button" class="btn btn-outline-success" id="approveAllBtn">
+                                    <i class="bi bi-check-all"></i> Approve All Items
+                                </button>
+                            </div>
                         </form>
 
                         <hr>
 
-                        <!-- Reject Requisition Form -->
+                        <!-- Rejection Form -->
                         <form action="{{ route('ceo.requisitions.reject', $requisition) }}" method="POST">
                             @csrf
                             <div class="mb-3">
@@ -221,39 +400,43 @@
                                           placeholder="Please provide reason for rejection..." required></textarea>
                             </div>
                             <button type="submit" class="btn btn-danger w-100" 
-                                    onclick="return confirm('Reject this requisition? This action cannot be undone.')">
-                                <i class="bi bi-x-circle"></i> Reject Requisition
+                                    onclick="return confirm('Reject this entire requisition? This action cannot be undone.')">
+                                <i class="bi bi-x-circle"></i> Reject Entire Requisition
                             </button>
                         </form>
 
                     @elseif($requisition->status === 'ceo_approved')
                         <div class="alert alert-success">
-                            <strong>Approved:</strong> You have approved this requisition.
+                            <strong>Approved:</strong> You have approved this requisition with modifications.
                         </div>
+                        
+                        <!-- Show Approval Details -->
+                        @php
+                            $lastApproval = $requisition->approvals->where('role', 'ceo')->where('action', 'approved')->last();
+                        @endphp
+                        
+                        @if($lastApproval && $lastApproval->approved_amount != $requisition->estimated_total)
+                            <div class="alert alert-info">
+                                <strong>Modifications Made:</strong><br>
+                                Original Amount: UGX {{ number_format($requisition->estimated_total, 2) }}<br>
+                                Approved Amount: UGX {{ number_format($lastApproval->approved_amount, 2) }}
+                            </div>
+                        @endif
                         
                         @if($requisition->lpo)
                             <div class="text-center">
-                                <a href="{{ route('procurement.lpos.show', $requisition->lpo) }}" 
-                                   class="btn btn-outline-primary w-100 mb-2" target="_blank">
-                                    <i class="bi bi-eye"></i> View LPO Details
+                                <a href="{{ route('ceo.lpos.show', $requisition->lpo) }}" 
+                                   class="btn btn-outline-primary w-100 mb-2">
+                                    <i class="bi bi-receipt"></i> View LPO with Approved Items
                                 </a>
                             </div>
                         @endif
 
-                    @elseif($requisition->status === 'lpo_issued')
+                    @elseif(in_array($requisition->status, ['lpo_issued', 'delivered', 'completed']))
                         <div class="alert alert-info">
-                            <strong>LPO Issued:</strong> Purchase order has been issued to supplier.
+                            <strong>Status:</strong> {{ ucfirst(str_replace('_', ' ', $requisition->status)) }}
                         </div>
                         
-                        @if($requisition->lpo)
-                            <div class="text-center">
-                                <a href="{{ route('procurement.lpos.show', $requisition->lpo) }}" 
-                                   class="btn btn-outline-primary w-100 mb-2" target="_blank">
-                                    <i class="bi bi-eye"></i> View LPO Details
-                                </a>
-                            </div>
-                        @endif
-
                     @elseif($requisition->status === 'rejected')
                         <div class="alert alert-danger">
                             <strong>Rejected:</strong> This requisition has been rejected.
@@ -308,6 +491,29 @@
                                 </div>
                             </div>
                         @endforeach
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Quick Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ $requisition->items->count() }}</div>
+                            <div class="stat-label">Items</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">UGX</div>
+                            <div class="stat-label">{{ number_format($requisition->estimated_total, 0) }}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ $requisition->created_at->format('M d') }}</div>
+                            <div class="stat-label">Created</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -367,5 +573,319 @@
     font-size: 0.75em;
     padding: 0.35em 0.65em;
 }
+
+/* CEO Approval System Styles */
+.item-approval-checkbox:checked + label {
+    font-weight: bold;
+    color: #198754;
+}
+
+.approved-quantity:disabled {
+    background-color: #f8f9fa;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.remove-item-btn {
+    transition: all 0.3s ease;
+    padding: 0.25rem 0.5rem;
+}
+
+.remove-item-btn:hover {
+    transform: scale(1.1);
+    background-color: #dc3545;
+    color: white;
+}
+
+#approved-total {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+#approveBtn {
+    transition: all 0.3s ease;
+}
+
+#approveBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Highlight modified items */
+.approved-quantity.modified {
+    border-color: #ffc107;
+    background-color: #fff3cd;
+}
+
+/* Item row styling for removed items */
+.item-row.removed {
+    opacity: 0.6;
+    background-color: #f8f9fa;
+    text-decoration: line-through;
+}
+
+/* Stats grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    text-align: center;
+}
+
+.stat-item {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+    
+    .approved-quantity {
+        font-size: 0.75rem;
+    }
+}
 </style>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize approval system
+    initializeCEOApprovalSystem();
+    
+    function initializeCEOApprovalSystem() {
+        const form = document.getElementById('ceoApprovalForm');
+        if (!form) return;
+        
+        // Calculate initial totals
+        calculateApprovalSummary();
+        
+        // Event listeners for quantity changes
+        document.querySelectorAll('.approved-quantity').forEach(input => {
+            input.addEventListener('input', function() {
+                updateItemTotal(this);
+                calculateApprovalSummary();
+                highlightModifiedItems();
+            });
+            
+            input.addEventListener('change', function() {
+                validateQuantity(this);
+            });
+        });
+        
+        // Event listeners for approval checkboxes
+        document.querySelectorAll('.item-approval-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const itemId = this.dataset.itemId;
+                const quantityInput = document.querySelector(`.approved-quantity[data-item-id="${itemId}"]`);
+                const itemRow = document.querySelector(`.item-row[data-item-id="${itemId}"]`);
+                
+                if (!this.checked) {
+                    // If unchecking, set quantity to 0 and disable
+                    quantityInput.value = 0;
+                    quantityInput.disabled = true;
+                    itemRow.classList.add('removed');
+                } else {
+                    // If checking, restore original quantity
+                    quantityInput.value = quantityInput.dataset.originalQuantity;
+                    quantityInput.disabled = false;
+                    itemRow.classList.remove('removed');
+                }
+                
+                updateItemTotal(quantityInput);
+                calculateApprovalSummary();
+                highlightModifiedItems();
+            });
+        });
+        
+        // Remove item buttons
+        document.querySelectorAll('.remove-item-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const itemId = this.dataset.itemId;
+                const checkbox = document.querySelector(`.item-approval-checkbox[data-item-id="${itemId}"]`);
+                const quantityInput = document.querySelector(`.approved-quantity[data-item-id="${itemId}"]`);
+                const itemRow = document.querySelector(`.item-row[data-item-id="${itemId}"]`);
+                
+                // Uncheck and set quantity to 0
+                checkbox.checked = false;
+                quantityInput.value = 0;
+                quantityInput.disabled = true;
+                itemRow.classList.add('removed');
+                
+                updateItemTotal(quantityInput);
+                calculateApprovalSummary();
+                highlightModifiedItems();
+                
+                // Show feedback
+                showToast('Item removed from approval', 'warning');
+            });
+        });
+        
+        // Approve all button
+        document.getElementById('approveAllBtn').addEventListener('click', function() {
+            document.querySelectorAll('.item-approval-checkbox').forEach(checkbox => {
+                checkbox.checked = true;
+                const itemId = checkbox.dataset.itemId;
+                const quantityInput = document.querySelector(`.approved-quantity[data-item-id="${itemId}"]`);
+                const itemRow = document.querySelector(`.item-row[data-item-id="${itemId}"]`);
+                
+                quantityInput.value = quantityInput.dataset.originalQuantity;
+                quantityInput.disabled = false;
+                itemRow.classList.remove('removed');
+                
+                updateItemTotal(quantityInput);
+            });
+            
+            calculateApprovalSummary();
+            highlightModifiedItems();
+            
+            // Show confirmation
+            showToast('All items selected for approval with original quantities', 'success');
+        });
+        
+        // Form submission validation
+        form.addEventListener('submit', function(e) {
+            const approvedItems = document.querySelectorAll('.item-approval-checkbox:checked');
+            const approvedTotal = parseFloat(document.getElementById('approved-total').textContent.replace(/[^\d.]/g, ''));
+            
+            if (approvedItems.length === 0) {
+                e.preventDefault();
+                showToast('Please approve at least one item before submitting.', 'error');
+                return;
+            }
+            
+            if (approvedTotal === 0) {
+                e.preventDefault();
+                showToast('Approved amount cannot be zero. Please adjust quantities.', 'error');
+                return;
+            }
+            
+            // Show confirmation with summary
+            const confirmed = confirm(
+                `APPROVAL CONFIRMATION\n\n` +
+                `Items Approved: ${approvedItems.length}\n` +
+                `Total Amount: UGX ${approvedTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}\n\n` +
+                `This will update the LPO and proceed with procurement.\n\n` +
+                `Click OK to confirm approval.`
+            );
+            
+            if (!confirmed) {
+                e.preventDefault();
+            }
+        });
+        
+        // Initial highlight check
+        highlightModifiedItems();
+    }
+    
+    function updateItemTotal(quantityInput) {
+        const itemId = quantityInput.dataset.itemId;
+        const quantity = parseFloat(quantityInput.value) || 0;
+        const unitPrice = parseFloat(quantityInput.dataset.unitPrice) || 0;
+        const total = quantity * unitPrice;
+        
+        const totalElement = document.querySelector(`.approved-total[data-item-id="${itemId}"]`);
+        if (totalElement) {
+            totalElement.textContent = `UGX ${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            totalElement.className = `approved-total small fw-bold ${total > 0 ? 'text-success' : 'text-danger'}`;
+        }
+    }
+    
+    function calculateApprovalSummary() {
+        let approvedTotal = 0;
+        let approvedCount = 0;
+        
+        document.querySelectorAll('.item-approval-checkbox').forEach(checkbox => {
+            if (checkbox.checked) {
+                const itemId = checkbox.dataset.itemId;
+                const quantityInput = document.querySelector(`.approved-quantity[data-item-id="${itemId}"]`);
+                const quantity = parseFloat(quantityInput.value) || 0;
+                
+                if (quantity > 0) {
+                    approvedCount++;
+                    
+                    const unitPrice = parseFloat(quantityInput.dataset.unitPrice) || 0;
+                    approvedTotal += quantity * unitPrice;
+                }
+            }
+        });
+        
+        // Update display
+        document.getElementById('approved-total').textContent = `UGX ${approvedTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        document.getElementById('approved-count').textContent = approvedCount;
+        
+        // Update button text and state
+        const approveBtn = document.getElementById('approveBtn');
+        if (approveBtn) {
+            approveBtn.innerHTML = `<i class="bi bi-check-circle"></i> Approve ${approvedCount} Items (UGX ${approvedTotal.toLocaleString('en-US', {minimumFractionDigits: 2})})`;
+            approveBtn.disabled = approvedCount === 0 || approvedTotal === 0;
+        }
+    }
+    
+    function highlightModifiedItems() {
+        document.querySelectorAll('.approved-quantity').forEach(input => {
+            const originalQty = parseFloat(input.dataset.originalQuantity);
+            const currentQty = parseFloat(input.value) || 0;
+            
+            if (currentQty !== originalQty) {
+                input.classList.add('modified');
+            } else {
+                input.classList.remove('modified');
+            }
+        });
+    }
+    
+    function validateQuantity(input) {
+        const maxQty = parseFloat(input.max);
+        const currentQty = parseFloat(input.value) || 0;
+        
+        if (currentQty > maxQty) {
+            input.value = maxQty;
+            updateItemTotal(input);
+            calculateApprovalSummary();
+            showToast('Quantity cannot exceed requested amount', 'warning');
+        }
+    }
+    
+    function showToast(message, type = 'info') {
+        // Simple toast notification
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '9999';
+        toast.style.minWidth = '300px';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+    }
+});
+</script>
+@endpush
 @endsection

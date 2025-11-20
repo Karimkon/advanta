@@ -117,6 +117,7 @@ return [
     | Supported drivers: "file", "cache"
     |
     */
+    'staff_access_code' => env('STAFF_ACCESS_CODE', 'ADVANTA2024'),
 
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
