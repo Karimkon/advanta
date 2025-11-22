@@ -228,7 +228,7 @@
             <div class="company-info text-center mt-3">
                 <p>
                     <strong>Location:</strong> Katula Road Kisaasi, Kampala | 
-                    <strong>Tel:</strong> +256 706 701234 / +256 393 215281 | 
+                    <strong>Tel:</strong> 0393 249740 or 0200 91644 | 
                     <strong>Email:</strong> procurement@advanta.ug
                 </p>
             </div>
@@ -281,7 +281,7 @@
                     <table class="info-table">
                         <tr><td>Company:</td><td>Advanta Uganda Limited</td></tr>
                         <tr><td>Location:</td><td>Katula Road Kisaasi</td></tr>
-                        <tr><td>Contact:</td><td>+256 706 701234</td></tr>
+                        <tr><td>Contact:</td><td>0393 249740 or 0200 91644</td></tr>
                         <tr><td>Email:</td><td>procurement@advanta.ug</td></tr>
                     </table>
                 </div>

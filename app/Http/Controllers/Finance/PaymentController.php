@@ -50,16 +50,16 @@ class PaymentController extends Controller
         return view('finance.payments.create', compact('requisition', 'breakdown'));
     }
 
-      public function store(Request $request, $requisitionId)
+       public function store(Request $request, $requisitionId)
     {
         $request->validate([
             'amount' => 'required|numeric|min:0',
             'payment_method' => 'required|string',
             'payment_date' => 'required|date',
             'reference_number' => 'nullable|string',
-            'tax_amount' => 'required|numeric|min:0',
             'vat_amount' => 'required|numeric|min:0',
-            'other_charges' => 'nullable|numeric|min:0',
+            'additional_costs' => 'nullable|numeric|min:0', // CHANGED
+            'additional_costs_description' => 'nullable|string|max:255', // NEW
             'notes' => 'nullable|string',
         ]);
 
@@ -69,23 +69,14 @@ class PaymentController extends Controller
             return back()->with('error', 'Cannot process payment: Supplier information missing for this requisition.');
         }
 
-        // Calculate expected amounts based on actual received items
+        // Calculate expected amounts
         $expectedBreakdown = $this->calculatePaymentBreakdown($requisition->lpo);
         
         $requestedAmount = $request->amount;
         $expectedTotal = $expectedBreakdown['total'];
         $difference = abs($requestedAmount - $expectedTotal);
-        
-        // Log significant differences
-        if ($difference > 1000) {
-            \Log::warning("Payment amount mismatch for LPO {$requisition->lpo->lpo_number}", [
-                'requested' => $requestedAmount,
-                'expected' => $expectedTotal,
-                'difference' => $difference
-            ]);
-        }
 
-        // Create payment with VAT and tax information
+        // Create payment with VAT and additional costs
         $payment = Payment::create([
             'lpo_id' => $requisition->lpo->id,
             'supplier_id' => $requisition->lpo->supplier_id,
@@ -96,19 +87,20 @@ class PaymentController extends Controller
             'paid_on' => $request->payment_date,
             'reference' => $request->reference_number,
             'notes' => $this->buildPaymentNotes($request, $expectedBreakdown, $difference),
-            'tax_amount' => $request->tax_amount,
             'vat_amount' => $request->vat_amount,
+            'additional_costs' => $request->additional_costs ?? 0, // CHANGED
+            'additional_costs_description' => $request->additional_costs_description, // NEW
         ]);
 
-        // Update requisition status to completed
+        // Update requisition status
         $requisition->update(['status' => 'completed']);
 
         return redirect()->route('finance.payments.show', $payment)
-            ->with('success', 'Payment processed successfully! VAT and tax amounts recorded.');
+            ->with('success', 'Payment processed successfully! VAT and additional costs recorded.');
     }
 
-     /**
-     * Calculate payment breakdown based on received quantities and VAT
+    /**
+     * Calculate payment breakdown based on received quantities
      */
     private function calculatePaymentBreakdown($lpo)
     {
@@ -116,7 +108,7 @@ class PaymentController extends Controller
             return [
                 'subtotal' => $lpo->subtotal ?? 0,
                 'vat_amount' => $lpo->vat_amount ?? 0,
-                'tax_amount' => 0,
+                'additional_costs' => 0,
                 'total' => $lpo->total ?? 0,
             ];
         }
@@ -141,11 +133,12 @@ class PaymentController extends Controller
         return [
             'subtotal' => $subtotal,
             'vat_amount' => $vatAmount,
-            'tax_amount' => 0, // You can add tax calculation if needed
+            'additional_costs' => 0, // Additional costs are manually entered
             'total' => $total,
             'vat_percentage' => $subtotal > 0 ? ($vatAmount / $subtotal) * 100 : 0,
         ];
     }
+
 
      /**
      * Build comprehensive payment notes
@@ -157,7 +150,13 @@ class PaymentController extends Controller
         $notes .= "\n\n--- PAYMENT BREAKDOWN ---";
         $notes .= "\nSubtotal: UGX " . number_format($expectedBreakdown['subtotal'], 2);
         $notes .= "\nVAT (" . number_format($expectedBreakdown['vat_percentage'], 1) . "%): UGX " . number_format($expectedBreakdown['vat_amount'], 2);
-        $notes .= "\nTax: UGX " . number_format($request->tax_amount, 2);
+        
+        // Add additional costs if any
+        if ($request->additional_costs > 0) {
+            $description = $request->additional_costs_description ?: 'Additional Costs';
+            $notes .= "\n{$description}: UGX " . number_format($request->additional_costs, 2);
+        }
+        
         $notes .= "\nTotal: UGX " . number_format($request->amount, 2);
         
         if ($difference > 1000) {

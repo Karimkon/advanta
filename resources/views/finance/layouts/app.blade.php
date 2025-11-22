@@ -146,6 +146,14 @@
             <i class="bi bi-clock"></i> Pending Payments
         </a>
 
+        <a href="{{ route('finance.subcontractors.index') }}" class="{{ request()->routeIs('finance.subcontractors.*') ? 'active' : '' }}">
+            <i class="bi bi-building"></i> Subcontractors Costs
+        </a>
+
+        <a href="{{ route('finance.labor.index') }}" class="{{ request()->routeIs('finance.labor.*') ? 'active' : '' }}">
+            <i class="bi bi-people"></i> Labor Costs
+        </a>
+
         <a href="{{ route('finance.expenses.index') }}" class="{{ request()->routeIs('finance.expenses.*') ? 'active' : '' }}">
             <i class="bi bi-cash-coin"></i> Expenses
         </a>

@@ -65,7 +65,7 @@
                             <th>Ref No.</th>
                             <th>Project</th>
                             <th>Type</th>
-                            <th>Amount</th>
+                            <!-- <th>Amount</th> -->
                             <th>Status</th>
                             <th>Urgency</th>
                             <th>Date</th>
@@ -84,7 +84,7 @@
                                         {{ ucfirst($requisition->type) }}
                                     </span>
                                 </td>
-                                <td>UGX {{ number_format($requisition->estimated_total, 2) }}</td>
+                                <!-- <td>UGX {{ number_format($requisition->estimated_total, 2) }}</td> -->
                                 <td>
                                     <span class="badge {{ $requisition->getStatusBadgeClass() }}">
                                         {{ $requisition->getCurrentStage() }}

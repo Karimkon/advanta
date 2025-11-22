@@ -11,7 +11,8 @@ class InventoryItem extends Model
 
     protected $fillable = [
         'sku', 'name', 'description', 'category', 'unit_price', 'unit', 
-        'quantity', 'reorder_level', 'track_per_project', 'store_id', 'project_id'
+        'quantity', 'reorder_level', 'track_per_project', 'store_id', 'project_id',
+        'product_catalog_id' // ADD THIS
     ];
 
     protected $casts = [
@@ -21,6 +22,7 @@ class InventoryItem extends Model
         'track_per_project' => 'boolean',
     ];
 
+    // Relationships
     public function logs()
     {
         return $this->hasMany(InventoryLog::class, 'inventory_item_id');
@@ -39,6 +41,12 @@ class InventoryItem extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    // ADD THIS RELATIONSHIP
+    public function productCatalog()
+    {
+        return $this->belongsTo(ProductCatalog::class);
     }
 
     // Check if item is low stock
@@ -74,5 +82,23 @@ class InventoryItem extends Model
             'in_stock' => 'bg-success',
             default => 'bg-secondary'
         };
+    }
+
+    // ADD: Accessor for name to use product catalog name if available
+    public function getNameAttribute($value)
+    {
+        return $value ?? $this->productCatalog?->name;
+    }
+
+    // ADD: Accessor for description to use product catalog description if available
+    public function getDescriptionAttribute($value)
+    {
+        return $value ?? $this->productCatalog?->description;
+    }
+
+    // ADD: Accessor for unit to use product catalog unit if available
+    public function getUnitAttribute($value)
+    {
+        return $value ?? $this->productCatalog?->unit;
     }
 }

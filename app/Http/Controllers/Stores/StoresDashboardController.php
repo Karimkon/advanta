@@ -79,15 +79,20 @@ class StoresDashboardController extends Controller
             ->take(5)
             ->get();
 
-        // Get pending LPOs count - ADD THIS
-        $pendingLposCount = Lpo::whereHas('requisition', function($query) use ($currentStore) {
-                $query->where('project_id', $currentStore->project_id);
-            })
-            ->where('status', 'issued')
-            ->count();
+        // Get pending LPOs count
+        $pendingLposCount = 0;
+        if ($currentStore->project_id) {
+            $pendingLposCount = Lpo::whereHas('requisition', function($query) use ($currentStore) {
+                    $query->where('project_id', $currentStore->project_id);
+                })
+                ->where('status', 'issued')
+                ->count();
+        }
 
-        // Share pending count with layout
+        // Share counts with ALL store views (for layout)
         view()->share('pendingCount', $pendingRequisitions->count());
+        view()->share('pendingLposCount', $pendingLposCount); // ADD THIS LINE
+        view()->share('stores', $stores); // ADD THIS LINE
 
         return view('stores.dashboard', compact(
             'stores',

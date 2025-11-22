@@ -51,7 +51,7 @@
                 <div class="company-info text-center mt-3">
                     <p class="mb-1">
                         <strong>Location:</strong> Katula Road Kisaasi, Kampala | 
-                        <strong>Tel:</strong> +256 706 701234 / +256 393 215281 | 
+                        <strong>Tel:</strong> 0393 249740 or 0200 91644 | 
                         <strong>Email:</strong> info@advanta.ug
                     </p>
                 </div>
@@ -154,7 +154,7 @@
                             </tr>
                             <tr>
                                 <td><strong>Contact:</strong></td>
-                                <td>+256 706 701234</td>
+                                <td>0393 249740 or 0200 91644</td>
                             </tr>
                             <tr>
                                 <td><strong>Email:</strong></td>
@@ -273,7 +273,7 @@
                             </tr>
                             <tr>
                                 <td><strong>Contact Phone:</strong></td>
-                                <td>+256 706 701234</td>
+                                <td>0393 249740 or 0200 91644</td>
                             </tr>
                             <tr>
                                 <td><strong>Delivery Date:</strong></td>
@@ -341,7 +341,7 @@
                         </div>
                         <div class="col-md-4 text-center">
                             <strong>Contact Information</strong><br>
-                            Tel: +256 706 701234 / +256 393 215281<br>
+                            Tel: 0393 249740 or 0200 91644<br>
                             Email: info@advanta.ug
                         </div>
                         <div class="col-md-4 text-end">

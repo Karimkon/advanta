@@ -178,7 +178,7 @@ public function createLpo(Requisition $requisition)
                     "• Deliver all items on or before the specified date\n" .
                     "• Goods must meet quality standards\n" .
                     "• Provide proper packaging and documentation\n" .
-                    "• Contact: procurement@advanta.ug / +256 706 701234";
+                    "• Contact: procurement@advanta.ug / 0393 249740 or 0200 91644";
         }
             
             // NEW: Get VAT configuration for items
@@ -555,8 +555,9 @@ private function sendLpoToSupplier(Lpo $lpo)
                    "• Provide proper packaging to prevent damage\n" .
                    "• Submit original invoice and delivery note\n" .
                    "• Prices should include VAT where applicable\n" .
+                    "•Payments shall be made by EFT or crossed cheque\n" .
                    "• Late deliveries may result in order cancellation\n" .
-                   "• Contact: procurement@advanta.ug / +256 706 701234";
+                   "• Contact: procurement@advanta.ug / 0393 249740 or 0200 91644";
 
     return view('procurement.requisitions.create-lpo', compact('requisition', 'suppliers', 'defaultTerms'));
 }

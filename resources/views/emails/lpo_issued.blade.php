@@ -87,7 +87,7 @@
             <li>Deliver all items on or before {{ $lpo->delivery_date->format('M d, Y') }}</li>
         </ol>
 
-        <p>For any queries, please contact our procurement department at procurement@advanta.ug or call +256 706 701234.</p>
+        <p>For any queries, please contact our procurement department at procurement@advanta.ug or call 0393 249740 or 0200 91644.</p>
 
         <p>Best regards,<br>
         <strong>Procurement Department</strong><br>
@@ -96,7 +96,7 @@
 
     <div class="footer">
         <p>PLOT 28A, Katula Road Kisaasi, Kampala, Uganda<br>
-        Tel: +256 706 701234 / +256 393 215281 | Email: procurement@advanta.ug</p>
+        Tel: 0393 249740 or 0200 91644 / +256 393 215281 | Email: procurement@advanta.ug</p>
         <p><em>This is an electronically generated document. No signature is required for email purposes.</em></p>
     </div>
 </body>

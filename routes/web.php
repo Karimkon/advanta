@@ -47,6 +47,10 @@ use App\Http\Controllers\Surveyor\SurveyorProjectController;
 use App\Http\Controllers\ProjectManager\ProjectManagerMilestoneController;  
 use App\Http\Controllers\CEO\CEOLpoController;
 use App\Http\Controllers\StaffReportController;
+use App\Http\Controllers\Finance\SubcontractorController;
+use App\Http\Controllers\Finance\LaborController;
+use App\http\controllers\finance\subcontractorpaymentcontroller;
+use App\Http\Controllers\Engineer\EngineerProjectController;
 
 // ----------------------
 // Landing Page
@@ -158,6 +162,9 @@ Route::post('/logout', function (Request $request) {
 Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class,'index'])->name('dashboard');
 
+    Route::resource('product-catalog', \App\Http\Controllers\Admin\ProductCatalogController::class);
+    Route::get('product-catalog/search', [\App\Http\Controllers\Admin\ProductCatalogController::class, 'search'])->name('product-catalog.search');
+    Route::post('product-catalog/bulk-import', [\App\Http\Controllers\Admin\ProductCatalogController::class, 'bulkImportStore'])->name('product-catalog.bulk-import');
     // Users Management
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
@@ -429,6 +436,32 @@ Route::middleware(['auth','role:finance'])->prefix('finance')->name('finance.')-
         Route::get('/project/{project}', [FinancialReportsController::class, 'projectReport'])->name('project');
         Route::get('/export/financial-summary', [FinancialReportsController::class, 'exportFinancialSummary'])->name('export.summary');
     });
+
+    // Subcontrollers, Subcontractors and Labor
+Route::prefix('subcontractors')->name('subcontractors.')->group(function () {
+    Route::get('/', [SubcontractorController::class, 'index'])->name('index');
+    Route::get('/create', [SubcontractorController::class, 'create'])->name('create');
+    Route::post('/', [SubcontractorController::class, 'store'])->name('store');
+    Route::get('/{subcontractor}', [SubcontractorController::class, 'show'])->name('show');
+    Route::get('/contract/{projectSubcontractor}/ledger', [SubcontractorController::class, 'ledger'])->name('ledger');
+    
+    // Payments
+    Route::get('/contract/{projectSubcontractor}/payments/create', [SubcontractorPaymentController::class, 'create'])->name('payments.create');
+    Route::post('/contract/{projectSubcontractor}/payments', [SubcontractorPaymentController::class, 'store'])->name('payments.store');
+});
+
+Route::prefix('labor')->name('labor.')->group(function () {
+    Route::get('/', [LaborController::class, 'index'])->name('index');
+    Route::get('/create', [LaborController::class, 'create'])->name('create');
+    Route::post('/', [LaborController::class, 'store'])->name('store');
+     Route::get('/import', [LaborController::class, 'import'])->name('import');
+    Route::post('/import', [LaborController::class, 'processImport'])->name('process-import');
+    Route::get('/download-template', [LaborController::class, 'downloadTemplate'])->name('download-template');
+    Route::get('/{worker}', [LaborController::class, 'show'])->name('show');
+    Route::get('/{worker}/payments/create', [LaborController::class, 'processPayment'])->name('payments.create');
+    Route::post('/{worker}/payments', [LaborController::class, 'storePayment'])->name('payments.store');
+     Route::get('/payments/{payment}/receipt', [LaborController::class, 'generateReceipt'])->name('payments.receipt');
+});
 });
 
 // STORES
@@ -552,14 +585,18 @@ Route::middleware(['auth','role:engineer'])->prefix('engineer')->name('engineer.
         Route::get('/', [EngineerRequisitionController::class, 'index'])->name('index');
         Route::get('/create', [EngineerRequisitionController::class, 'create'])->name('create');
         Route::post('/', [EngineerRequisitionController::class, 'store'])->name('store');
-        Route::get('/{requisition}', [EngineerRequisitionController::class, 'show'])->name('show');
         Route::get('/pending', [EngineerRequisitionController::class, 'pending'])->name('pending');
+        Route::get('/search-products', [\App\Http\Controllers\Engineer\EngineerRequisitionController::class, 'searchProducts'])
+                ->name('search-products');
+                
+            Route::get('/{requisition}', [EngineerRequisitionController::class, 'show'])->name('show');
     });
     
     // Projects
     Route::prefix('projects')->name('projects.')->group(function () {
         Route::get('/', [EngineerProjectController::class, 'index'])->name('index');
     });
+
 });
 
 // SURVEYOR

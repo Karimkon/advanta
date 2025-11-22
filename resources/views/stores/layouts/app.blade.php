@@ -62,80 +62,89 @@
                     </div>
 
                     <!-- Navigation -->
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('stores.dashboard') ? 'active' : '' }}" 
-                               href="{{ route('stores.dashboard') }}">
-                                <i class="bi bi-speedometer2"></i> Dashboard
-                                @if(isset($pendingCount) && $pendingCount > 0)
-                                    <span class="badge bg-danger float-end">{{ $pendingCount }}</span>
-                                @endif
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('stores.inventory.*') ? 'active' : '' }}" 
-                               href="#">
-                                <i class="bi bi-box-seam"></i> Inventory Management
-                            </a>
-                            <ul class="nav flex-column ms-3">
-                                @php
-                                    // Show ONLY the store assigned to this user
-                                    $userStores = collect($stores ?? [])->filter(function($store) {
-                                        $user = auth()->user();
-                                        
-                                        // Main store manager (ID 6) sees only main store
-                                        if ($user->id === 6) {
-                                            return $store->isMainStore();
-                                        }
-                                        
-                                        // Other store users see only their project stores
-                                        return $store->isProjectStore() && 
-                                               $store->project && 
-                                               $store->project->users()->where('user_id', $user->id)->exists();
-                                    });
-                                @endphp
-                                
-                                @foreach($userStores as $store)
-                                    <li>
-                                        <a class="nav-link small {{ request()->is('stores/inventory/' . $store->id) ? 'active' : '' }}" 
-                                           href="{{ route('stores.inventory.index', $store) }}">
-                                            <i class="bi bi-building"></i> {{ $store->display_name }}
-                                        </a>
-                                    </li>
-                                @endforeach
-                                
-                                @if($userStores->isEmpty())
-                                    <li>
-                                        <span class="nav-link small text-warning">
-                                            <i class="bi bi-exclamation-circle"></i> No stores assigned
-                                        </span>
-                                    </li>
-                                @endif
-                            </ul>
-                        </li>
-                        
-                        <!-- Store Releases - Only show if user has stores -->
-                        @if($userStores->isNotEmpty())
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('stores.releases.*') ? 'active' : '' }}" 
-                               href="{{ route('stores.releases.index', $userStores->first()) }}">
-                                <i class="bi bi-clipboard-check"></i> Store Releases
-                                @if(isset($pendingCount) && $pendingCount > 0)
-                                    <span class="badge bg-danger float-end">{{ $pendingCount }}</span>
-                                @endif
-                            </a>
-                        </li>
-                        @endif
-                        
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('stores.movements.*') ? 'active' : '' }}" 
-                            href="{{ route('stores.movements.index', $userStores->first() ?? 1) }}">
-                                <i class="bi bi-arrow-left-right"></i> Stock Movements
-                            </a>
-                        </li>
-                        
-                      
-                    </ul>
+                   <ul class="nav flex-column">
+    <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('stores.dashboard') ? 'active' : '' }}" 
+           href="{{ route('stores.dashboard') }}">
+            <i class="bi bi-speedometer2"></i> Dashboard
+            @if(isset($pendingCount) && $pendingCount > 0)
+                <span class="badge bg-danger float-end">{{ $pendingCount }}</span>
+            @endif
+        </a>
+    </li>
+    
+    <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('stores.inventory.*') ? 'active' : '' }}" 
+           href="#">
+            <i class="bi bi-box-seam"></i> Inventory Management
+        </a>
+        <ul class="nav flex-column ms-3">
+            @php
+                $userStores = collect($stores ?? [])->filter(function($store) {
+                    $user = auth()->user();
+                    
+                    if ($user->id === 6) {
+                        return $store->isMainStore();
+                    }
+                    
+                    return $store->isProjectStore() && 
+                           $store->project && 
+                           $store->project->users()->where('user_id', $user->id)->exists();
+                });
+            @endphp
+            
+            @foreach($userStores as $store)
+                <li>
+                    <a class="nav-link small {{ request()->is('stores/inventory/' . $store->id) ? 'active' : '' }}" 
+                       href="{{ route('stores.inventory.index', $store) }}">
+                        <i class="bi bi-building"></i> {{ $store->display_name }}
+                    </a>
+                </li>
+            @endforeach
+            
+            @if($userStores->isEmpty())
+                <li>
+                    <span class="nav-link small text-warning">
+                        <i class="bi bi-exclamation-circle"></i> No stores assigned
+                    </span>
+                </li>
+            @endif
+        </ul>
+    </li>
+    
+    <!-- Store Releases -->
+    @if($userStores->isNotEmpty())
+    <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('stores.releases.*') ? 'active' : '' }}" 
+           href="{{ route('stores.releases.index', $userStores->first()) }}">
+            <i class="bi bi-clipboard-check"></i> Store Releases
+            @if(isset($pendingCount) && $pendingCount > 0)
+                <span class="badge bg-danger float-end">{{ $pendingCount }}</span>
+            @endif
+        </a>
+    </li>
+    @endif
+    
+    <!-- LPO Deliveries - ADD THIS -->
+    @if($userStores->isNotEmpty())
+    <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('stores.lpos.*') ? 'active' : '' }}" 
+           href="{{ route('stores.lpos.index', $userStores->first()) }}">
+            <i class="bi bi-truck"></i> LPO Deliveries
+            @if(isset($pendingLposCount) && $pendingLposCount > 0)
+                <span class="badge bg-warning float-end">{{ $pendingLposCount }}</span>
+            @endif
+        </a>
+    </li>
+    @endif
+    
+    <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('stores.movements.*') ? 'active' : '' }}" 
+        href="{{ route('stores.movements.index', $userStores->first() ?? 1) }}">
+            <i class="bi bi-arrow-left-right"></i> Stock Movements
+        </a>
+    </li>
+</ul>
                 </div>
             </div>
 

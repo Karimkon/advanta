@@ -90,7 +90,7 @@
             Project Management System
         </h1>
         <p class="text-lg text-gray-300 mb-10 max-w-3xl mx-auto">
-            Streamline projects, requisitions, LPOs, procurement, approvals, and reporting — all in one platform.
+            Streamline projects, requisitions, LPOs, procurement, approvals and reporting.
         </p>
     </div>
 

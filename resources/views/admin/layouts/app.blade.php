@@ -364,6 +364,25 @@ body {
                     </div>
                 </div>
             </div>
+
+            <!-- Product Catalog -->
+<div class="accordion-item">
+    <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#productCatalogCollapse">
+            <i class="bi bi-box-seam"></i> Product Catalog
+        </button>
+    </h2>
+    <div id="productCatalogCollapse" class="accordion-collapse collapse {{ request()->is('admin/product-catalog*') ? 'show' : '' }}">
+        <div class="accordion-body">
+            <a href="{{ route('admin.product-catalog.index') }}" class="{{ request()->routeIs('admin.product-catalog.index') ? 'active' : '' }}">
+                <i class="bi bi-list-ul"></i> All Products
+            </a>
+            <a href="{{ route('admin.product-catalog.create') }}" class="{{ request()->routeIs('admin.product-catalog.create') ? 'active' : '' }}">
+                <i class="bi bi-plus-circle"></i> Add Product
+            </a>
+        </div>
+    </div>
+</div>
         </div>
 
         <!-- User Management (Direct Link) -->

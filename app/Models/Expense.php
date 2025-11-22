@@ -19,13 +19,21 @@ class Expense extends Model
         'incurred_on',
         'recorded_by',
         'status',
-        'notes'
+        'notes',
+        'reference_id', 
+        'reference_type'
     ];
 
     protected $casts = [
         'incurred_on' => 'date',
         'amount' => 'decimal:2',
     ];
+
+     // Add polymorphic relationship
+    public function reference()
+    {
+        return $this->morphTo();
+    }
 
     public function project()
     {

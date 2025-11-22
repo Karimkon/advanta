@@ -60,6 +60,51 @@
                 </div>
             </div>
 
+            <!-- ADD THIS NEW PAYMENT BREAKDOWN SECTION RIGHT HERE -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Payment Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Subtotal:</strong><br>
+                            UGX {{ number_format($payment->amount - $payment->vat_amount - $payment->additional_costs, 2) }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>VAT Amount:</strong><br>
+                            UGX {{ number_format($payment->vat_amount, 2) }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Additional Costs:</strong><br>
+                            UGX {{ number_format($payment->additional_costs, 2) }}
+                            @if($payment->additional_costs_description)
+                                <br><small class="text-muted">{{ $payment->additional_costs_description }}</small>
+                            @endif
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <strong>Total Amount:</strong>
+                            <span class="float-end fw-bold fs-5">UGX {{ number_format($payment->amount, 2) }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- VAT Percentage Info -->
+                    @if($payment->vat_amount > 0)
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <small class="text-muted">
+                                VAT Rate: {{ number_format($payment->getVatPercentage(), 1) }}%
+                            </small>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            <!-- END OF NEW PAYMENT BREAKDOWN SECTION -->
+
             <!-- Related Requisition -->
             @if($payment->requisition)
             <div class="card shadow-sm">
@@ -142,11 +187,17 @@
 <!-- Hidden Printable Receipt -->
 <div id="printable-receipt" style="display: none;">
     <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; border: 2px solid #000;">
-        <!-- Header -->
+        <!-- Header with Logo -->
         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-            <h1 style="margin: 0; color: #2c5aa0; font-size: 24px;">ADVANTA UGANDA LTD</h1>
-            <p style="margin: 5px 0; font-size: 14px;">Project Management System</p>
-            <p style="margin: 5px 0; font-size: 14px;">Payment Receipt</p>
+            <!-- Logo Section -->
+            <div style="margin-bottom: 15px;">
+                <img src="{{ asset('images/advanta.jpg') }}" 
+                     alt="ADVANTA Logo" 
+                     style="height: 60px; width: auto; display: block; margin: 0 auto;">
+            </div>
+            <h1 style="margin: 0; color: #2c5aa0; font-size: 24px; font-weight: bold;">ADVANTA UGANDA LTD</h1>
+            <p style="margin: 5px 0; font-size: 14px; color: #666;">Project Management System</p>
+            <p style="margin: 5px 0; font-size: 16px; font-weight: bold; color: #2c5aa0;">PAYMENT RECEIPT</p>
         </div>
 
         <!-- Receipt Details -->
@@ -169,7 +220,7 @@
 
         <!-- Payment Details -->
         <div style="margin-bottom: 20px;">
-            <h3 style="color: #2c5aa0; border-bottom: 1px solid #000; padding-bottom: 5px;">PAYMENT DETAILS</h3>
+            <h3 style="color: #2c5aa0; border-bottom: 1px solid #000; padding-bottom: 5px; font-size: 16px;">PAYMENT DETAILS</h3>
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                     <td style="padding: 8px 0; border-bottom: 1px solid #ddd;"><strong>Amount Paid:</strong></td>
@@ -192,9 +243,46 @@
             </table>
         </div>
 
+        <!-- Payment Breakdown in Receipt -->
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: #2c5aa0; border-bottom: 1px solid #000; padding-bottom: 5px; font-size: 16px;">PAYMENT BREAKDOWN</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 5px 0; border-bottom: 1px solid #ddd;"><strong>Subtotal:</strong></td>
+                    <td style="padding: 5px 0; border-bottom: 1px solid #ddd; text-align: right;">
+                        UGX {{ number_format($payment->amount - $payment->vat_amount - $payment->additional_costs, 2) }}
+                    </td>
+                </tr>
+                @if($payment->vat_amount > 0)
+                <tr>
+                    <td style="padding: 5px 0; border-bottom: 1px solid #ddd;"><strong>VAT:</strong></td>
+                    <td style="padding: 5px 0; border-bottom: 1px solid #ddd; text-align: right;">
+                        UGX {{ number_format($payment->vat_amount, 2) }}
+                    </td>
+                </tr>
+                @endif
+                @if($payment->additional_costs > 0)
+                <tr>
+                    <td style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                        <strong>{{ $payment->additional_costs_description ?: 'Additional Costs' }}:</strong>
+                    </td>
+                    <td style="padding: 5px 0; border-bottom: 1px solid #ddd; text-align: right;">
+                        UGX {{ number_format($payment->additional_costs, 2) }}
+                    </td>
+                </tr>
+                @endif
+                <tr>
+                    <td style="padding: 8px 0; border-top: 2px solid #000;"><strong>Total:</strong></td>
+                    <td style="padding: 8px 0; border-top: 2px solid #000; text-align: right; font-weight: bold;">
+                        UGX {{ number_format($payment->amount, 2) }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
         <!-- Related Information -->
         <div style="margin-bottom: 20px;">
-            <h3 style="color: #2c5aa0; border-bottom: 1px solid #000; padding-bottom: 5px;">RELATED INFORMATION</h3>
+            <h3 style="color: #2c5aa0; border-bottom: 1px solid #000; padding-bottom: 5px; font-size: 16px;">RELATED INFORMATION</h3>
             <table style="width: 100%; border-collapse: collapse;">
                 @if($payment->requisition)
                 <tr>
@@ -220,15 +308,15 @@
         <!-- Notes -->
         @if($payment->notes)
         <div style="margin-bottom: 20px;">
-            <h3 style="color: #2c5aa0; border-bottom: 1px solid #000; padding-bottom: 5px;">NOTES</h3>
-            <p style="font-style: italic; margin: 10px 0;">{{ $payment->notes }}</p>
+            <h3 style="color: #2c5aa0; border-bottom: 1px solid #000; padding-bottom: 5px; font-size: 16px;">NOTES</h3>
+            <p style="font-style: italic; margin: 10px 0; font-size: 12px;">{{ $payment->notes }}</p>
         </div>
         @endif
 
         <!-- Footer -->
         <div style="text-align: center; border-top: 2px solid #000; padding-top: 15px; margin-top: 20px;">
-            <p style="margin: 5px 0; font-size: 12px;">Thank you for your business!</p>
-            <p style="margin: 5px 0; font-size: 10px; color: #666;">This is an computer generated receipt</p>
+            <p style="margin: 5px 0; font-size: 12px; font-weight: bold;">Thank you for your business!</p>
+            <p style="margin: 5px 0; font-size: 10px; color: #666;">This is a computer generated receipt</p>
             <p style="margin: 5px 0; font-size: 10px; color: #666;">Advanta Uganda Ltd - {{ config('app.url') }}</p>
         </div>
     </div>
@@ -301,13 +389,31 @@ function printReceipt() {
                     margin: 0; 
                     padding: 20px;
                     background: white;
+                    color: #000;
                 }
                 @media print {
-                    body { margin: 0; }
+                    body { 
+                        margin: 0; 
+                        padding: 15px;
+                    }
+                    @page {
+                        margin: 0.5cm;
+                    }
+                }
+                img {
+                    max-width: 100%;
+                    height: auto;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                td {
+                    padding: 4px 0;
                 }
             </style>
         </head>
-        <body onload="window.print(); window.close();">
+        <body onload="setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 500); }, 500);">
             ${printContent}
         </body>
         </html>

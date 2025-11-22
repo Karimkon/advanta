@@ -56,53 +56,65 @@ class StoreService
     }
 
     private function addItemToStore($lpoItem, $store, $project, $lpo, $receivedQty, $condition)
-    {
-        // Find existing inventory item or create new one
+{
+    // Try to find by product catalog first
+    $inventoryItem = null;
+    
+    if ($lpoItem->product_catalog_id) {
+        $inventoryItem = InventoryItem::where('store_id', $store->id)
+            ->where('product_catalog_id', $lpoItem->product_catalog_id)
+            ->first();
+    }
+    
+    // If not found by product catalog, try by name (backward compatibility)
+    if (!$inventoryItem) {
         $inventoryItem = InventoryItem::where('store_id', $store->id)
             ->where('name', $lpoItem->description)
             ->first();
-
-        if ($inventoryItem) {
-            // Update existing item
-            $oldQuantity = $inventoryItem->quantity;
-            $newQuantity = $oldQuantity + $receivedQty;
-            
-            $inventoryItem->update([
-                'quantity' => $newQuantity,
-                'unit_price' => $lpoItem->unit_price, // Update to latest price
-            ]);
-        } else {
-            // Create new inventory item
-            $inventoryItem = InventoryItem::create([
-                'name' => $lpoItem->description,
-                'description' => $lpoItem->description,
-                'sku' => 'SKU-' . strtoupper(uniqid()),
-                'category' => 'General',
-                'unit_price' => $lpoItem->unit_price,
-                'unit' => $lpoItem->unit,
-                'quantity' => $receivedQty,
-                'reorder_level' => 10, // Default reorder level
-                'track_per_project' => true,
-                'store_id' => $store->id,
-                'project_id' => $project->id,
-            ]);
-            $oldQuantity = 0;
-            $newQuantity = $receivedQty;
-        }
-
-        // Create inventory log
-        InventoryLog::create([
-            'inventory_item_id' => $inventoryItem->id,
-            'project_id' => $project->id,
-            'user_id' => auth()->id(),
-            'type' => 'in',
-            'quantity' => $receivedQty,
-            'unit_price' => $lpoItem->unit_price,
-            'balance_after' => $newQuantity,
-            'notes' => "LPO Delivery: {$lpo->lpo_number} - {$lpoItem->description}" . 
-                      ($condition !== 'good' ? " (Condition: {$condition})" : ""),
-        ]);
     }
+
+    if ($inventoryItem) {
+        // Update existing item
+        $oldQuantity = $inventoryItem->quantity;
+        $newQuantity = $oldQuantity + $receivedQty;
+        
+        $inventoryItem->update([
+            'quantity' => $newQuantity,
+            'unit_price' => $lpoItem->unit_price,
+        ]);
+    } else {
+        // Create new inventory item with product catalog link
+        $inventoryItem = InventoryItem::create([
+            'product_catalog_id' => $lpoItem->product_catalog_id,
+            'name' => $lpoItem->description,
+            'description' => $lpoItem->description,
+            'sku' => 'SKU-' . strtoupper(uniqid()),
+            'category' => 'General',
+            'unit_price' => $lpoItem->unit_price,
+            'unit' => $lpoItem->unit,
+            'quantity' => $receivedQty,
+            'reorder_level' => 10,
+            'track_per_project' => true,
+            'store_id' => $store->id,
+            'project_id' => $project->id,
+        ]);
+        $oldQuantity = 0;
+        $newQuantity = $receivedQty;
+    }
+
+    // Create inventory log
+    InventoryLog::create([
+        'inventory_item_id' => $inventoryItem->id,
+        'project_id' => $project->id,
+        'user_id' => auth()->id(),
+        'type' => 'in',
+        'quantity' => $receivedQty,
+        'unit_price' => $lpoItem->unit_price,
+        'balance_after' => $newQuantity,
+        'notes' => "LPO Delivery: {$lpo->lpo_number} - {$lpoItem->description}" . 
+                  ($condition !== 'good' ? " (Condition: {$condition})" : ""),
+    ]);
+}
 
     public function getProjectStoreInventory($projectId)
     {

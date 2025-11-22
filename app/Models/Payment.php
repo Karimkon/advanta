@@ -20,14 +20,17 @@ class Payment extends Model
         'paid_on',
         'reference',
         'notes',
-        'tax_amount', 
-        'vat_amount', 
+        'vat_amount',
+        'additional_costs',
+        'additional_costs_description',
+         
     ];
  protected $casts = [
         'amount' => 'decimal:2',
-        'tax_amount' => 'decimal:2',
+        'additional_costs' => 'decimal:2',
         'vat_amount' => 'decimal:2',
         'paid_on' => 'date',
+        'additional_costs_description' => 'string', 
     ];
 
     public function supplier()
@@ -76,16 +79,33 @@ class Payment extends Model
     }
 
     // NEW: Get payment breakdown
-    public function getPaymentBreakdown()
+     public function getPaymentBreakdown()
     {
-        $subtotal = $this->amount - $this->vat_amount - $this->tax_amount;
+        $subtotal = $this->amount - $this->vat_amount - $this->additional_costs;
         
         return [
             'subtotal' => $subtotal,
             'vat_amount' => $this->vat_amount,
-            'tax_amount' => $this->tax_amount,
+            'additional_costs' => $this->additional_costs,
+            'additional_costs_description' => $this->additional_costs_description,
             'total' => $this->amount,
         ];
+    }
+
+     // NEW: Check if payment has additional costs
+    public function hasAdditionalCosts()
+    {
+        return $this->additional_costs > 0;
+    }
+
+     // NEW: Get formatted additional costs description
+    public function getFormattedAdditionalCosts()
+    {
+        if ($this->additional_costs > 0) {
+            $description = $this->additional_costs_description ?: 'Additional Costs';
+            return "{$description}: UGX " . number_format($this->additional_costs, 2);
+        }
+        return null;
     }
 
     // NEW: Check if payment includes VAT

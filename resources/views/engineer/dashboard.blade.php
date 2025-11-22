@@ -98,8 +98,8 @@
                                         <th>Ref No.</th>
                                         <th>Project</th>
                                         <th>Type</th>
-                                        <th>Amount</th>
-                                        <th>Actual Amount</th>
+                                        <!-- <th>Amount</th>
+                                        <th>Actual Amount</th> -->
                                         <th>Status</th>
                                         <th>Date</th>
                                         <th>Action</th>
@@ -119,20 +119,20 @@
                                                     {{ ucfirst($requisition->type) }}
                                                 </span>
                                             </td>
-                                            <td>
+                                            <!-- <td>
                                                 UGX {{ number_format($requisition->estimated_total, 2) }}
                                                 @if($showActualAmount)
                                                     <br><small class="text-muted">Original</small>
                                                 @endif
-                                            </td>
-                                            <td>
+                                            </td> -->
+                                            <!-- <td>
                                                 @if($showActualAmount)
                                                     <strong class="text-success">UGX {{ number_format($requisition->actual_amount, 2) }}</strong>
                                                     <br><small class="text-success">Actual</small>
                                                 @else
                                                     <span class="text-muted">-</span>
                                                 @endif
-                                            </td>
+                                            </td> -->
                                             <td>
                                                 <span class="badge {{ $requisition->getStatusBadgeClass() }}">
                                                     {{ $requisition->getCurrentStage() }}

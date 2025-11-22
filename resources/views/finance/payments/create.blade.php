@@ -104,10 +104,18 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label for="tax_amount" class="form-label">Tax Amount *</label>
-                                <input type="number" step="0.01" class="form-control" id="tax_amount" name="tax_amount" 
-                                       value="0" required>
-                                <small class="text-muted">Other taxes (if applicable)</small>
+                                <label for="additional_costs" class="form-label">Additional Costs</label>
+                                <input type="number" step="0.01" class="form-control" id="additional_costs" name="additional_costs" 
+                                       value="0" placeholder="0.00">
+                                <small class="text-muted">Transport, handling fees, or other charges</small>
+                            </div>
+
+                            <!-- NEW: Additional Costs Description -->
+                            <div class="col-12 mb-3">
+                                <label for="additional_costs_description" class="form-label">Additional Costs Description</label>
+                                <input type="text" class="form-control" id="additional_costs_description" name="additional_costs_description" 
+                                       placeholder="e.g., Transport charges, Handling fees, etc.">
+                                <small class="text-muted">Brief description of what the additional costs cover</small>
                             </div>
 
                             <div class="col-12 mb-3">
@@ -127,9 +135,9 @@
                                 <strong>VAT Amount:</strong>
                                 <span id="vat_amount_display">UGX {{ number_format($breakdown['vat_amount'], 2) }}</span>
                             </div>
-                            <div class="d-flex justify-content-between">
-                                <strong>Tax Amount:</strong>
-                                <span id="tax_amount_display">UGX 0.00</span>
+                            <div class="d-flex justify-content-between" id="additional_costs_row" style="display: none;">
+                                <strong id="additional_costs_label">Additional Costs:</strong>
+                                <span id="additional_costs_display">UGX 0.00</span>
                             </div>
                             <hr>
                             <div class="d-flex justify-content-between fw-bold">
@@ -200,17 +208,27 @@ document.addEventListener('DOMContentLoaded', function() {
     function calculateTotal() {
         const amount = parseFloat(document.getElementById('amount').value) || 0;
         const vatAmount = parseFloat(document.getElementById('vat_amount').value) || 0;
-        const taxAmount = parseFloat(document.getElementById('tax_amount').value) || 0;
+        const additionalCosts = parseFloat(document.getElementById('additional_costs').value) || 0;
         const total = amount;
 
         document.getElementById('payment_amount_display').textContent = 'UGX ' + amount.toLocaleString('en-US', {minimumFractionDigits: 2});
         document.getElementById('vat_amount_display').textContent = 'UGX ' + vatAmount.toLocaleString('en-US', {minimumFractionDigits: 2});
-        document.getElementById('tax_amount_display').textContent = 'UGX ' + taxAmount.toLocaleString('en-US', {minimumFractionDigits: 2});
+        
+        // Show/hide additional costs row
+        const additionalCostsRow = document.getElementById('additional_costs_row');
+        if (additionalCosts > 0) {
+            additionalCostsRow.style.display = 'flex';
+            document.getElementById('additional_costs_display').textContent = 'UGX ' + additionalCosts.toLocaleString('en-US', {minimumFractionDigits: 2});
+        } else {
+            additionalCostsRow.style.display = 'none';
+        }
+        
         document.getElementById('total_amount_display').textContent = 'UGX ' + total.toLocaleString('en-US', {minimumFractionDigits: 2});
         
         // Update amount in words
         document.getElementById('amount_in_words').textContent = convertAmountToWords(total);
     }
+        
 
     // Amount to words conversion function
     function convertAmountToWords(amount) {
@@ -281,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listeners
     document.getElementById('amount').addEventListener('input', calculateTotal);
     document.getElementById('vat_amount').addEventListener('input', calculateTotal);
-    document.getElementById('tax_amount').addEventListener('input', calculateTotal);
+    document.getElementById('additional_costs').addEventListener('input', calculateTotal);
     
     // Initialize on page load
     calculateTotal();
