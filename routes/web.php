@@ -283,7 +283,7 @@ Route::prefix('milestones')->name('milestones.')->group(function () {
 });
 });
 
-// API Routes for dynamic store inventory loading
+// Replace your current API route with this:
 Route::get('/api/stores/{store}/inventory', function ($storeId) {
     $store = \App\Models\Store::find($storeId);
     
@@ -292,8 +292,27 @@ Route::get('/api/stores/{store}/inventory', function ($storeId) {
     }
     
     $items = $store->inventoryItems()
+        ->with('productCatalog') // Eager load product catalog relationship
         ->where('quantity', '>', 0)
-        ->get(['name', 'quantity', 'unit', 'unit_price']);
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'product_catalog_id' => $item->product_catalog_id,
+                'name' => $item->name,
+                'quantity' => $item->quantity,
+                'unit' => $item->unit,
+                'unit_price' => $item->unit_price,
+                // Add product catalog name for matching
+                'product_name' => $item->productCatalog ? $item->productCatalog->name : $item->name
+            ];
+        });
+    
+    \Log::info("Store {$storeId} inventory API response", [
+        'store_id' => $storeId,
+        'items_count' => $items->count(),
+        'items' => $items->toArray()
+    ]);
     
     return response()->json(['items' => $items]);
 })->name('api.store.inventory');
@@ -518,6 +537,15 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
         Route::post('/{requisition}/approve', [CEORequisitionController::class, 'approveRequisition'])->name('approve');
         Route::post('/{requisition}/reject', [CEORequisitionController::class, 'rejectRequisition'])->name('reject');
         Route::post('/lpos/{lpo}/approve', [CEORequisitionController::class, 'approveLpo'])->name('lpos.approve');
+    });
+
+     // Payment Approval Routes
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('/pending', [CEOPaymentController::class, 'pendingPayments'])->name('pending');
+        Route::get('/', [CEOPaymentController::class, 'allPayments'])->name('index');
+        Route::get('/{payment}', [CEOPaymentController::class, 'showPayment'])->name('show');
+        Route::post('/{payment}/approve', [CEOPaymentController::class, 'approvePayment'])->name('approve');
+        Route::post('/{payment}/reject', [CEOPaymentController::class, 'rejectPayment'])->name('reject');
     });
     
     // LPOs

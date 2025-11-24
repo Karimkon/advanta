@@ -17,13 +17,15 @@ class LpoItem extends Model
         'unit',
         'unit_price',
         'total_price',
-        'notes'
+        'notes',
+        'has_vat'
     ];
 
     protected $casts = [
         'quantity' => 'decimal:2',
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
+        'has_vat' => 'boolean',
     ];
 
     public function lpo()

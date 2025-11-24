@@ -157,22 +157,14 @@ class ProcurementRequisitionController extends Controller
         return back()->with('error', 'Failed to send to CEO: ' . $e->getMessage());
     }
 }
+    public function createLpo(Requisition $requisition)
+{
+    try {
+        $supplier_id = request('supplier_id');
+        $delivery_date = request('delivery_date');
+        $terms = request('terms');
+        $notes = request('notes');
 
-public function createLpo(Requisition $requisition)
-    {
-        try {
-            \Log::info('Starting LPO creation for requisition:', [
-                'requisition_id' => $requisition->id,
-                'current_status' => $requisition->status,
-                'item_count' => $requisition->items->count()
-            ]);
-
-            $supplier_id = request('supplier_id');
-            $delivery_date = request('delivery_date');
-            $terms = request('terms');
-            $notes = request('notes');
-
-              // Use default terms if none provided
         if (empty($terms)) {
             $terms = "• Payment will be made within 21 days after delivery\n" .
                     "• Deliver all items on or before the specified date\n" .
@@ -180,133 +172,95 @@ public function createLpo(Requisition $requisition)
                     "• Provide proper packaging and documentation\n" .
                     "• Contact: procurement@advanta.ug / 0393 249740 or 0200 91644";
         }
-            
-            // NEW: Get VAT configuration for items
-            $items_with_vat = request('items_with_vat', []);
-            $vat_rates = request('vat_rates', []);
-            
-            if (!$supplier_id) {
-                return back()->with('error', 'Supplier is required.');
-            }
-
-            if (!$delivery_date) {
-                return back()->with('error', 'Delivery date is required.');
-            }
-
-            // Generate LPO number
-            $lpoNumber = 'LPO-' . date('Ymd') . '-' . rand(1000, 9999);
-
-            DB::beginTransaction();
-
-            // Calculate totals with VAT
-            $subtotal = 0;
-            $vatAmount = 0;
-            
-            foreach ($requisition->items as $item) {
-                $itemTotal = $item->quantity * $item->unit_price;
-                $subtotal += $itemTotal;
-                
-                // Check if this item has VAT
-                $hasVat = in_array($item->id, $items_with_vat);
-                $vatRate = $vat_rates[$item->id] ?? 18; // Default 18%
-                
-                if ($hasVat) {
-                    $vatAmount += $itemTotal * ($vatRate / 100);
-                }
-            }
-
-            $total = $subtotal + $vatAmount;
-
-            // Create LPO
-            $lpo = Lpo::create([
-                'lpo_number' => $lpoNumber,
-                'requisition_id' => $requisition->id,
-                'supplier_id' => $supplier_id,
-                'prepared_by' => auth()->id(),
-                'status' => 'draft',
-                'subtotal' => $subtotal,
-                'tax' => 0,
-                'vat_amount' => $vatAmount,
-                'other_charges' => 0,
-                'total' => $total,
-                'delivery_date' => $delivery_date,
-                'terms' => $terms,
-                'notes' => $notes,
-            ]);
-
-            \Log::info('LPO created:', ['lpo_id' => $lpo->id, 'lpo_number' => $lpoNumber]);
-
-            // Create LPO items with VAT information
-            $createdItems = 0;
-            foreach ($requisition->items as $item) {
-                $hasVat = in_array($item->id, $items_with_vat);
-                $vatRate = $vat_rates[$item->id] ?? 18;
-                
-                \Log::info('Creating LPO item with VAT:', [
-                    'item_name' => $item->name,
-                    'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price,
-                    'has_vat' => $hasVat,
-                    'vat_rate' => $vatRate
-                ]);
-                
-                $lpoItem = LpoItem::create([
-                    'lpo_id' => $lpo->id,
-                    'inventory_item_id' => null,
-                    'description' => $item->name,
-                    'quantity' => $item->quantity,
-                    'unit' => $item->unit,
-                    'unit_price' => $item->unit_price,
-                    'total_price' => $item->total_price,
-                    'has_vat' => $hasVat,
-                    'vat_rate' => $vatRate,
-                ]);
-                
-                if ($lpoItem) {
-                    $createdItems++;
-                    \Log::info('LPO item created successfully:', ['lpo_item_id' => $lpoItem->id]);
-                } else {
-                    \Log::error('Failed to create LPO item for:', ['item_name' => $item->name]);
-                }
-            }
-
-            \Log::info('LPO items creation summary:', [
-                'attempted' => $requisition->items->count(),
-                'created' => $createdItems,
-                'vat_items' => count($items_with_vat),
-                'total_vat' => $vatAmount
-            ]);
-
-            // Create approval record
-            RequisitionApproval::create([
-                'requisition_id' => $requisition->id,
-                'approved_by' => auth()->id(),
-                'role' => 'procurement',
-                'action' => 'lpo_created_pending_ceo',
-                'comment' => 'LPO created with VAT calculation: ' . $lpoNumber . '. VAT Amount: UGX ' . number_format($vatAmount, 2),
-            ]);
-
-            DB::commit();
-
-            \Log::info('LPO creation completed successfully', [
-                'requisition_id' => $requisition->id,
-                'lpo_id' => $lpo->id,
-                'items_created' => $createdItems,
-                'vat_amount' => $vatAmount
-            ]);
-
-            return redirect()->route('procurement.lpos.show', $lpo)
-                ->with('success', 'LPO created successfully with VAT calculation! The CEO can now review and approve it.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('LPO Creation Error: ' . $e->getMessage(), [
-                'requisition_id' => $requisition->id,
-                'trace' => $e->getTraceAsString()
-            ]);
-            return back()->with('error', 'Failed to create LPO: ' . $e->getMessage());
+        
+        // Get VAT configuration
+        $items_with_vat = request('items_with_vat', []);
+        $vat_rates = request('vat_rates', []);
+        
+        if (!$supplier_id || !$delivery_date) {
+            return back()->with('error', 'Supplier and delivery date are required.');
         }
+
+        // Generate LPO number
+        $lpoNumber = 'LPO-' . date('Ymd') . '-' . rand(1000, 9999);
+
+        DB::beginTransaction();
+
+        // Calculate totals with VAT - ITEM BY ITEM
+        $subtotal = 0;
+        $vatAmount = 0;
+        
+        foreach ($requisition->items as $item) {
+            $itemTotal = $item->quantity * $item->unit_price;
+            $subtotal += $itemTotal;
+            
+            // Check if THIS SPECIFIC ITEM has VAT
+            $hasVat = in_array($item->id, $items_with_vat);
+            $vatRate = $vat_rates[$item->id] ?? 18;
+            
+            // Only add VAT if this specific item is marked for VAT
+            if ($hasVat) {
+                $itemVat = $itemTotal * ($vatRate / 100);
+                $vatAmount += $itemVat;
+            }
+        }
+
+        $total = $subtotal + $vatAmount;
+
+        // Create LPO
+        $lpo = Lpo::create([
+            'lpo_number' => $lpoNumber,
+            'requisition_id' => $requisition->id,
+            'supplier_id' => $supplier_id,
+            'prepared_by' => auth()->id(),
+            'status' => 'draft',
+            'subtotal' => $subtotal,
+            'tax' => 0,
+            'vat_amount' => $vatAmount,
+            'other_charges' => 0,
+            'total' => $total,
+            'delivery_date' => $delivery_date,
+            'terms' => $terms,
+            'notes' => $notes,
+        ]);
+
+        // Create LPO items with CORRECT VAT information
+        foreach ($requisition->items as $item) {
+            $hasVat = in_array($item->id, $items_with_vat);
+            $vatRate = $vat_rates[$item->id] ?? 18;
+            
+            LpoItem::create([
+                'lpo_id' => $lpo->id,
+                'inventory_item_id' => null,
+                'description' => $item->name,
+                'quantity' => $item->quantity,
+                'unit' => $item->unit,
+                'unit_price' => $item->unit_price,
+                'total_price' => $item->total_price,
+                'has_vat' => $hasVat, // This should reflect the actual VAT status
+                'vat_rate' => $vatRate,
+            ]);
+        }
+
+        // Create approval record
+        RequisitionApproval::create([
+            'requisition_id' => $requisition->id,
+            'approved_by' => auth()->id(),
+            'role' => 'procurement',
+            'action' => 'lpo_created_pending_ceo',
+            'comment' => 'LPO created with VAT calculation: ' . $lpoNumber . '. VAT Amount: UGX ' . number_format($vatAmount, 2),
+        ]);
+
+        DB::commit();
+
+        return redirect()->route('procurement.lpos.show', $lpo)
+            ->with('success', 'LPO created successfully with VAT calculation! The CEO can now review and approve it.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Failed to create LPO: ' . $e->getMessage());
     }
+}
 
 
 public function issueLpo(Lpo $lpo)

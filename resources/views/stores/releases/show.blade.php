@@ -59,7 +59,9 @@
                                 </tr>
                                 <tr>
                                     <th>Release Date:</th>
-                                    <td>{{ $release->released_at->format('M d, Y H:i') }}</td>
+                                    <td>
+                                        {{ $release->released_at ? $release->released_at->format('M d, Y H:i') : 'Not Set' }}
+                                    </td>
                                 </tr>
                                 <tr>
                                     <th>Created:</th>

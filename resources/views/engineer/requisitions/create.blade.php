@@ -549,6 +549,99 @@
 document.addEventListener('DOMContentLoaded', function() {
     let productCounter = 0;
     let currentStoreId = null;
+    let storeInventory = [];
+
+// Replace the current store change handler with this:
+$('#store_id').change(function () {
+    const storeId = $(this).val();
+    const url = $(this).find(':selected').data('inventory-url');
+    
+    if (!storeId) {
+        $('#store-info').hide();
+        storeInventory = [];
+        return;
+    }
+
+    if (!url) {
+        $('#store-info').show().addClass('alert-danger');
+        $('#store-message').text('Error: No inventory URL found for this store');
+        return;
+    }
+
+    $('#store-info').show().removeClass('alert-danger').addClass('alert-info');
+    $('#store-message').html('<span class="loading-spinner me-2"></span>Loading store inventory...');
+
+    fetch(url)
+        .then(res => {
+            if (!res.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return res.json();
+        })
+        .then(data => {
+            storeInventory = data.items || [];
+            $('#store-info').removeClass('alert-info alert-danger').addClass('alert-success');
+            $('#store-message').text(`Store inventory loaded. ${storeInventory.length} items available.`);
+            
+            // Clear existing products when store changes
+            $('#selected-products-tbody').empty();
+            $('#mobile-products-list').empty();
+            $('#products-container').hide();
+            $('#empty-products-state').show();
+            updateProductCount();
+        })
+        .catch(error => {
+            console.error('Error loading store inventory:', error);
+            $('#store-info').removeClass('alert-info').addClass('alert-danger');
+            $('#store-message').text('Error loading store inventory. Please try again.');
+            storeInventory = [];
+        });
+});
+
+// Enhanced product matching function
+function findStoreItemByProduct(product) {
+    if (!storeInventory.length) return null;
+    
+    console.log('Searching for product in store inventory:', { 
+        productId: product.id, 
+        productName: product.text,
+        storeInventoryCount: storeInventory.length 
+    });
+    
+    // Try multiple matching strategies
+    let storeItem = null;
+    
+    // 1. First try exact product_catalog_id match
+    storeItem = storeInventory.find(i => i.product_catalog_id == product.id);
+    if (storeItem) {
+        console.log('Found by product_catalog_id match:', storeItem);
+        return storeItem;
+    }
+    
+    // 2. Try name matching (case insensitive)
+    storeItem = storeInventory.find(i => 
+        i.name?.toLowerCase() === product.text?.toLowerCase() ||
+        i.product_name?.toLowerCase() === product.text?.toLowerCase()
+    );
+    if (storeItem) {
+        console.log('Found by name match:', storeItem);
+        return storeItem;
+    }
+    
+    // 3. Try partial name matching
+    storeItem = storeInventory.find(i => 
+        i.name?.toLowerCase().includes(product.text?.toLowerCase()) ||
+        product.text?.toLowerCase().includes(i.name?.toLowerCase())
+    );
+    if (storeItem) {
+        console.log('Found by partial name match:', storeItem);
+        return storeItem;
+    }
+    
+    console.log('No matching store item found for product:', product);
+    return null;
+}
+
     
     console.log('Enhanced Engineer Requisition Form Initialized');
     
@@ -641,97 +734,133 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    function addProductToTable(product) {
-        const tbody = $('#selected-products-tbody');
-        const mobileList = $('#mobile-products-list');
-        const rowId = `product-${productCounter}`;
-        
-        // Validate product data
-        if (!product.id || !product.text || !product.unit) {
-            showNotification('Invalid product data', 'error');
-            return;
-        }
-        
-        // Show containers if hidden
-        $('#products-container').show();
-        $('#empty-products-state').hide();
-        
-        // Desktop table row
-        const row = `
-            <tr id="${rowId}" data-product-id="${product.id}">
-                <td>
-                    <strong>${escapeHtml(product.text)}</strong>
-                    <input type="hidden" name="items[${productCounter}][product_catalog_id]" value="${product.id}">
-                    <input type="hidden" name="items[${productCounter}][name]" value="${escapeHtml(product.text)}">
-                    <input type="hidden" name="items[${productCounter}][unit]" value="${escapeHtml(product.unit)}">
-                    <input type="hidden" name="items[${productCounter}][unit_price]" value="0">
-                    <br>
-                    <small class="text-muted">${escapeHtml(product.category || 'N/A')}</small>
-                </td>
-                <td>
-                    <input type="number" 
-                           name="items[${productCounter}][quantity]" 
-                           class="form-control form-control-sm quantity-input" 
-                           value="1" 
-                           min="0.01" 
-                           step="0.01" 
-                           required>
-                </td>
-                <td><span class="badge bg-secondary">${escapeHtml(product.unit)}</span></td>
-                <td colspan="2" class="text-muted">
-                    <small><i class="bi bi-info-circle"></i> Price to be determined</small>
-                </td>
-                <td>
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-product" data-counter="${productCounter}" title="Remove">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-        
-        // Mobile card
-        const mobileCard = `
-            <div class="product-card-mobile" id="mobile-${rowId}" data-product-id="${product.id}">
-                <div class="product-header">
-                    <div style="flex: 1;">
-                        <div class="product-title">${escapeHtml(product.text)}</div>
-                        <div class="product-category">${escapeHtml(product.category || 'N/A')}</div>
-                    </div>
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-product" data-counter="${productCounter}" title="Remove">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-                <div class="quantity-section">
-                    <input type="number" 
-                           class="form-control quantity-input mobile-quantity-${productCounter}" 
-                           value="1" 
-                           min="0.01" 
-                           step="0.01" 
-                           data-sync="${productCounter}"
-                           required>
-                    <span class="unit-badge">${escapeHtml(product.unit)}</span>
-                </div>
-                <div class="mt-2 text-muted small">
-                    <i class="bi bi-info-circle"></i> Price will be determined by Procurement
-                </div>
-            </div>
-        `;
-        
-        tbody.append(row);
-        mobileList.append(mobileCard);
-        
-        // Sync quantity inputs between desktop and mobile
-        $(document).on('input', `input[data-sync="${productCounter}"]`, function() {
-            const value = $(this).val();
-            $(`input[name="items[${productCounter}][quantity]"]`).val(value);
-            $(`.mobile-quantity-${productCounter}`).val(value);
-        });
-        
-        productCounter++;
-        updateProductCount();
-        showNotification('Product added successfully', 'success');
-    }
+    // Replace the current addProductToTable function with this corrected version:
+// Update the addProductToTable function
+function addProductToTable(product) {
+    const tbody = $('#selected-products-tbody');
+    const mobileList = $('#mobile-products-list');
+    const rowId = `product-${productCounter}`;
+    
+    // Use the enhanced matching function
+    const storeItem = findStoreItemByProduct(product);
+    const availableQty = storeItem ? parseFloat(storeItem.quantity) : 0;
+    
+    console.log('Adding product to table:', {
+        product: product,
+        storeItem: storeItem,
+        availableQty: availableQty
+    });
 
+    // Validate product data
+    if (!product.id || !product.text || !product.unit) {
+        showNotification('Invalid product data', 'error');
+        return;
+    }
+    
+    // Show containers if hidden
+    $('#products-container').show();
+    $('#empty-products-state').hide();
+    
+    // Desktop table row with stock information
+    const row = `
+        <tr id="${rowId}" data-product-id="${product.id}">
+            <td>
+                <strong>${escapeHtml(product.text)}</strong>
+                <input type="hidden" name="items[${productCounter}][product_catalog_id]" value="${product.id}">
+                <input type="hidden" name="items[${productCounter}][name]" value="${escapeHtml(product.text)}">
+                <input type="hidden" name="items[${productCounter}][unit]" value="${escapeHtml(product.unit)}">
+                <input type="hidden" name="items[${productCounter}][unit_price]" value="0">
+                <br>
+                <small class="text-muted">${escapeHtml(product.category || 'N/A')}</small>
+            </td>
+            <td>
+                <input type="number" 
+                       name="items[${productCounter}][quantity]" 
+                       class="form-control form-control-sm quantity-input" 
+                       value="1" 
+                       min="0.01" 
+                       step="0.01" 
+                       max="${availableQty}"
+                       required
+                       onchange="validateQuantity(this, ${availableQty})">
+                <small class="text-${availableQty > 0 ? 'success' : 'danger'}">
+                    Available: ${availableQty}
+                </small>
+            </td>
+            <td><span class="badge bg-secondary">${escapeHtml(product.unit)}</span></td>
+            <td colspan="2" class="text-muted">
+                <small><i class="bi bi-info-circle"></i> Price to be determined</small>
+            </td>
+            <td>
+                <button type="button" class="btn btn-outline-danger btn-sm remove-product" data-counter="${productCounter}" title="Remove">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `;
+    
+    // Mobile card with stock information
+    const mobileCard = `
+        <div class="product-card-mobile" id="mobile-${rowId}" data-product-id="${product.id}">
+            <div class="product-header">
+                <div style="flex: 1;">
+                    <div class="product-title">${escapeHtml(product.text)}</div>
+                    <div class="product-category">${escapeHtml(product.category || 'N/A')}</div>
+                    <small class="text-${availableQty > 0 ? 'success' : 'danger'}">
+                        Available: ${availableQty}
+                    </small>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm remove-product" data-counter="${productCounter}" title="Remove">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            <div class="quantity-section">
+                <input type="number" 
+                       class="form-control quantity-input mobile-quantity-${productCounter}" 
+                       value="1" 
+                       min="0.01" 
+                       step="0.01" 
+                       max="${availableQty}"
+                       data-sync="${productCounter}"
+                       required
+                       onchange="validateQuantity(this, ${availableQty})">
+                <span class="unit-badge">${escapeHtml(product.unit)}</span>
+            </div>
+            <div class="mt-2 text-muted small">
+                <i class="bi bi-info-circle"></i> Price will be determined by Procurement
+            </div>
+        </div>
+    `;
+    
+    tbody.append(row);
+    mobileList.append(mobileCard);
+    
+    // Sync quantity inputs between desktop and mobile
+    $(document).on('input', `input[data-sync="${productCounter}"]`, function() {
+        const value = $(this).val();
+        $(`input[name="items[${productCounter}][quantity]"]`).val(value);
+        $(`.mobile-quantity-${productCounter}`).val(value);
+    });
+    
+    productCounter++;
+    updateProductCount();
+    
+    if (availableQty > 0) {
+        showNotification('Product added successfully', 'success');
+    } else {
+        showNotification('Product added but shows 0 available. Check store inventory.', 'warning');
+    }
+}
+
+// Add this validation function
+function validateQuantity(input, availableQty) {
+    const value = parseFloat(input.value);
+    if (value > availableQty) {
+        showNotification(`Cannot request more than ${availableQty} available items`, 'error');
+        input.value = availableQty;
+        input.focus();
+    }
+}
     // Helper function to escape HTML
     function escapeHtml(text) {
         const map = {
@@ -835,52 +964,70 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form validation before submission
     const requisitionForm = document.getElementById('requisitionForm');
     
-    if (requisitionForm) {
-        requisitionForm.addEventListener('submit', function(e) {
-            const items = $('#selected-products-tbody tr');
+    // Update the form submission handler
+if (requisitionForm) {
+    requisitionForm.addEventListener('submit', function(e) {
+        const items = $('#selected-products-tbody tr');
+        const type = document.getElementById('type').value;
+        
+        if (items.length === 0) {
+            e.preventDefault();
+            showNotification('Please add at least one product to the requisition', 'error');
+            $('html, body').animate({
+                scrollTop: $('#products-container').offset().top - 100
+            }, 500);
+            return false;
+        }
+        
+        // Validate quantities and stock availability
+        let hasInvalidQuantity = false;
+        let hasInsufficientStock = false;
+        
+        items.each(function() {
+            const qty = parseFloat($(this).find('.quantity-input').val());
+            const productId = $(this).data('product-id');
+            const maxQty = parseFloat($(this).find('.quantity-input').attr('max'));
             
-            if (items.length === 0) {
-                e.preventDefault();
-                showNotification('Please add at least one product to the requisition', 'error');
-                $('html, body').animate({
-                    scrollTop: $('#products-container').offset().top - 100
-                }, 500);
-                return false;
+            if (!qty || qty <= 0) {
+                hasInvalidQuantity = true;
             }
             
-            // Validate quantities
-            let hasInvalidQuantity = false;
-            items.each(function() {
-                const qty = parseFloat($(this).find('.quantity-input').val());
-                if (!qty || qty <= 0) {
-                    hasInvalidQuantity = true;
-                }
-            });
-            
-            if (hasInvalidQuantity) {
-                e.preventDefault();
-                showNotification('Please ensure all quantities are greater than 0', 'error');
-                return false;
+            // Stock validation for store requisitions
+            if (type === 'store' && qty > maxQty) {
+                hasInsufficientStock = true;
+                $(this).find('.quantity-input').addClass('is-invalid');
             }
-            
-            // Validate store requisitions have store selected
-            const type = document.getElementById('type').value;
-            const storeId = document.getElementById('store_id').value;
-            
-            if (type === 'store' && !storeId) {
-                e.preventDefault();
-                showNotification('Please select a store for store requisitions', 'error');
-                return false;
-            }
-            
-            // Show loading state
-            const submitBtn = $(this).find('button[type="submit"]');
-            submitBtn.prop('disabled', true);
-            submitBtn.html('<span class="loading-spinner me-2"></span>Creating...');
-            
-            return true;
         });
-    }
+        
+        if (hasInvalidQuantity) {
+            e.preventDefault();
+            showNotification('Please ensure all quantities are greater than 0', 'error');
+            return false;
+        }
+        
+        if (hasInsufficientStock) {
+            e.preventDefault();
+            showNotification('Some items exceed available stock. Please adjust quantities.', 'error');
+            return false;
+        }
+        
+        // Validate store requisitions have store selected
+        const storeId = document.getElementById('store_id').value;
+        
+        if (type === 'store' && !storeId) {
+            e.preventDefault();
+            showNotification('Please select a store for store requisitions', 'error');
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = $(this).find('button[type="submit"]');
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<span class="loading-spinner me-2"></span>Creating...');
+        
+        return true;
+    });
+}
 
     // Prevent double submission
     $('form').submit(function() {

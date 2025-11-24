@@ -121,7 +121,7 @@
                                                        class="form-check-input vat-checkbox"
                                                        data-item-id="{{ $item->id }}"
                                                        data-item-total="{{ $item->total_price }}"
-                                                       {{ in_array($item->id, old('items_with_vat', [])) ? 'checked' : 'checked' }}>
+                                                       {{ in_array($item->id, old('items_with_vat', [])) ? 'checked' : '' }}
                                                 <label class="form-check-label small" for="vat_item_{{ $item->id }}">
                                                     18% VAT
                                                 </label>

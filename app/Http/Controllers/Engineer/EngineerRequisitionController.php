@@ -32,21 +32,26 @@ class EngineerRequisitionController extends Controller
     }
 
     public function create()
-    {
-        $user = auth()->user();
-        
-        $projects = $user->projects()->get();
-
-        $projectStores = Store::whereHas('project.users', function($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->with(['inventoryItems' => function($query) {
-            $query->where('quantity', '>', 0);
-        }])->get();
-
-        $categories = ProductCatalog::distinct()->pluck('category');
-
-        return view('engineer.requisitions.create', compact('projects', 'projectStores', 'categories'));
-    }
+{
+    $projects = auth()->user()->projects;
+    $projectStores = Store::whereIn('project_id', $projects->pluck('id'))->get();
+    
+    // Get product catalog with stock information
+    $products = ProductCatalog::active()
+        ->with(['inventoryItems' => function($query) use ($projects) {
+            $query->whereIn('store_id', Store::whereIn('project_id', $projects->pluck('id'))->pluck('id'));
+        }])
+        ->get();
+    
+    $categories = ProductCatalog::distinct()->pluck('category')->filter();
+    
+    return view('engineer.requisitions.create', compact(
+        'projects', 
+        'projectStores', 
+        'products',
+        'categories'
+    ));
+}
 
     public function store(Request $request)
     {
@@ -239,47 +244,46 @@ class EngineerRequisitionController extends Controller
     }
 
     public function searchProducts(Request $request)
-    {
-        try {
-            $search = $request->get('q');
-            $category = $request->get('category');
-
-            $products = ProductCatalog::active()
-                ->when($search, function($query) use ($search) {
-                    return $query->where(function($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                          ->orWhere('description', 'like', "%{$search}%")
-                          ->orWhere('sku', 'like', "%{$search}%");
-                    });
-                })
-                ->when($category, function($query) use ($category) {
-                    return $query->where('category', $category);
-                })
-                ->select('id', 'name', 'description', 'category', 'unit', 'sku')
-                ->orderBy('name')
-                ->limit(20)
-                ->get();
-
-            $formattedProducts = $products->map(function($product) {
-                return [
-                    'id' => $product->id,
-                    'text' => $product->name . ($product->sku ? " ({$product->sku})" : ''),
-                    'unit' => $product->unit,
-                    'category' => $product->category,
-                    'description' => $product->description,
-                ];
-            });
-
-            return response()->json(['results' => $formattedProducts]);
-
-        } catch (\Exception $e) {
-            Log::error('Product search error:', [
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json(['results' => []], 500);
-        }
+{
+    $search = $request->q;
+    $category = $request->category;
+    
+    $query = ProductCatalog::active();
+    
+    if ($search) {
+        $query->where(function($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('description', 'like', "%{$search}%")
+              ->orWhere('sku', 'like', "%{$search}%");
+        });
     }
+    
+    if ($category) {
+        $query->where('category', $category);
+    }
+    
+    $products = $query->limit(50)->get();
+    
+    $results = $products->map(function($product) {
+        // Get total available stock across all project stores
+        $totalStock = $product->inventoryItems
+            ->where('quantity', '>', 0)
+            ->sum('quantity');
+            
+        return [
+            'id' => $product->id,
+            'text' => $product->name . ($product->sku ? " ({$product->sku})" : ''),
+            'name' => $product->name,
+            'description' => $product->description,
+            'category' => $product->category,
+            'unit' => $product->unit,
+            'available_stock' => $totalStock,
+            'has_stock' => $totalStock > 0
+        ];
+    });
+    
+    return response()->json(['results' => $results]);
+}
 
     public function show(Requisition $requisition)
     {

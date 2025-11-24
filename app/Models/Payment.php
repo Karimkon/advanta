@@ -23,6 +23,7 @@ class Payment extends Model
         'vat_amount',
         'additional_costs',
         'additional_costs_description',
+        'approval_status'
          
     ];
  protected $casts = [
@@ -31,6 +32,8 @@ class Payment extends Model
         'vat_amount' => 'decimal:2',
         'paid_on' => 'date',
         'additional_costs_description' => 'string', 
+        'ceo_approved' => 'boolean',
+        'ceo_approved_at' => 'datetime',
     ];
 
     public function supplier()

@@ -166,11 +166,12 @@
                 </div>
 
                 <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                    <div class="text-muted">
-                        Showing {{ $products->firstItem() }} to {{ $products->lastItem() }} of {{ $products->total() }} products
-                    </div>
-                    {{ $products->links() }}
+               <div class="mt-3 d-flex justify-content-center">
+                    <nav>
+                        <ul class="pagination pagination-sm">
+                            {{ $products->onEachSide(1)->links('pagination::bootstrap-5') }}
+                        </ul>
+                    </nav>
                 </div>
             @else
                 <div class="text-center py-5">

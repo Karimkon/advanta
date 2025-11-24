@@ -106,6 +106,16 @@
                                 <i class="bi bi-receipt"></i> LPO Management
                             </a>
                         </li>
+                        <!-- resources/views/ceo/layouts/app.blade.php - ADD TO SIDEBAR -->
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('ceo.payments.*') ? 'active' : '' }}" 
+                            href="{{ route('ceo.payments.pending') }}">
+                                <i class="bi bi-cash-coin"></i> Payment Approvals
+                                @if(isset($pendingPaymentCount) && $pendingPaymentCount > 0)
+                                    <span class="badge bg-danger float-end">{{ $pendingPaymentCount }}</span>
+                                @endif
+                            </a>
+                        </li>
                         <li class="nav-item mt-4">
                             <hr class="bg-white">
                         </li>

@@ -50,54 +50,42 @@ class PaymentController extends Controller
         return view('finance.payments.create', compact('requisition', 'breakdown'));
     }
 
-       public function store(Request $request, $requisitionId)
-    {
-        $request->validate([
-            'amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|string',
-            'payment_date' => 'required|date',
-            'reference_number' => 'nullable|string',
-            'vat_amount' => 'required|numeric|min:0',
-            'additional_costs' => 'nullable|numeric|min:0', // CHANGED
-            'additional_costs_description' => 'nullable|string|max:255', // NEW
-            'notes' => 'nullable|string',
-        ]);
+public function store(Request $request, Requisition $requisition)
+{
+    $validated = $request->validate([
+        'amount' => 'required|numeric|min:0',
+        'payment_method' => 'required|string',
+        'paid_on' => 'required|date',
+        'reference' => 'required|string|max:255',
+        'notes' => 'nullable|string',
+        'vat_amount' => 'nullable|numeric|min:0',
+        'additional_costs' => 'nullable|numeric|min:0',
+        'additional_costs_description' => 'nullable|string|max:500'
+    ]);
 
-        $requisition = Requisition::with(['lpo.supplier', 'lpo.receivedItems.lpoItem'])->findOrFail($requisitionId);
-
-        if (!$requisition->lpo || !$requisition->lpo->supplier) {
-            return back()->with('error', 'Cannot process payment: Supplier information missing for this requisition.');
-        }
-
-        // Calculate expected amounts
-        $expectedBreakdown = $this->calculatePaymentBreakdown($requisition->lpo);
-        
-        $requestedAmount = $request->amount;
-        $expectedTotal = $expectedBreakdown['total'];
-        $difference = abs($requestedAmount - $expectedTotal);
-
-        // Create payment with VAT and additional costs
+    DB::transaction(function () use ($validated, $requisition) {
         $payment = Payment::create([
             'lpo_id' => $requisition->lpo->id,
             'supplier_id' => $requisition->lpo->supplier_id,
             'paid_by' => auth()->id(),
-            'payment_method' => $request->payment_method,
-            'status' => 'completed',
-            'amount' => $request->amount,
-            'paid_on' => $request->payment_date,
-            'reference' => $request->reference_number,
-            'notes' => $this->buildPaymentNotes($request, $expectedBreakdown, $difference),
-            'vat_amount' => $request->vat_amount,
-            'additional_costs' => $request->additional_costs ?? 0, // CHANGED
-            'additional_costs_description' => $request->additional_costs_description, // NEW
+            'payment_method' => $validated['payment_method'],
+            'amount' => $validated['amount'],
+            'paid_on' => $validated['paid_on'],
+            'reference' => $validated['reference'],
+            'notes' => $validated['notes'],
+            'vat_amount' => $validated['vat_amount'] ?? 0,
+            'additional_costs' => $validated['additional_costs'] ?? 0,
+            'status' => 'pending_ceo', // NEW: Send to CEO for approval
+            'approval_status' => 'pending_ceo' // NEW
         ]);
 
         // Update requisition status
-        $requisition->update(['status' => 'completed']);
+        $requisition->update(['status' => Requisition::STATUS_PAYMENT_PENDING_CEO]);
+    });
 
-        return redirect()->route('finance.payments.show', $payment)
-            ->with('success', 'Payment processed successfully! VAT and additional costs recorded.');
-    }
+    return redirect()->route('finance.payments.index')
+        ->with('success', 'Payment created and sent to CEO for approval!');
+}
 
     /**
      * Calculate payment breakdown based on received quantities
