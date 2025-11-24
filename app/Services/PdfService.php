@@ -19,52 +19,49 @@ class PdfService
         $lpo->load([
             'requisition.project',
             'supplier', 
-            'items'
+            'items',
+            'preparer'
         ]);
 
-        // Generate PDF content
+        // Generate PDF with optimized settings for email
         $pdf = PDF::loadView('pdf.lpo', compact('lpo'))
                  ->setPaper('a4', 'portrait')
                  ->setOptions([
-                     'defaultFont' => 'sans-serif',
+                     'defaultFont' => 'helvetica',
                      'isHtml5ParserEnabled' => true,
-                     'isRemoteEnabled' => true,
-                     'chroot' => public_path(),
+                     'isRemoteEnabled' => false, // Disable for email
                      'dpi' => 96,
+                     'isFontSubsettingEnabled' => true,
+                     'isPhpEnabled' => false,
+                     'debugCss' => false,
+                     'debugLayout' => false,
                  ]);
 
-        // Create directory if it doesn't exist
-        $directory = 'lpos';
-        if (!Storage::disk('local')->exists($directory)) {
-            Storage::disk('local')->makeDirectory($directory);
-        }
-
-        // Save to storage using proper path
-        $filename = 'lpo_' . $lpo->lpo_number . '_' . time() . '.pdf';
-        $path = $directory . DIRECTORY_SEPARATOR . $filename; // Use DIRECTORY_SEPARATOR for cross-platform compatibility
+        // Generate filename
+        $filename = 'LPO_' . $lpo->lpo_number . '_' . now()->format('Ymd') . '.pdf';
+        $path = 'lpos/' . $filename;
         
+        // Save PDF
         $pdfContent = $pdf->output();
-        $saved = Storage::disk('local')->put($path, $pdfContent);
+        Storage::disk('local')->put($path, $pdfContent);
 
-        Log::info('PDF generated and saved successfully', [
+        Log::info('PDF generated successfully', [
             'lpo_id' => $lpo->id,
             'path' => $path,
-            'file_size' => strlen($pdfContent),
-            'saved' => $saved,
-            'absolute_path' => Storage::disk('local')->path($path),
-            'file_exists' => Storage::disk('local')->exists($path)
+            'size' => strlen($pdfContent)
         ]);
 
         return [
             'success' => true,
             'path' => $path,
-            'filename' => $filename
+            'filename' => $filename,
+            'content' => $pdfContent
         ];
         
     } catch (Exception $e) {
         Log::error('PDF Generation Error: ' . $e->getMessage(), [
             'lpo_id' => $lpo->id,
-            'error' => $e->getTraceAsString()
+            'trace' => $e->getTraceAsString()
         ]);
         
         return [

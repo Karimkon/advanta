@@ -51,6 +51,7 @@ use App\Http\Controllers\Finance\SubcontractorController;
 use App\Http\Controllers\Finance\LaborController;
 use App\http\controllers\finance\subcontractorpaymentcontroller;
 use App\Http\Controllers\Engineer\EngineerProjectController;
+use App\Http\Controllers\ProjectManager\ProjectManagerProjectController;
 
 // ----------------------
 // Landing Page
@@ -569,10 +570,9 @@ Route::middleware(['auth','role:project_manager'])->prefix('project-manager')->n
     });
     
     // Projects
-    Route::prefix('projects')->name('projects.')->group(function () {
-        Route::get('/', function () {
-            return view('project_manager.projects.index');
-        })->name('index');
+     Route::prefix('projects')->name('projects.')->group(function () {
+        Route::get('/', [ProjectManagerProjectController::class, 'index'])->name('index');
+        Route::get('/{project}', [ProjectManagerProjectController::class, 'show'])->name('show');
     });
 });
 

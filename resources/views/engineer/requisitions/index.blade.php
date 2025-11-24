@@ -84,7 +84,6 @@
                                         {{ ucfirst($requisition->type) }}
                                     </span>
                                 </td>
-                                <!-- <td>UGX {{ number_format($requisition->estimated_total, 2) }}</td> -->
                                 <td>
                                     <span class="badge {{ $requisition->getStatusBadgeClass() }}">
                                         {{ $requisition->getCurrentStage() }}
