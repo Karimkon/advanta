@@ -130,6 +130,20 @@
             @endif
         </a>
     </li>
+
+    <li class="nav-item">
+    <a class="nav-link {{ request()->routeIs('ceo.qhse-reports.*') ? 'active' : '' }}" 
+       href="{{ route('ceo.qhse-reports.index') }}">
+        <i class="bi bi-shield-check"></i> QHSE Reports
+        @php
+            use App\Models\QhseReport;
+            $todayQhseCount = QhseReport::whereDate('created_at', today())->count();
+        @endphp
+        @if($todayQhseCount > 0)
+            <span class="badge bg-warning float-end">{{ $todayQhseCount }}</span>
+        @endif
+    </a>
+</li>
                         <li class="nav-item mt-4">
                             <hr class="bg-white">
                         </li>

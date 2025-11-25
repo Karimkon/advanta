@@ -55,7 +55,9 @@ use App\Http\Controllers\ProjectManager\ProjectManagerProjectController;
 use App\Http\Controllers\CEO\CEOPaymentController;
 use App\Http\Controllers\CEO\CEOStaffReportController;           
 use App\Http\Controllers\Admin\ProductCategoryController;    
-use App\Http\Controllers\Admin\ProductCatalogController;                     
+use App\Http\Controllers\Admin\ProductCatalogController; 
+use App\Http\Controllers\QhseReportController;     
+use App\Http\Controllers\CEO\CEOQhseReportController;               
 
 // ----------------------
 // Landing Page
@@ -681,6 +683,28 @@ Route::middleware(['auth', 'role:admin,ceo'])->prefix('staff-reports')->name('st
     Route::get('/{staffReport}', [StaffReportController::class, 'show'])->name('show');
     Route::delete('/{staffReport}', [StaffReportController::class, 'destroy'])->name('destroy');
     Route::get('/{staffReport}/download/{index}', [StaffReportController::class, 'downloadAttachment'])->name('download.attachment');
+});
+
+// QHSE Reports Operations Routes (protected)
+Route::middleware(['auth', 'role:operations'])->prefix('operations/qhse-reports')->name('operations.qhse-reports.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Operations\OperationsQhseReportController::class, 'index'])->name('index');
+    Route::get('/{qhseReport}', [\App\Http\Controllers\Operations\OperationsQhseReportController::class, 'show'])->name('show');
+    Route::get('/{qhseReport}/download/{index}', [\App\Http\Controllers\Operations\OperationsQhseReportController::class, 'downloadAttachment'])->name('download');
+});
+
+// QHSE Reports Public Routes (no authentication required)
+Route::prefix('qhse-reports')->name('qhse-reports.')->group(function () {
+    Route::get('/submit', [QhseReportController::class, 'create'])->name('create');
+    Route::post('/submit', [QhseReportController::class, 'store'])->name('store');
+    Route::get('/success', [QhseReportController::class, 'success'])->name('success');
+});
+
+// QHSE Reports Admin/CEO Routes (protected) - USING CEO CONTROLLER
+Route::middleware(['auth', 'role:admin,ceo'])->prefix('qhse-reports')->name('ceo.qhse-reports.')->group(function () {
+    Route::get('/', [CEOQhseReportController::class, 'index'])->name('index');
+    Route::get('/{qhseReport}', [CEOQhseReportController::class, 'show'])->name('show');
+    Route::delete('/{qhseReport}', [CEOQhseReportController::class, 'destroy'])->name('destroy');
+    Route::get('/{qhseReport}/download/{index}', [CEOQhseReportController::class, 'downloadAttachment'])->name('download.attachment');
 });
 
 // SUPPLIER

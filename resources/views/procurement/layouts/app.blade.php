@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Procurement Dashboard')</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -23,6 +24,7 @@
             --card-bg: #ffffff;
         }
 
+        
         body {
             font-family: 'Inter', sans-serif;
             background: var(--bg);
@@ -124,6 +126,14 @@
             padding: 0.5rem;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
+         @media print {
+        /* Ensure body takes full page */
+        html, body {
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+    }
 
         @media (max-width: 768px) {
             .sidebar {

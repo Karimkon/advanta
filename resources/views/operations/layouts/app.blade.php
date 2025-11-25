@@ -179,6 +179,10 @@
         <a href="{{ route('operations.requisitions.approved') }}" class="{{ request()->routeIs('operations.requisitions.approved') ? 'active' : '' }}">
             <i class="bi bi-check-circle"></i> Approved Requisitions
         </a>
+
+        <a href="{{ route('operations.qhse-reports.index') }}" class="{{ request()->routeIs('operations.qhse-reports.*') ? 'active' : '' }}">
+        <i class="bi bi-shield-check"></i> QHSE Docs and Reports
+        </a>
     </div>
 
     <div class="sidebar-footer">

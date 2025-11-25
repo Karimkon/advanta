@@ -75,7 +75,20 @@
                                 </td>
                                 <td>{{ $lpo->requisition->ref }}</td>
                                 <td>{{ $lpo->supplier->name ?? 'N/A' }}</td>
-                                <td>UGX {{ number_format($lpo->items->sum('total_price'), 2) }}</td>
+                                <td>
+                                <div class="d-flex flex-column">
+                                    <strong class="text-primary">UGX {{ number_format($lpo->total, 2) }}</strong>
+                                    @if($lpo->vat_amount > 0)
+                                        <small class="text-muted">
+                                            <i class="bi bi-receipt"></i> VAT Inclusive
+                                        </small>
+                                    @else
+                                        <small class="text-muted">
+                                            <i class="bi bi-receipt"></i> Excl. VAT
+                                        </small>
+                                    @endif
+                                </div>
+                            </td>
                                 <td>{{ $lpo->delivery_date ? $lpo->delivery_date->format('M d, Y') : 'N/A' }}</td>
                                 <td>
                                     <span class="badge bg-{{ $lpo->status === 'issued' ? 'success' : ($lpo->status === 'delivered' ? 'info' : 'warning') }}">

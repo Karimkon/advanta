@@ -28,337 +28,339 @@
 
     <div class="row">
         <!-- LPO Details - Main Content -->
-            <div class="col-lg-8" id="print-area">
-            <!-- Professional Company Header -->
-            <div class="lpo-header printable-section mb-4">
-                <div class="row align-items-center">
-                    <div class="col-3 text-center">
-                        <div class="company-logo">
-                            <img src="{{ asset('images/advanta.jpg') }}" alt="ADVANTA Logo" class="img-fluid">
-                        </div>
-                    </div>
-                    <div class="col-6 text-center">
-                        <h1 class="company-name">ADVANTA UGANDA LIMITED</h1>
-                        <p class="company-tagline">Project Management System</p>
-                        <h2 class="document-title">LOCAL PURCHASE ORDER</h2>
-                    </div>
-                    <div class="col-3 text-center">
-                        <div class="lpo-number-box">
-                            <h3>{{ $lpo->lpo_number }}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="company-info text-center mt-3">
-                    <p class="mb-1">
-                        <strong>Location:</strong> Katula Road Kisaasi, Kampala | 
-                        <strong>Tel:</strong> 0393 249740 or 0200 91644 | 
-                        <strong>Email:</strong> info@advanta.ug
-                    </p>
-                </div>
-            </div>
-
-            <!-- LPO Information Box -->
-            <div class="lpo-info-box printable-section mb-4">
-                <div class="row">
-                    <div class="col-md-6">
-                        <table class="info-table">
-                            <tr>
-                                <td><strong>LPO Number:</strong></td>
-                                <td>{{ $lpo->lpo_number }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Requisition:</strong></td>
-                                <td>{{ $lpo->requisition->ref }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Project:</strong></td>
-                                <td>{{ $lpo->requisition->project->name }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Project Location:</strong></td>
-                                <td>{{ $lpo->requisition->project->location ?? 'Katula Road Kisaasi' }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Prepared By:</strong></td>
-                                <td>{{ $lpo->preparer->name ?? 'N/A' }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <table class="info-table">
-                            <tr>
-                                <td><strong>Date:</strong></td>
-                                <td>{{ $lpo->created_at->format('M d, Y') }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Status:</strong></td>
-                                <td>
-                                    <span class="status-badge status-{{ $lpo->status }}">
-                                        {{ ucfirst($lpo->status) }}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Delivery Date:</strong></td>
-                                <td>{{ $lpo->delivery_date->format('M d, Y') }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Delivery Location:</strong></td>
-                                <td>{{ $lpo->requisition->project->location ?? 'Katula Road Kisaasi' }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Supplier & Company Information -->
-            <div class="row printable-section mb-4">
-                <div class="col-md-6">
-                    <div class="info-card">
-                        <h4 class="card-title">Supplier Information</h4>
-                        <table class="info-table">
-                            <tr>
-                                <td><strong>Supplier:</strong></td>
-                                <td>{{ $lpo->supplier->name ?? 'N/A' }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Contact Person:</strong></td>
-                                <td>{{ $lpo->supplier->contact_person ?? 'N/A' }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Phone:</strong></td>
-                                <td>{{ $lpo->supplier->phone ?? 'N/A' }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Email:</strong></td>
-                                <td>{{ $lpo->supplier->email ?? 'N/A' }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Address:</strong></td>
-                                <td>{{ $lpo->supplier->address ?? 'N/A' }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="info-card">
-                        <h4 class="card-title">Our Information</h4>
-                        <table class="info-table">
-                            <tr>
-                                <td><strong>Company:</strong></td>
-                                <td>Advanta Uganda Limited</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Location:</strong></td>
-                                <td>Katula Road Kisaasi</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Contact:</strong></td>
-                                <td>0393 249740 or 0200 91644</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Email:</strong></td>
-                                <td>procurement@advanta.ug</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Financial Summary -->
-            <div class="financial-summary printable-section mb-4">
-                <div class="row">
-                    <div class="col-md-8">
-                        <h4 class="section-title">Financial Summary</h4>
-                        <table class="financial-table">
-                            <tr>
-                                <td>Subtotal (Excluding VAT):</td>
-                                <td>UGX {{ number_format($lpo->subtotal, 2) }}</td>
-                            </tr>
-                            <tr>
-                                <td>VAT Amount (18%):</td>
-                                <td>UGX {{ number_format($lpo->vat_amount, 2) }}</td>
-                            </tr>
-                            <tr>
-                                <td>Other Charges:</td>
-                                <td>UGX {{ number_format($lpo->other_charges, 2) }}</td>
-                            </tr>
-                            <tr class="grand-total">
-                                <td><strong>Grand Total:</strong></td>
-                                <td><strong>UGX {{ number_format($lpo->total, 2) }}</strong></td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="amount-words-card">
-                            <h5>Amount in Words</h5>
-                            <p class="amount-words">{{ $lpo->getAmountInWords() }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Order Items Table -->
-            <div class="order-items printable-section mb-4">
-                <h4 class="section-title">Order Items</h4>
-                <div class="table-responsive">
-                    <table class="items-table">
-                        <thead>
-                            <tr>
-                                <th width="5%">#</th>
-                                <th width="35%">Item Description</th>
-                                <th width="10%">Qty</th>
-                                <th width="10%">Unit</th>
-                                <th width="15%">Unit Price</th>
-                                <th width="10%">VAT</th>
-                                <th width="15%">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($lpo->items as $index => $item)
-                                <tr>
-                                    <td class="text-center">{{ $index + 1 }}</td>
-                                    <td>{{ $item->description ?? 'No description' }}</td>
-                                    <td class="text-center">{{ number_format($item->quantity, 3) }}</td>
-                                    <td class="text-center">{{ $item->unit }}</td>
-                                    <td class="text-right">UGX {{ number_format($item->unit_price, 2) }}</td>
-                                    <td class="text-center">
-                                        @if($item->has_vat)
-                                            <span class="vat-indicator yes">YES</span>
-                                        @else
-                                            <span class="vat-indicator no">NO</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-right">UGX {{ number_format($item->total_price, 2) }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">
-                                        No items found in this LPO
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="5" class="text-right"><strong>Subtotal:</strong></td>
-                                <td colspan="2" class="text-right"><strong>UGX {{ number_format($lpo->subtotal, 2) }}</strong></td>
-                            </tr>
-                            <tr>
-                                <td colspan="5" class="text-right"><strong>VAT Amount:</strong></td>
-                                <td colspan="2" class="text-right"><strong>UGX {{ number_format($lpo->vat_amount, 2) }}</strong></td>
-                            </tr>
-                            <tr class="grand-total">
-                                <td colspan="5" class="text-right"><strong>GRAND TOTAL:</strong></td>
-                                <td colspan="2" class="text-right"><strong>UGX {{ number_format($lpo->total, 2) }}</strong></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Delivery & Terms -->
-            <div class="row printable-section mb-4">
-                <div class="col-md-6">
-                    <div class="info-card">
-                        <h4 class="card-title">Delivery Information</h4>
-                        <table class="info-table">
-                            <tr>
-                                <td><strong>Delivery Location:</strong></td>
-                                <td>{{ $lpo->requisition->project->location ?? 'Katula Road Kisaasi' }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Contact Person:</strong></td>
-                                <td>Site Manager</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Contact Phone:</strong></td>
-                                <td>0393 249740 or 0200 91644</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Delivery Date:</strong></td>
-                                <td>{{ $lpo->delivery_date->format('M d, Y') }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="info-card">
-                        <h4 class="card-title">Terms & Conditions</h4>
-                        <div class="terms-content">
-                            @if($lpo->terms)
-                                {{ $lpo->terms }}
-                            @else
-                                <p>Standard payment terms apply. Delivery must be made on or before the specified date. All goods must meet quality standards.</p>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Professional Signatures Section -->
-            <div class="signatures-section printable-section">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="signature-box supplier">
-                            <h5>FOR SUPPLIER</h5>
-                            <div class="signature-area">
-                                <p class="signature-line">Name: _________________________</p>
-                                <p class="signature-line">Signature: _____________________</p>
-                                <p class="signature-line">Date: _________________________</p>
-                                <div class="stamp-area">
-                                    <p class="stamp-label">Company Stamp:</p>
-                                    <div class="stamp-box"></div>
-                                </div>
+        <div class="col-lg-8" id="print-area">
+            <div class="print-container">
+                <!-- Professional Company Header -->
+                <div class="lpo-header printable-section mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-3 text-center">
+                            <div class="company-logo">
+                                <img src="{{ asset('images/advanta.jpg') }}" alt="ADVANTA Logo" class="img-fluid">
                             </div>
-                            <p class="signature-note">I hereby confirm delivery of all items as specified above</p>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="signature-box company">
-                            <h5>FOR ADVANTA UGANDA LIMITED</h5>
-                            <div class="signature-area">
-                                <p class="signature-line">Name: _________________________</p>
-                                <p class="signature-line">Signature: _____________________</p>
-                                <p class="signature-line">Date: _________________________</p>
-                                <div class="stamp-area">
-                                    <p class="stamp-label">Company Stamp:</p>
-                                    <div class="stamp-box"></div>
-                                </div>
+                        <div class="col-6 text-center">
+                            <h1 class="company-name">ADVANTA UGANDA LIMITED</h1>
+                            <p class="company-tagline">Project Management System</p>
+                            <h2 class="document-title">LOCAL PURCHASE ORDER</h2>
+                        </div>
+                        <div class="col-3 text-center">
+                            <div class="lpo-number-box">
+                                <h3>{{ $lpo->lpo_number }}</h3>
                             </div>
-                            <p class="signature-note">I hereby acknowledge receipt of all items in good condition</p>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Footer -->
-                <div class="lpo-footer">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <strong>ADVANTA UGANDA LIMITED</strong><br>
-                            PLOT 28A, Katula Road Kisaasi<br>
-                            Kampala, Uganda
-                        </div>
-                        <div class="col-md-4 text-center">
-                            <strong>Contact Information</strong><br>
-                            Tel: 0393 249740 or 0200 91644<br>
-                            Email: info@advanta.ug
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <strong>Supplier</strong><br>
-                            {{ $lpo->supplier->name ?? 'N/A' }}<br>
-                            Tel: {{ $lpo->supplier->phone ?? 'N/A' }}
-                        </div>
-                    </div>
-                    <div class="footer-note">
-                        <p class="mb-0">
-                            <strong>Note:</strong> This LPO is valid only when signed by both parties. 
-                            Goods must be delivered on or before {{ $lpo->delivery_date->format('M d, Y') }}.
+                    <div class="company-info text-center mt-3">
+                        <p class="mb-1">
+                            <strong>Location:</strong> Katula Road Kisaasi, Kampala | 
+                            <strong>Tel:</strong> 0393 249740 or 0200 91644 | 
+                            <strong>Email:</strong> info@advanta.ug
                         </p>
                     </div>
                 </div>
-            </div>
-        </div>
+
+                <!-- LPO Information Box -->
+                <div class="lpo-info-box printable-section mb-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="info-table">
+                                <tr>
+                                    <td><strong>LPO Number:</strong></td>
+                                    <td>{{ $lpo->lpo_number }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Requisition:</strong></td>
+                                    <td>{{ $lpo->requisition->ref }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Project:</strong></td>
+                                    <td>{{ $lpo->requisition->project->name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Project Location:</strong></td>
+                                    <td>{{ $lpo->requisition->project->location ?? 'Katula Road Kisaasi' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Prepared By:</strong></td>
+                                    <td>{{ $lpo->preparer->name ?? 'N/A' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="info-table">
+                                <tr>
+                                    <td><strong>Date:</strong></td>
+                                    <td>{{ $lpo->created_at->format('M d, Y') }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        <span class="status-badge status-{{ $lpo->status }}">
+                                            {{ ucfirst($lpo->status) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Delivery Date:</strong></td>
+                                    <td>{{ $lpo->delivery_date->format('M d, Y') }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Delivery Location:</strong></td>
+                                    <td>{{ $lpo->requisition->project->location ?? 'Katula Road Kisaasi' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Supplier & Company Information -->
+                <div class="row printable-section mb-4">
+                    <div class="col-md-6">
+                        <div class="info-card">
+                            <h4 class="card-title">Supplier Information</h4>
+                            <table class="info-table">
+                                <tr>
+                                    <td><strong>Supplier:</strong></td>
+                                    <td>{{ $lpo->supplier->name ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Contact Person:</strong></td>
+                                    <td>{{ $lpo->supplier->contact_person ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Phone:</strong></td>
+                                    <td>{{ $lpo->supplier->phone ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>{{ $lpo->supplier->email ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Address:</strong></td>
+                                    <td>{{ $lpo->supplier->address ?? 'N/A' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-card">
+                            <h4 class="card-title">Our Information</h4>
+                            <table class="info-table">
+                                <tr>
+                                    <td><strong>Company:</strong></td>
+                                    <td>Advanta Uganda Limited</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Location:</strong></td>
+                                    <td>Katula Road Kisaasi</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Contact:</strong></td>
+                                    <td>0393 249740 or 0200 91644</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>procurement@advanta.ug</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Summary -->
+                <div class="financial-summary printable-section mb-4">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h4 class="section-title">Financial Summary</h4>
+                            <table class="financial-table">
+                                <tr>
+                                    <td>Subtotal (Excluding VAT):</td>
+                                    <td>UGX {{ number_format($lpo->subtotal, 2) }}</td>
+                                </tr>
+                                <tr>
+                                    <td>VAT Amount (18%):</td>
+                                    <td>UGX {{ number_format($lpo->vat_amount, 2) }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Other Charges:</td>
+                                    <td>UGX {{ number_format($lpo->other_charges, 2) }}</td>
+                                </tr>
+                                <tr class="grand-total">
+                                    <td><strong>Grand Total:</strong></td>
+                                    <td><strong>UGX {{ number_format($lpo->total, 2) }}</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="amount-words-card">
+                                <h5>Amount in Words</h5>
+                                <p class="amount-words">{{ $lpo->getAmountInWords() }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Items Table -->
+                <div class="order-items printable-section mb-4">
+                    <h4 class="section-title">Order Items</h4>
+                    <div class="table-responsive">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th width="35%">Item Description</th>
+                                    <th width="10%">Qty</th>
+                                    <th width="10%">Unit</th>
+                                    <th width="15%">Unit Price</th>
+                                    <th width="10%">VAT</th>
+                                    <th width="15%">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($lpo->items as $index => $item)
+                                    <tr>
+                                        <td class="text-center">{{ $index + 1 }}</td>
+                                        <td>{{ $item->description ?? 'No description' }}</td>
+                                        <td class="text-center">{{ number_format($item->quantity, 3) }}</td>
+                                        <td class="text-center">{{ $item->unit }}</td>
+                                        <td class="text-right">UGX {{ number_format($item->unit_price, 2) }}</td>
+                                        <td class="text-center">
+                                            @if($item->has_vat)
+                                                <span class="vat-indicator yes">YES</span>
+                                            @else
+                                                <span class="vat-indicator no">NO</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-right">UGX {{ number_format($item->total_price, 2) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            No items found in this LPO
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5" class="text-right"><strong>Subtotal:</strong></td>
+                                    <td colspan="2" class="text-right"><strong>UGX {{ number_format($lpo->subtotal, 2) }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="text-right"><strong>VAT Amount:</strong></td>
+                                    <td colspan="2" class="text-right"><strong>UGX {{ number_format($lpo->vat_amount, 2) }}</strong></td>
+                                </tr>
+                                <tr class="grand-total">
+                                    <td colspan="5" class="text-right"><strong>GRAND TOTAL:</strong></td>
+                                    <td colspan="2" class="text-right"><strong>UGX {{ number_format($lpo->total, 2) }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Delivery & Terms -->
+                <div class="row printable-section mb-4">
+                    <div class="col-md-6">
+                        <div class="info-card">
+                            <h4 class="card-title">Delivery Information</h4>
+                            <table class="info-table">
+                                <tr>
+                                    <td><strong>Delivery Location:</strong></td>
+                                    <td>{{ $lpo->requisition->project->location ?? 'Katula Road Kisaasi' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Contact Person:</strong></td>
+                                    <td>Site Manager</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Contact Phone:</strong></td>
+                                    <td>0393 249740 or 0200 91644</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Delivery Date:</strong></td>
+                                    <td>{{ $lpo->delivery_date->format('M d, Y') }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-card">
+                            <h4 class="card-title">Terms & Conditions</h4>
+                            <div class="terms-content">
+                                @if($lpo->terms)
+                                    {{ $lpo->terms }}
+                                @else
+                                    <p>Standard payment terms apply. Delivery must be made on or before the specified date. All goods must meet quality standards.</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Professional Signatures Section -->
+                <div class="signatures-section printable-section">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="signature-box supplier">
+                                <h5>FOR SUPPLIER</h5>
+                                <div class="signature-area">
+                                    <p class="signature-line">Name: _________________________</p>
+                                    <p class="signature-line">Signature: _____________________</p>
+                                    <p class="signature-line">Date: _________________________</p>
+                                    <div class="stamp-area">
+                                        <p class="stamp-label">Company Stamp:</p>
+                                        <div class="stamp-box"></div>
+                                    </div>
+                                </div>
+                                <p class="signature-note">I hereby confirm delivery of all items as specified above</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="signature-box company">
+                                <h5>FOR ADVANTA UGANDA LIMITED</h5>
+                                <div class="signature-area">
+                                    <p class="signature-line">Name: _________________________</p>
+                                    <p class="signature-line">Signature: _____________________</p>
+                                    <p class="signature-line">Date: _________________________</p>
+                                    <div class="stamp-area">
+                                        <p class="stamp-label">Company Stamp:</p>
+                                        <div class="stamp-box"></div>
+                                    </div>
+                                </div>
+                                <p class="signature-note">I hereby acknowledge receipt of all items in good condition</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="lpo-footer">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>ADVANTA UGANDA LIMITED</strong><br>
+                                PLOT 28A, Katula Road Kisaasi<br>
+                                Kampala, Uganda
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <strong>Contact Information</strong><br>
+                                Tel: 0393 249740 or 0200 91644<br>
+                                Email: info@advanta.ug
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <strong>Supplier</strong><br>
+                                {{ $lpo->supplier->name ?? 'N/A' }}<br>
+                                Tel: {{ $lpo->supplier->phone ?? 'N/A' }}
+                            </div>
+                        </div>
+                        <div class="footer-note">
+                            <p class="mb-0">
+                                <strong>Note:</strong> This LPO is valid only when signed by both parties. 
+                                Goods must be delivered on or before {{ $lpo->delivery_date->format('M d, Y') }}.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- Close print-container -->
+        </div> <!-- Close col-lg-8 -->
 
         <!-- Sidebar Actions - Hidden when printing -->
         <div class="col-lg-4 non-printable">
@@ -426,11 +428,19 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
+        </div> <!-- Close col-lg-4 -->
+    </div> <!-- Close row -->
+</div> <!-- Close container-fluid -->
+
 
 <style>
+
+    .print-container {
+    max-width: 210mm;
+    margin: 0 auto;
+    background: white;
+    padding: 20px;
+}
 /* Professional LPO Styling */
 .lpo-header {
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
@@ -743,80 +753,225 @@
     text-transform: uppercase;
 }
 
-/* Print Styles */
+/* Print Styles - Optimized for PDF */
 @media print {
-
-    /* Hide everything except print area */
-    body * { visibility: hidden !important; }
-    #print-area, #print-area * { visibility: visible !important; }
-
-    /* True print scaling */
-    #print-area {
-        zoom: 0.78 !important; /* Better than transform – real height reduction */
-        margin: 0 auto !important;
-        width: 100% !important;
+    /* Reset everything for print */
+    * {
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
     }
 
-    /* Remove margins that add unnecessary height */
-    .container-fluid,
-    .row,
-    .col-md-6,
-    .col-md-4,
-    .col-lg-8 {
+    /* Hide non-printable elements */
+    .non-printable,
+    .breadcrumb,
+    .btn-group,
+    .card-header,
+    .alert,
+    form {
+        display: none !important;
+    }
+
+    /* Show only print area */
+    body {
+        background: white !important;
+        color: black !important;
+        font-size: 12pt;
+        line-height: 1.3;
         margin: 0 !important;
         padding: 0 !important;
     }
 
-    /* Reduce spacing inside large blocks */
-    .lpo-header {
-        padding: 10px !important;
+    #print-area {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
     }
+
+    /* Remove all backgrounds and borders that don't print well */
+    .lpo-header {
+        background: #1e3c72 !important;
+        color: white !important;
+        padding: 15px 10px !important;
+        border-radius: 0 !important;
+        margin-bottom: 10px !important;
+    }
+
+    .company-logo img {
+        max-height: 60px !important;
+        filter: brightness(0) invert(1) !important;
+    }
+
+    .company-name {
+        font-size: 18pt !important;
+        margin-bottom: 3px !important;
+    }
+
+    .company-tagline {
+        font-size: 10pt !important;
+        margin-bottom: 5px !important;
+    }
+
+    .document-title {
+        font-size: 16pt !important;
+        margin-bottom: 5px !important;
+    }
+
+    .lpo-number-box {
+        background: rgba(255,255,255,0.9) !important;
+        color: #1e3c72 !important;
+        padding: 8px !important;
+        border: 1px solid white !important;
+    }
+
+    .lpo-number-box h3 {
+        font-size: 14pt !important;
+    }
+
+    /* Simplify info boxes */
     .lpo-info-box,
     .info-card,
     .financial-summary,
     .order-items,
     .signatures-section {
+        border: 1px solid #ccc !important;
         padding: 8px !important;
-        margin-bottom: 6px !important;
-    }
-
-    /* Smaller table text & row height */
-    table,
-    td,
-    th {
-        font-size: 10px !important;
-        padding: 2px 3px !important;
-    }
-
-    /* Prevent any splitting */
-    .info-card,
-    .lpo-info-box,
-    .financial-summary,
-    .order-items,
-    .signatures-section,
-    table,
-    tr {
+        margin-bottom: 8px !important;
+        background: white !important;
         page-break-inside: avoid !important;
-        break-inside: avoid !important;
     }
 
-    /* Reduce header height */
-    .company-logo img {
-        max-height: 50px !important;
-    }
-    .company-name { font-size: 18px !important; }
-    .company-tagline { font-size: 11px !important; }
-    .document-title { font-size: 20px !important; }
-
-    /* Page margin */
-    @page {
-        margin: 5mm !important;
+    /* Optimize tables for print */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 9pt !important;
+        page-break-inside: avoid !important;
     }
 
-    /* Keep colors */
+    th, td {
+        padding: 4px 3px !important;
+        border: 1px solid #ddd !important;
+        text-align: left !important;
+    }
+
+    th {
+        background: #f8f9fa !important;
+        color: black !important;
+        font-weight: bold !important;
+    }
+
+    /* Simplify financial tables */
+    .financial-table tr td {
+        padding: 3px 0 !important;
+        border-bottom: 1px solid #eee !important;
+    }
+
+    /* Optimize items table */
+    .items-table th {
+        background: #2c3e50 !important;
+        color: white !important;
+        padding: 5px 3px !important;
+    }
+
+    .items-table td {
+        padding: 4px 3px !important;
+    }
+
+    /* Simplify VAT indicators */
+    .vat-indicator {
+        padding: 2px 4px !important;
+        font-size: 8pt !important;
+        border: 1px solid #ccc !important;
+    }
+
+    .vat-indicator.yes {
+        background: #f8f9fa !important;
+        color: black !important;
+    }
+
+    .vat-indicator.no {
+        background: #f8f9fa !important;
+        color: black !important;
+    }
+
+    /* Simplify signatures */
+    .signature-box {
+        padding: 10px !important;
+        border: 1px solid #ccc !important;
+        margin-bottom: 10px !important;
+    }
+
+    .signature-line {
+        margin: 5px 0 !important;
+        font-size: 10pt !important;
+    }
+
+    .stamp-box {
+        width: 120px !important;
+        height: 60px !important;
+        border: 1px dashed #999 !important;
+    }
+
+    /* Ensure proper page breaks */
+    .printable-section {
+        page-break-inside: avoid !important;
+    }
+
+    .order-items,
+    .signatures-section {
+        page-break-before: auto !important;
+    }
+
+    /* Remove shadows and gradients */
+    .lpo-header {
+        background: #1e3c72 !important;
+        background-image: none !important;
+    }
+
+    /* Optimize text sizes */
+    h1 { font-size: 18pt !important; }
+    h2 { font-size: 16pt !important; }
+    h3 { font-size: 14pt !important; }
+    h4 { font-size: 12pt !important; }
+    h5 { font-size: 11pt !important; }
+
+    .card-title {
+        font-size: 11pt !important;
+        border-bottom: 1px solid #3498db !important;
+    }
+
+    .section-title {
+        font-size: 12pt !important;
+    }
+
+    /* Ensure colors print properly */
     * {
         -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
         print-color-adjust: exact !important;
+    }
+
+    /* Page margins */
+    @page {
+        margin: 0.5cm !important;
+        size: A4 portrait;
+    }
+
+    /* Footer optimization */
+    .lpo-footer {
+        margin-top: 15px !important;
+        padding-top: 10px !important;
+        border-top: 1px solid #ccc !important;
+        font-size: 9pt !important;
+    }
+
+    .footer-note {
+        font-size: 8pt !important;
+        padding: 5px !important;
     }
 }
 
@@ -845,14 +1000,36 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Add compact class for printing
-    window.addEventListener('beforeprint', function() {
-        document.body.classList.add('printing');
-    });
+    const printButton = document.querySelector('button[onclick="window.print()"]');
     
+    if (printButton) {
+        printButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Add optimization class
+            document.body.classList.add('printing-optimized');
+            
+            // Small delay to ensure styles are applied
+            setTimeout(function() {
+                window.print();
+                
+                // Remove class after print
+                setTimeout(function() {
+                    document.body.classList.remove('printing-optimized');
+                }, 500);
+            }, 100);
+        });
+    }
+
+    // Handle browser print dialog
+    window.addEventListener('beforeprint', function() {
+        document.body.classList.add('printing-optimized');
+    });
+
     window.addEventListener('afterprint', function() {
-        document.body.classList.remove('printing');
+        document.body.classList.remove('printing-optimized');
     });
 });
 </script>
 @endsection
+

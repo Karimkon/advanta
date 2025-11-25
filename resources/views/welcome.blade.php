@@ -144,18 +144,26 @@
             <p class="text-sm text-gray-300">Site operations & requisitions</p>
         </a>
         
-        <!-- NEW: Surveyor Role Card -->
+        <!-- NEW: QHSE Reports Card -->
+        <a href="/qhse-reports/submit" class="role-card group p-6 rounded-2xl text-center">
+            <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">🛡️</div>
+            <h4 class="text-lg font-bold mb-2 text-emerald-300">QHSE Reports</h4>
+            <p class="text-sm text-gray-300">Quality, Health, Safety & Environment</p>
+        </a>
+
+        <!-- MOVED: Project Milestones Card (now below QHSE) -->
         <a href="/surveyor/login" class="role-card group p-6 rounded-2xl text-center">
             <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">📐</div>
             <h4 class="text-lg font-bold mb-2 text-teal-300">Project Milestones</h4>
             <p class="text-sm text-gray-300">Track construction milestones</p>
         </a>
 
+        <!-- Staff Reports Card -->
         <a href="/staff-reports/submit" class="role-card group p-6 rounded-2xl text-center">
-    <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">📝</div>
-    <h4 class="text-lg font-bold mb-2 text-lime-300">Staff Reports</h4>
-    <p class="text-sm text-gray-300">Submit daily/weekly reports</p>
-</a>
+            <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">📝</div>
+            <h4 class="text-lg font-bold mb-2 text-lime-300">Staff Reports</h4>
+            <p class="text-sm text-gray-300">Submit daily/weekly reports</p>
+        </a>
     </div>
 
     <!-- Manual Icon at Bottom -->
