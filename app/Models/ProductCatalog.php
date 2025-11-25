@@ -14,7 +14,7 @@ class ProductCatalog extends Model
     protected $fillable = [
         'name',
         'description',
-        'category',
+        'category_id',
         'unit',
         'sku',
         'is_active',
@@ -24,6 +24,11 @@ class ProductCatalog extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+     public function category()
+    {
+        return $this->belongsTo(ProductCategory::class, 'category_id');
+    }
 
     // Relationships
     public function requisitionItems()

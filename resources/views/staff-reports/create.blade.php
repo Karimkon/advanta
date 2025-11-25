@@ -32,7 +32,7 @@
                 <div class="report-form-card">
                     <div class="form-header text-center">
                         <h1><i class="bi bi-clipboard-check"></i> Staff Report Submission</h1>
-                        <p class="mb-0">ADVANTA Uganda Limited - Daily/Weekly Activity Reports</p>
+                        <p class="mb-0">Advanta Uganda Limited - Daily/Weekly Activity Reports</p>
                     </div>
                     
                     <div class="card-body p-4">

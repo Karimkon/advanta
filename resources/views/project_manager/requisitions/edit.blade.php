@@ -16,6 +16,12 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    <!-- Info Alert -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Note:</strong> You can only edit quantities. Prices will be determined by Procurement based on supplier quotes.
+                    </div>
+
                     <form action="{{ route('project_manager.requisitions.update', $requisition) }}" method="POST" enctype="multipart/form-data" id="requisitionForm">
                         @csrf
                         @method('PUT')
@@ -25,7 +31,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="project_id" class="form-label">Project <span class="text-danger">*</span></label>
-                                    <select name="project_id" id="project_id" class="form-select @error('project_id') is-invalid @enderror" required>
+                                    <select name="project_id" id="project_id" class="form-select @error('project_id') is-invalid @enderror" required {{ $requisition->status !== 'pending' ? 'disabled' : '' }}>
                                         <option value="">Select Project</option>
                                         @foreach($projects as $project)
                                             <option value="{{ $project->id }}" {{ old('project_id', $requisition->project_id) == $project->id ? 'selected' : '' }}>
@@ -33,6 +39,9 @@
                                             </option>
                                         @endforeach
                                     </select>
+                                    @if($requisition->status !== 'pending')
+                                        <input type="hidden" name="project_id" value="{{ $requisition->project_id }}">
+                                    @endif
                                     @error('project_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -42,12 +51,15 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="urgency" class="form-label">Urgency <span class="text-danger">*</span></label>
-                                    <select name="urgency" id="urgency" class="form-select @error('urgency') is-invalid @enderror" required>
+                                    <select name="urgency" id="urgency" class="form-select @error('urgency') is-invalid @enderror" required {{ $requisition->status !== 'pending' ? 'disabled' : '' }}>
                                         <option value="">Select Urgency</option>
                                         <option value="low" {{ old('urgency', $requisition->urgency) == 'low' ? 'selected' : '' }}>Low</option>
                                         <option value="medium" {{ old('urgency', $requisition->urgency) == 'medium' ? 'selected' : '' }}>Medium</option>
                                         <option value="high" {{ old('urgency', $requisition->urgency) == 'high' ? 'selected' : '' }}>High</option>
                                     </select>
+                                    @if($requisition->status !== 'pending')
+                                        <input type="hidden" name="urgency" value="{{ $requisition->urgency }}">
+                                    @endif
                                     @error('urgency')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -57,7 +69,7 @@
 
                         <div class="mb-4">
                             <label for="reason" class="form-label">Reason/Purpose <span class="text-danger">*</span></label>
-                            <textarea name="reason" id="reason" class="form-control @error('reason') is-invalid @enderror" rows="4" placeholder="Explain the purpose of this requisition and why these items are needed..." required>{{ old('reason', $requisition->reason) }}</textarea>
+                            <textarea name="reason" id="reason" class="form-control @error('reason') is-invalid @enderror" rows="4" placeholder="Explain the purpose of this requisition and why these items are needed..." required {{ $requisition->status !== 'pending' ? 'readonly' : '' }}>{{ old('reason', $requisition->reason) }}</textarea>
                             @error('reason')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -67,9 +79,11 @@
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6>Requisition Items <span class="text-danger">*</span></h6>
-                                <button type="button" class="btn btn-outline-primary btn-sm" id="addItem">
-                                    <i class="bi bi-plus-circle"></i> Add Item
-                                </button>
+                                @if($requisition->status === 'pending')
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="addItem">
+                                        <i class="bi bi-plus-circle"></i> Add Item
+                                    </button>
+                                @endif
                             </div>
                             
                             <div id="items-container">
@@ -78,7 +92,8 @@
                                         <div class="row g-2">
                                             <div class="col-md-4">
                                                 <label class="form-label">Item Name</label>
-                                                <input type="text" name="items[{{ $index }}][name]" class="form-control" value="{{ old('items.' . $index . '.name', $item->name) }}" required>
+                                                <input type="text" class="form-control" value="{{ $item->name }}" readonly>
+                                                <input type="hidden" name="items[{{ $index }}][name]" value="{{ $item->name }}">
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label">Quantity</label>
@@ -86,11 +101,13 @@
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label">Unit</label>
-                                                <input type="text" name="items[{{ $index }}][unit]" class="form-control" value="{{ old('items.' . $index . '.unit', $item->unit) }}" required>
+                                                <input type="text" class="form-control" value="{{ $item->unit }}" readonly>
+                                                <input type="hidden" name="items[{{ $index }}][unit]" value="{{ $item->unit }}">
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label">Unit Price</label>
-                                                <input type="number" name="items[{{ $index }}][unit_price]" class="form-control unit-price" step="0.01" min="0" value="{{ old('items.' . $index . '.unit_price', $item->unit_price) }}" required>
+                                                <input type="text" class="form-control" value="UGX {{ number_format($item->unit_price, 2) }}" readonly>
+                                                <input type="hidden" name="items[{{ $index }}][unit_price]" value="{{ $item->unit_price }}">
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label">Total</label>
@@ -101,7 +118,7 @@
                                                 <input type="text" name="items[{{ $index }}][notes]" class="form-control" value="{{ old('items.' . $index . '.notes', $item->notes) }}" placeholder="Additional notes...">
                                             </div>
                                         </div>
-                                        @if($index > 0)
+                                        @if($requisition->status === 'pending' && $index > 0)
                                             <button type="button" class="btn btn-outline-danger btn-sm mt-2 remove-item">
                                                 <i class="bi bi-trash"></i> Remove
                                             </button>
@@ -118,9 +135,15 @@
                         <!-- Submit Buttons -->
                         <div class="d-flex justify-content-between">
                             <a href="{{ route('project_manager.requisitions.show', $requisition) }}" class="btn btn-outline-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i> Update Requisition
-                            </button>
+                            @if($requisition->status === 'pending')
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Update Requisition
+                                </button>
+                            @else
+                                <button type="button" class="btn btn-secondary" disabled>
+                                    <i class="bi bi-lock"></i> Editing Not Allowed
+                                </button>
+                            @endif
                         </div>
                     </form>
                 </div>
@@ -134,6 +157,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let itemCount = {{ $requisition->items->count() }};
+    
+    // Only enable editing if requisition is pending
+    @if($requisition->status === 'pending')
     
     // Add item
     document.getElementById('addItem').addEventListener('click', function() {
@@ -258,6 +284,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize calculation for existing rows
     initializeCalculations();
+    
+    @endif
 });
 </script>
 @endpush

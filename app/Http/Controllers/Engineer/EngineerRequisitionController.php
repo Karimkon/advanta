@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Models\ProductCategory;
 
 class EngineerRequisitionController extends Controller
 {
@@ -43,7 +44,9 @@ class EngineerRequisitionController extends Controller
         }])
         ->get();
     
-    $categories = ProductCatalog::distinct()->pluck('category')->filter();
+    $categories = ProductCategory::whereHas('products')
+        ->orderBy('name')
+        ->pluck('name');
     
     return view('engineer.requisitions.create', compact(
         'projects', 

@@ -380,6 +380,9 @@ body {
             <a href="{{ route('admin.product-catalog.create') }}" class="{{ request()->routeIs('admin.product-catalog.create') ? 'active' : '' }}">
                 <i class="bi bi-plus-circle"></i> Add Product
             </a>
+            <a href="{{ route('admin.product-categories.create') }}" class="{{ request()->routeIs('admin.product-categories.create') ? 'active' : '' }}">
+                <i class="bi bi-plus-circle"></i> New Category
+            </a>
         </div>
     </div>
 </div>

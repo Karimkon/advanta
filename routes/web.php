@@ -49,9 +49,13 @@ use App\Http\Controllers\CEO\CEOLpoController;
 use App\Http\Controllers\StaffReportController;
 use App\Http\Controllers\Finance\SubcontractorController;
 use App\Http\Controllers\Finance\LaborController;
-use App\http\controllers\finance\subcontractorpaymentcontroller;
+use App\Http\Controllers\Finance\SubcontractorPaymentController;
 use App\Http\Controllers\Engineer\EngineerProjectController;
 use App\Http\Controllers\ProjectManager\ProjectManagerProjectController;
+use App\Http\Controllers\CEO\CEOPaymentController;
+use App\Http\Controllers\CEO\CEOStaffReportController;           
+use App\Http\Controllers\Admin\ProductCategoryController;    
+use App\Http\Controllers\Admin\ProductCatalogController;                     
 
 // ----------------------
 // Landing Page
@@ -162,10 +166,15 @@ Route::post('/logout', function (Request $request) {
 // ADMIN
 Route::middleware(['auth','role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class,'index'])->name('dashboard');
-
+// routes/web.php (admin section)
+    Route::resource('product-categories', ProductCategoryController::class); 
+    
+    // Product Catalog Routes
+Route::get('product-catalog/export', [ProductCatalogController::class, 'export'])->name('product-catalog.export');
+Route::get('product-catalog/export-data', [ProductCatalogController::class, 'exportData'])->name('product-catalog.export-data');
     Route::resource('product-catalog', \App\Http\Controllers\Admin\ProductCatalogController::class);
     Route::get('product-catalog/search', [\App\Http\Controllers\Admin\ProductCatalogController::class, 'search'])->name('product-catalog.search');
-    Route::post('product-catalog/bulk-import', [\App\Http\Controllers\Admin\ProductCatalogController::class, 'bulkImportStore'])->name('product-catalog.bulk-import');
+    Route::post('product-catalog/bulk-import', [\App\Http\Controllers\Admin\ProductCatalogController::class, 'bulkImport'])->name('product-catalog.bulk-import');
     // Users Management
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
@@ -481,6 +490,16 @@ Route::prefix('labor')->name('labor.')->group(function () {
     Route::get('/{worker}/payments/create', [LaborController::class, 'processPayment'])->name('payments.create');
     Route::post('/{worker}/payments', [LaborController::class, 'storePayment'])->name('payments.store');
      Route::get('/payments/{payment}/receipt', [LaborController::class, 'generateReceipt'])->name('payments.receipt');
+
+      // NEW: Bulk payment routes
+        Route::prefix('bulk-payments')->name('bulk-payments.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Finance\BulkLaborPaymentController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Finance\BulkLaborPaymentController::class, 'create'])->name('create');
+            Route::post('/download-template', [\App\Http\Controllers\Finance\BulkLaborPaymentController::class, 'downloadTemplate'])->name('download-template');
+            Route::post('/import', [\App\Http\Controllers\Finance\BulkLaborPaymentController::class, 'processBulkImport'])->name('import');
+            Route::post('/store', [\App\Http\Controllers\Finance\BulkLaborPaymentController::class, 'storeBulk'])->name('store');
+            Route::get('/report', [\App\Http\Controllers\Finance\BulkLaborPaymentController::class, 'getMonthlyReport'])->name('report');
+        });
 });
 });
 
@@ -576,6 +595,13 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
         Route::get('/', [CEOMilestoneController::class, 'index'])->name('index');
         Route::get('/project/{project}', [CEOMilestoneController::class, 'projectMilestones'])->name('project');
         Route::get('/project/{project}/milestone/{milestone}', [CEOMilestoneController::class, 'show'])->name('show');
+    });
+
+     Route::prefix('staff-reports')->name('staff-reports.')->group(function () {
+        Route::get('/', [CEOStaffReportController::class, 'index'])->name('index');
+        Route::get('/{staffReport}', [CEOStaffReportController::class, 'show'])->name('show');
+        Route::delete('/{staffReport}', [CEOStaffReportController::class, 'destroy'])->name('destroy');
+        Route::get('/{staffReport}/download/{index}', [CEOStaffReportController::class, 'downloadAttachment'])->name('download.attachment');
     });
 });
 

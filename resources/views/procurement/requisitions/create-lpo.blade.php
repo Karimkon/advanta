@@ -102,7 +102,7 @@
                                         <th width="15%">Quantity</th>
                                         <th width="15%">Unit Price</th>
                                         <th width="15%">Total</th>
-                                        <th width="15%">Include VAT?</th>
+                                        <th width="15%">Add VAT?</th>
                                     </tr>
                                 </thead>
                                 <tbody>

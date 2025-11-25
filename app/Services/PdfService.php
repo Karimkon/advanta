@@ -35,6 +35,7 @@ class PdfService
                      'isPhpEnabled' => false,
                      'debugCss' => false,
                      'debugLayout' => false,
+                     'enable_html5_parser' => true,
                  ]);
 
         // Generate filename

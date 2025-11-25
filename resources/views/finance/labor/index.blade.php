@@ -11,6 +11,9 @@
             <p class="text-muted mb-0">Manage all labor workers and their payments</p>
         </div>
         <div class="btn-group">
+              <a href="{{ route('finance.labor.bulk-payments.index') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-cash-stack"></i> Bulk Payments
+                </a>
             <a href="{{ route('finance.labor.import') }}" class="btn btn-outline-primary">
                 <i class="bi bi-upload"></i> Import Workers
             </a>

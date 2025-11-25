@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LPO {{ $lpo->lpo_number }} - Advanta Uganda Limited</title>
+    <title>LPO {{ $lpo->lpo_number }}</title>
     <style>
-        /* Reset and Base Styles */
         * {
             margin: 0;
             padding: 0;
@@ -14,126 +13,123 @@
 
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 11pt;
-            line-height: 1.4;
+            font-size: 9pt;
+            line-height: 1.3;
             color: #333;
             background: #ffffff;
-            padding: 15mm;
+            padding: 8mm;
         }
 
-        /* Use tables for layout - more reliable in PDFs */
         table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        /* Header Section */
+        /* Compact Header */
         .header-section {
             width: 100%;
             background: #1e3c72;
             color: white;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 12px;
+            margin-bottom: 10px;
         }
 
         .header-section td {
             vertical-align: middle;
-            padding: 10px;
+            padding: 5px;
         }
 
         .company-logo-cell {
-            width: 25%;
+            width: 20%;
             text-align: center;
         }
 
         .company-logo {
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
             background: rgba(255,255,255,0.2);
-            border-radius: 8px;
+            border-radius: 6px;
             display: inline-block;
-            line-height: 80px;
-            font-size: 10px;
-            color: white;
+            line-height: 60px;
         }
 
         .company-info-cell {
-            width: 50%;
+            width: 60%;
             text-align: center;
         }
 
         .company-name {
-            font-size: 22pt;
+            font-size: 16pt;
             font-weight: bold;
-            margin-bottom: 5px;
-            letter-spacing: 1px;
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
         }
 
         .company-tagline {
-            font-size: 10pt;
+            font-size: 8pt;
             opacity: 0.9;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .document-title {
-            font-size: 20pt;
+            font-size: 14pt;
             font-weight: 300;
-            letter-spacing: 2px;
-            margin-top: 5px;
+            letter-spacing: 1px;
+            margin-top: 2px;
         }
 
         .lpo-number-cell {
-            width: 25%;
+            width: 20%;
             text-align: center;
         }
 
         .lpo-number-box {
             background: rgba(255,255,255,0.2);
             border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 8px;
-            padding: 15px;
+            border-radius: 6px;
+            padding: 8px;
             display: inline-block;
         }
 
         .lpo-number-box h3 {
-            font-size: 18pt;
+            font-size: 14pt;
             font-weight: bold;
         }
 
         .company-contact {
             text-align: center;
-            padding: 10px;
-            font-size: 9pt;
+            padding: 6px;
+            font-size: 7pt;
             border-top: 1px solid rgba(255,255,255,0.3);
-            margin-top: 10px;
+            margin-top: 5px;
         }
 
-        /* Info Sections */
+        /* Compact Info Sections */
         .info-section {
             width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
         }
 
         .info-section td {
             width: 50%;
             vertical-align: top;
-            padding: 5px;
+            padding: 3px;
         }
 
         .info-card {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
-            padding: 12px;
+            padding: 6px;
             height: 100%;
         }
 
         .card-title {
-            font-size: 12pt;
+            font-size: 9pt;
             font-weight: bold;
             color: #2c3e50;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
+            border-bottom: 1px solid #3498db;
+            padding-bottom: 2px;
+            margin-bottom: 4px;
         }
 
         .info-table {
@@ -141,14 +137,14 @@
         }
 
         .info-table td {
-            padding: 4px 6px;
-            font-size: 10pt;
+            padding: 2px 4px;
+            font-size: 8pt;
             border-bottom: 1px solid #e9ecef;
         }
 
         .info-table td:first-child {
             font-weight: 600;
-            width: 45%;
+            width: 42%;
         }
 
         .info-table tr:last-child td {
@@ -158,9 +154,9 @@
         /* Status Badge */
         .status-badge {
             display: inline-block;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 9pt;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 7pt;
             font-weight: 600;
         }
 
@@ -168,27 +164,27 @@
         .status-draft { background: #fff3cd; color: #856404; }
         .status-delivered { background: #d4edda; color: #155724; }
 
-        /* Financial Summary */
+        /* Compact Financial Summary */
         .financial-section {
             width: 100%;
-            margin: 15px 0;
+            margin: 8px 0;
         }
 
         .financial-section td {
             vertical-align: top;
-            padding: 5px;
+            padding: 3px;
         }
 
         .financial-table {
             width: 100%;
             background: #f8f9fa;
             border: 1px solid #dee2e6;
-            padding: 10px;
+            padding: 6px;
         }
 
         .financial-table td {
-            padding: 6px 8px;
-            font-size: 10pt;
+            padding: 3px 5px;
+            font-size: 8pt;
             border-bottom: 1px solid #e9ecef;
         }
 
@@ -203,7 +199,7 @@
 
         .financial-total {
             border-top: 2px solid #2c3e50 !important;
-            font-size: 11pt !important;
+            font-size: 9pt !important;
             font-weight: bold !important;
             color: #2c3e50;
         }
@@ -211,36 +207,36 @@
         .amount-words-box {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
-            padding: 12px;
+            padding: 6px;
             height: 100%;
         }
 
         .amount-words-title {
-            font-size: 10pt;
+            font-size: 8pt;
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .amount-words-text {
-            font-size: 9pt;
+            font-size: 7pt;
             font-style: italic;
             color: #495057;
-            line-height: 1.5;
+            line-height: 1.3;
         }
 
-        /* Items Table */
+        /* Compact Items Table */
         .items-section {
-            margin: 15px 0;
+            margin: 8px 0;
         }
 
         .section-title {
-            font-size: 13pt;
+            font-size: 10pt;
             font-weight: bold;
             color: #2c3e50;
-            margin-bottom: 10px;
-            padding: 8px;
+            margin-bottom: 5px;
+            padding: 4px;
             background: #f8f9fa;
-            border-left: 4px solid #3498db;
+            border-left: 3px solid #3498db;
         }
 
         .items-table {
@@ -251,16 +247,16 @@
         .items-table th {
             background: #2c3e50;
             color: white;
-            padding: 10px 6px;
-            font-size: 10pt;
+            padding: 5px 3px;
+            font-size: 8pt;
             font-weight: 600;
             text-align: center;
             border: 1px solid #2c3e50;
         }
 
         .items-table td {
-            padding: 8px 6px;
-            font-size: 9pt;
+            padding: 4px 3px;
+            font-size: 7pt;
             border: 1px solid #dee2e6;
             text-align: center;
         }
@@ -274,9 +270,9 @@
 
         .vat-indicator {
             display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 8pt;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 6pt;
             font-weight: 600;
         }
 
@@ -286,77 +282,78 @@
         .items-table tfoot td {
             background: #f8f9fa;
             font-weight: 600;
-            padding: 8px 6px;
+            padding: 4px 3px;
             border-top: 2px solid #2c3e50;
+            font-size: 8pt;
         }
 
         .items-table .grand-total-row td {
             background: #2c3e50;
             color: white;
             font-weight: bold;
-            font-size: 11pt;
+            font-size: 9pt;
         }
 
-        /* Signatures Section */
+        /* Compact Signatures */
         .signatures-section {
-            margin: 20px 0;
+            margin: 10px 0;
             page-break-inside: avoid;
         }
 
         .signature-cell {
             width: 50%;
             vertical-align: top;
-            padding: 10px;
+            padding: 5px;
         }
 
         .signature-box {
-            border: 2px solid #dee2e6;
-            padding: 15px;
-            min-height: 220px;
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            min-height: 140px;
         }
 
         .signature-title {
-            font-size: 11pt;
+            font-size: 9pt;
             font-weight: bold;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             color: #2c3e50;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 8px;
+            border-bottom: 1px solid #3498db;
+            padding-bottom: 4px;
         }
 
         .signature-line {
-            margin: 12px 0;
-            font-size: 9pt;
+            margin: 6px 0;
+            font-size: 7pt;
             border-bottom: 1px solid #333;
-            padding-bottom: 2px;
+            padding-bottom: 1px;
         }
 
         .stamp-box {
-            width: 140px;
-            height: 70px;
-            border: 2px dashed #999;
-            margin: 10px auto;
+            width: 100px;
+            height: 50px;
+            border: 1px dashed #999;
+            margin: 6px auto;
             background: #fafafa;
             text-align: center;
-            line-height: 70px;
-            font-size: 8pt;
+            line-height: 50px;
+            font-size: 6pt;
             color: #999;
         }
 
         .signature-note {
-            font-size: 8pt;
+            font-size: 6pt;
             font-style: italic;
             color: #666;
             text-align: center;
-            margin-top: 10px;
+            margin-top: 6px;
         }
 
-        /* Footer */
+        /* Compact Footer */
         .footer-section {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 2px solid #dee2e6;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid #dee2e6;
             page-break-inside: avoid;
         }
 
@@ -365,8 +362,8 @@
         }
 
         .footer-info td {
-            padding: 8px;
-            font-size: 9pt;
+            padding: 4px;
+            font-size: 7pt;
             vertical-align: top;
         }
 
@@ -377,9 +374,9 @@
         .footer-note {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
-            padding: 10px;
-            margin-top: 10px;
-            font-size: 8pt;
+            padding: 6px;
+            margin-top: 6px;
+            font-size: 6pt;
             text-align: center;
         }
 
@@ -387,8 +384,6 @@
         .text-center { text-align: center; }
         .text-right { text-align: right; }
         .text-left { text-align: left; }
-        .mb-10 { margin-bottom: 10px; }
-        .mt-10 { margin-top: 10px; }
 
         /* Ensure colors print */
         * {
@@ -402,6 +397,10 @@
             page-break-inside: avoid;
             break-inside: avoid;
         }
+
+        @page {
+            margin: 8mm;
+        }
     </style>
 </head>
 <body>
@@ -410,7 +409,7 @@
         <tr>
             <td class="company-logo-cell">
                 <div class="company-logo">
-                    <img src="{{ public_path('images/advanta.jpg') }}" alt="ADVANTA" style="max-width: 80px; max-height: 80px;">
+                    <img src="{{ public_path('images/advanta.jpg') }}" alt="ADVANTA" style="max-width: 60px; max-height: 60px;">
                 </div>
             </td>
             <td class="company-info-cell">
@@ -426,9 +425,7 @@
         </tr>
         <tr>
             <td colspan="3" class="company-contact">
-                <strong>Location:</strong> Katula Road Kisaasi, Kampala | 
-                <strong>Tel:</strong> 0393 249740 or 0200 91644 | 
-                <strong>Email:</strong> procurement@advanta.ug
+                <strong>Location:</strong> Katula Road Kisaasi, Kampala | <strong>Tel:</strong> 0393 249740 or 0200 91644 | <strong>Email:</strong> procurement@advanta.ug
             </td>
         </tr>
     </table>
@@ -451,10 +448,6 @@
                         <tr>
                             <td>Project:</td>
                             <td>{{ $lpo->requisition->project->name }}</td>
-                        </tr>
-                        <tr>
-                            <td>Location:</td>
-                            <td>{{ $lpo->requisition->project->location ?? 'Katula Road Kisaasi' }}</td>
                         </tr>
                         <tr>
                             <td>Prepared By:</td>
@@ -483,10 +476,6 @@
                             <td>Delivery Date:</td>
                             <td>{{ $lpo->delivery_date->format('M d, Y') }}</td>
                         </tr>
-                        <tr>
-                            <td>Delivery Location:</td>
-                            <td>{{ $lpo->requisition->project->location ?? 'Katula Road Kisaasi' }}</td>
-                        </tr>
                     </table>
                 </div>
             </td>
@@ -505,7 +494,7 @@
                             <td>{{ $lpo->supplier->name ?? 'N/A' }}</td>
                         </tr>
                         <tr>
-                            <td>Contact Person:</td>
+                            <td>Contact:</td>
                             <td>{{ $lpo->supplier->contact_person ?? 'N/A' }}</td>
                         </tr>
                         <tr>
@@ -515,10 +504,6 @@
                         <tr>
                             <td>Email:</td>
                             <td>{{ $lpo->supplier->email ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td>Address:</td>
-                            <td>{{ $lpo->supplier->address ?? 'N/A' }}</td>
                         </tr>
                     </table>
                 </div>
@@ -537,7 +522,7 @@
                         </tr>
                         <tr>
                             <td>Contact:</td>
-                            <td>0393 249740 or 0200 91644</td>
+                            <td>0393 249740 / 0200 91644</td>
                         </tr>
                         <tr>
                             <td>Email:</td>
@@ -588,13 +573,13 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width: 5%;">#</th>
-                    <th style="width: 35%;">Item Description</th>
-                    <th style="width: 10%;">Qty</th>
-                    <th style="width: 10%;">Unit</th>
-                    <th style="width: 15%;">Unit Price</th>
-                    <th style="width: 10%;">VAT</th>
-                    <th style="width: 15%;">Total</th>
+                    <th style="width: 4%;">#</th>
+                    <th style="width: 38%;">Description</th>
+                    <th style="width: 8%;">Qty</th>
+                    <th style="width: 8%;">Unit</th>
+                    <th style="width: 14%;">Unit Price</th>
+                    <th style="width: 8%;">VAT</th>
+                    <th style="width: 14%;">Total</th>
                 </tr>
             </thead>
             <tbody>
@@ -616,7 +601,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center" style="padding: 20px;">
+                        <td colspan="7" class="text-center" style="padding: 12px;">
                             No items found in this LPO
                         </td>
                     </tr>
@@ -647,24 +632,24 @@
                 <td class="signature-cell">
                     <div class="signature-box">
                         <div class="signature-title">FOR SUPPLIER</div>
-                        <div class="signature-line">Name: _________________________</div>
-                        <div class="signature-line">Signature: _____________________</div>
-                        <div class="signature-line">Date: __________________________</div>
-                        <div class="stamp-box">Company Stamp</div>
+                        <div class="signature-line">Name: ____________________</div>
+                        <div class="signature-line">Signature: ________________</div>
+                        <div class="signature-line">Date: _____________________</div>
+                        <div class="stamp-box">Stamp</div>
                         <div class="signature-note">
-                            I hereby confirm delivery of all items as specified above
+                            I confirm delivery of all items as specified
                         </div>
                     </div>
                 </td>
                 <td class="signature-cell">
                     <div class="signature-box">
-                        <div class="signature-title">FOR ADVANTA UGANDA LIMITED</div>
-                        <div class="signature-line">Name: _________________________</div>
-                        <div class="signature-line">Signature: _____________________</div>
-                        <div class="signature-line">Date: __________________________</div>
-                        <div class="stamp-box">Company Stamp</div>
+                        <div class="signature-title">FOR ADVANTA UGANDA LTD</div>
+                        <div class="signature-line">Name: ____________________</div>
+                        <div class="signature-line">Signature: ________________</div>
+                        <div class="signature-line">Date: _____________________</div>
+                        <div class="stamp-box">Stamp</div>
                         <div class="signature-note">
-                            I hereby acknowledge receipt of all items in good condition
+                            I acknowledge receipt in good condition
                         </div>
                     </div>
                 </td>
@@ -678,25 +663,22 @@
             <tr>
                 <td>
                     <strong>ADVANTA UGANDA LIMITED</strong><br>
-                    PLOT 28A, Katula Road Kisaasi<br>
-                    Kampala, Uganda
+                    Katula Road Kisaasi, Kampala
                 </td>
                 <td>
-                    <strong>Contact Information</strong><br>
-                    Tel: 0393 249740 or 0200 91644<br>
-                    Email: procurement@advanta.ug
+                    <strong>Contact</strong><br>
+                    Tel: 0393 249740 / 0200 91644<br>
+                    procurement@advanta.ug
                 </td>
                 <td>
                     <strong>Supplier</strong><br>
                     {{ $lpo->supplier->name ?? 'N/A' }}<br>
-                    Tel: {{ $lpo->supplier->phone ?? 'N/A' }}
+                    {{ $lpo->supplier->phone ?? 'N/A' }}
                 </td>
             </tr>
         </table>
         <div class="footer-note">
-            <strong>Important Note:</strong> This LPO is valid only when signed by both parties. 
-            Goods must be delivered on or before {{ $lpo->delivery_date->format('M d, Y') }}. 
-            All items must meet quality standards as specified.
+            <strong>Note:</strong> Valid when signed by both parties. Delivery by {{ $lpo->delivery_date->format('M d, Y') }}. All items must meet quality standards.
         </div>
     </div>
 </body>

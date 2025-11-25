@@ -50,17 +50,18 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
-                                    <select name="category" id="category" 
-                                            class="form-select @error('category') is-invalid @enderror" required>
+                                    <label for="category_id" class="form-label">Category <span class="text-danger">*</span></label>
+                                    <select name="category_id" id="category_id" 
+                                            class="form-select @error('category_id') is-invalid @enderror" required>
                                         <option value="">Select Category</option>
                                         @foreach($categories as $category)
-                                            <option value="{{ $category }}" {{ old('category') == $category ? 'selected' : '' }}>
-                                                {{ $category }}
+                                            <option value="{{ $category->id }}" 
+                                                {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                                {{ $category->name }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    @error('category')
+                                    @error('category_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>

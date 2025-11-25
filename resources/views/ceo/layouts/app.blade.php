@@ -116,6 +116,20 @@
                                 @endif
                             </a>
                         </li>
+                         <!-- ✅ NEW: Staff Reports Link -->
+    <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('ceo.staff-reports.*') ? 'active' : '' }}" 
+           href="{{ route('ceo.staff-reports.index') }}">
+            <i class="bi bi-file-text"></i> Staff Reports
+            @php
+                use App\Models\StaffReport;
+                $todayReportsCount = StaffReport::whereDate('created_at', today())->count();
+            @endphp
+            @if($todayReportsCount > 0)
+                <span class="badge bg-info float-end">{{ $todayReportsCount }}</span>
+            @endif
+        </a>
+    </li>
                         <li class="nav-item mt-4">
                             <hr class="bg-white">
                         </li>

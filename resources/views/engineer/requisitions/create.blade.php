@@ -734,20 +734,19 @@ function findStoreItemByProduct(product) {
         }
     });
 
-    // Replace the current addProductToTable function with this corrected version:
-// Update the addProductToTable function
-function addProductToTable(product) {
+   function addProductToTable(product) {
     const tbody = $('#selected-products-tbody');
     const mobileList = $('#mobile-products-list');
     const rowId = `product-${productCounter}`;
+    const requisitionType = $('#type').val();
     
-    // Use the enhanced matching function
-    const storeItem = findStoreItemByProduct(product);
-    const availableQty = storeItem ? parseFloat(storeItem.quantity) : 0;
+    // Only check stock for store requisitions, not purchase requisitions
+    const storeItem = requisitionType === 'store' ? findStoreItemByProduct(product) : null;
+    const availableQty = requisitionType === 'store' && storeItem ? parseFloat(storeItem.quantity) : null;
     
     console.log('Adding product to table:', {
         product: product,
-        storeItem: storeItem,
+        requisitionType: requisitionType,
         availableQty: availableQty
     });
 
@@ -761,7 +760,14 @@ function addProductToTable(product) {
     $('#products-container').show();
     $('#empty-products-state').hide();
     
-    // Desktop table row with stock information
+    // For purchase requisitions, don't show available stock or set max quantity
+    const stockInfo = requisitionType === 'store' ? 
+        `<small class="text-${availableQty > 0 ? 'success' : 'danger'}">Available: ${availableQty}</small>` :
+        `<small class="text-info">New purchase - no stock check</small>`;
+    
+    const maxAttr = requisitionType === 'store' && availableQty ? `max="${availableQty}"` : '';
+    
+    // Desktop table row
     const row = `
         <tr id="${rowId}" data-product-id="${product.id}">
             <td>
@@ -780,12 +786,9 @@ function addProductToTable(product) {
                        value="1" 
                        min="0.01" 
                        step="0.01" 
-                       max="${availableQty}"
-                       required
-                       onchange="validateQuantity(this, ${availableQty})">
-                <small class="text-${availableQty > 0 ? 'success' : 'danger'}">
-                    Available: ${availableQty}
-                </small>
+                       ${maxAttr}
+                       required>
+                ${stockInfo}
             </td>
             <td><span class="badge bg-secondary">${escapeHtml(product.unit)}</span></td>
             <td colspan="2" class="text-muted">
@@ -799,16 +802,14 @@ function addProductToTable(product) {
         </tr>
     `;
     
-    // Mobile card with stock information
+    // Mobile card
     const mobileCard = `
         <div class="product-card-mobile" id="mobile-${rowId}" data-product-id="${product.id}">
             <div class="product-header">
                 <div style="flex: 1;">
                     <div class="product-title">${escapeHtml(product.text)}</div>
                     <div class="product-category">${escapeHtml(product.category || 'N/A')}</div>
-                    <small class="text-${availableQty > 0 ? 'success' : 'danger'}">
-                        Available: ${availableQty}
-                    </small>
+                    ${stockInfo}
                 </div>
                 <button type="button" class="btn btn-outline-danger btn-sm remove-product" data-counter="${productCounter}" title="Remove">
                     <i class="bi bi-trash"></i>
@@ -820,10 +821,9 @@ function addProductToTable(product) {
                        value="1" 
                        min="0.01" 
                        step="0.01" 
-                       max="${availableQty}"
+                       ${maxAttr}
                        data-sync="${productCounter}"
-                       required
-                       onchange="validateQuantity(this, ${availableQty})">
+                       required>
                 <span class="unit-badge">${escapeHtml(product.unit)}</span>
             </div>
             <div class="mt-2 text-muted small">
@@ -845,11 +845,7 @@ function addProductToTable(product) {
     productCounter++;
     updateProductCount();
     
-    if (availableQty > 0) {
-        showNotification('Product added successfully', 'success');
-    } else {
-        showNotification('Product added but shows 0 available. Check store inventory.', 'warning');
-    }
+    showNotification('Product added successfully', 'success');
 }
 
 // Add this validation function
@@ -964,7 +960,6 @@ function validateQuantity(input, availableQty) {
     // Form validation before submission
     const requisitionForm = document.getElementById('requisitionForm');
     
-    // Update the form submission handler
 if (requisitionForm) {
     requisitionForm.addEventListener('submit', function(e) {
         const items = $('#selected-products-tbody tr');
@@ -979,20 +974,20 @@ if (requisitionForm) {
             return false;
         }
         
-        // Validate quantities and stock availability
+        // Validate quantities
         let hasInvalidQuantity = false;
         let hasInsufficientStock = false;
         
         items.each(function() {
             const qty = parseFloat($(this).find('.quantity-input').val());
-            const productId = $(this).data('product-id');
-            const maxQty = parseFloat($(this).find('.quantity-input').attr('max'));
+            const maxQty = parseFloat($(this).find('.quantity-input').attr('max')) || Infinity;
             
             if (!qty || qty <= 0) {
                 hasInvalidQuantity = true;
+                $(this).find('.quantity-input').addClass('is-invalid');
             }
             
-            // Stock validation for store requisitions
+            // Stock validation ONLY for store requisitions
             if (type === 'store' && qty > maxQty) {
                 hasInsufficientStock = true;
                 $(this).find('.quantity-input').addClass('is-invalid');
@@ -1028,6 +1023,32 @@ if (requisitionForm) {
         return true;
     });
 }
+
+// Refresh products when requisition type changes
+$('#type').change(function() {
+    const isStore = $(this).val() === 'store';
+    
+    // Update all existing products
+    $('#selected-products-tbody tr').each(function() {
+        const productId = $(this).data('product-id');
+        const quantityInput = $(this).find('.quantity-input');
+        
+        if (isStore) {
+            // For store requisitions, check stock and set limits
+            const storeItem = findStoreItemByProduct({id: productId, text: $(this).find('strong').text()});
+            const availableQty = storeItem ? parseFloat(storeItem.quantity) : 0;
+            
+            quantityInput.attr('max', availableQty);
+            quantityInput.next('small').remove();
+            quantityInput.after(`<small class="text-${availableQty > 0 ? 'success' : 'danger'}">Available: ${availableQty}</small>`);
+        } else {
+            // For purchase requisitions, remove stock limits
+            quantityInput.removeAttr('max');
+            quantityInput.next('small').remove();
+            quantityInput.after('<small class="text-info">New purchase - no stock check</small>');
+        }
+    });
+});
 
     // Prevent double submission
     $('form').submit(function() {

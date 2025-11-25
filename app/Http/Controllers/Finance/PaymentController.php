@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Payment;
 use App\Models\Requisition;
 use App\Models\Lpo;
+use App\Models\Expense;
 use App\Models\LpoReceivedItem;
 use Illuminate\Support\Facades\DB;
 
@@ -50,42 +51,68 @@ class PaymentController extends Controller
         return view('finance.payments.create', compact('requisition', 'breakdown'));
     }
 
-public function store(Request $request, Requisition $requisition)
+    public function store(Request $request, Requisition $requisition)
 {
-    $validated = $request->validate([
-        'amount' => 'required|numeric|min:0',
-        'payment_method' => 'required|string',
-        'paid_on' => 'required|date',
-        'reference' => 'required|string|max:255',
-        'notes' => 'nullable|string',
-        'vat_amount' => 'nullable|numeric|min:0',
+    $request->validate([
+        'amount' => 'required|numeric|min:0.01',
+        'payment_method' => 'required|in:bank_transfer,cash,cheque,mobile_money',
+        'payment_date' => 'required|date',
+        'vat_amount' => 'required|numeric|min:0',
         'additional_costs' => 'nullable|numeric|min:0',
-        'additional_costs_description' => 'nullable|string|max:500'
+        'additional_costs_description' => 'nullable|string|max:255',
+        'reference_number' => 'nullable|string|max:100',
+        'notes' => 'nullable|string|max:1000',
     ]);
 
-    DB::transaction(function () use ($validated, $requisition) {
-        $payment = Payment::create([
-            'lpo_id' => $requisition->lpo->id,
-            'supplier_id' => $requisition->lpo->supplier_id,
-            'paid_by' => auth()->id(),
-            'payment_method' => $validated['payment_method'],
-            'amount' => $validated['amount'],
-            'paid_on' => $validated['paid_on'],
-            'reference' => $validated['reference'],
-            'notes' => $validated['notes'],
-            'vat_amount' => $validated['vat_amount'] ?? 0,
-            'additional_costs' => $validated['additional_costs'] ?? 0,
-            'status' => 'pending_ceo', // NEW: Send to CEO for approval
-            'approval_status' => 'pending_ceo' // NEW
-        ]);
+    try {
+        DB::transaction(function () use ($request, $requisition) {
+            // Create payment record - SET AS PENDING CEO APPROVAL
+            $payment = Payment::create([
+                'lpo_id' => $requisition->lpo->id,
+                'supplier_id' => $requisition->supplier_id ?? $requisition->lpo->supplier_id ?? null,
+                'paid_by' => auth()->id(),
+                'payment_method' => $request->payment_method,
+                'status' => 'pending', // Payment is pending until CEO approves
+                'amount' => $request->amount,
+                'paid_on' => $request->payment_date,
+                'reference' => $request->reference_number,
+                'notes' => $request->notes,
+                'vat_amount' => $request->vat_amount,
+                'additional_costs' => $request->additional_costs ?? 0,
+                'additional_costs_description' => $request->additional_costs_description,
+                'approval_status' => Payment::APPROVAL_PENDING, // Set as pending CEO approval
+            ]);
 
-        // Update requisition status
-        $requisition->update(['status' => Requisition::STATUS_PAYMENT_PENDING_CEO]);
-    });
+            // Update requisition status - USE THE CORRECT CONSTANT
+            $requisition->update([
+                'status' => Requisition::STATUS_PAYMENT_COMPLETED // Changed from STATUS_PAYMENT_PROCESSED
+            ]);
 
-    return redirect()->route('finance.payments.index')
-        ->with('success', 'Payment created and sent to CEO for approval!');
+            // Create expense record
+            Expense::create([
+                'project_id' => $requisition->project_id,
+                'type' => 'supplier_payment',
+                'description' => 'Supplier Payment: ' . $requisition->supplier->name . ' - ' . $requisition->ref,
+                'amount' => $request->amount,
+                'incurred_on' => $request->payment_date,
+                'recorded_by' => auth()->id(),
+                'status' => 'pending', // Expense also pending until payment is approved
+                'notes' => $request->notes . " | Payment Ref: " . ($request->reference_number ?? 'N/A'),
+                'reference_id' => $payment->id,
+                'reference_type' => Payment::class,
+            ]);
+        });
+
+        return redirect()->route('finance.payments.pending')
+            ->with('success', 'Payment processed successfully! It is now pending CEO approval.');
+
+    } catch (\Exception $e) {
+        return redirect()->back()
+            ->with('error', 'Error processing payment: ' . $e->getMessage())
+            ->withInput();
+    }
 }
+
 
     /**
      * Calculate payment breakdown based on received quantities
@@ -126,7 +153,6 @@ public function store(Request $request, Requisition $requisition)
             'vat_percentage' => $subtotal > 0 ? ($vatAmount / $subtotal) * 100 : 0,
         ];
     }
-
 
      /**
      * Build comprehensive payment notes

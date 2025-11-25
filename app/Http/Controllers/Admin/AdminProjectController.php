@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use DateTime;
 
 class AdminProjectController extends Controller
 {
@@ -34,89 +35,149 @@ class AdminProjectController extends Controller
 
 
     public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:projects',
-            'description' => 'nullable|string',
-            'location' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'budget' => 'required|numeric|min:0',
-            'status' => 'required|in:planning,active,on_hold,completed,cancelled',
-            'project_manager_id' => 'required|exists:users,id',
-            'store_manager_id' => 'required|exists:users,id',
-            'engineer_ids' => 'nullable|array',
-            'engineer_ids.*' => 'exists:users,id',
-            'surveyor_ids' => 'nullable|array', // New
-            'surveyor_ids.*' => 'exists:users,id', // New
+{
+    // Convert date formats for Safari compatibility before validation
+    $request->merge([
+        'start_date' => $this->formatDateForDatabase($request->start_date),
+        'end_date' => $request->end_date ? $this->formatDateForDatabase($request->end_date) : null,
+    ]);
+
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'code' => 'required|string|max:50|unique:projects',
+        'description' => 'nullable|string',
+        'location' => 'required|string|max:255',
+        'start_date' => 'required|date',
+        'end_date' => 'nullable|date|after_or_equal:start_date',
+        'budget' => 'required|numeric|min:0',
+        'status' => 'required|in:planning,active,on_hold,completed,cancelled',
+        'project_manager_id' => 'required|exists:users,id',
+        'store_manager_id' => 'required|exists:users,id',
+        'engineer_ids' => 'nullable|array',
+        'engineer_ids.*' => 'exists:users,id',
+        'surveyor_ids' => 'nullable|array',
+        'surveyor_ids.*' => 'exists:users,id',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        // Create project
+        $project = Project::create([
+            'name' => $request->name,
+            'code' => $request->code,
+            'description' => $request->description,
+            'location' => $request->location,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'budget' => $request->budget,
+            'status' => $request->status,
         ]);
 
-        DB::beginTransaction();
-        try {
-            // Create project
-            $project = Project::create([
-                'name' => $request->name,
-                'code' => $request->code,
-                'description' => $request->description,
-                'location' => $request->location,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
-                'budget' => $request->budget,
-                'status' => $request->status,
-            ]);
+        // Attach BOTH managers to the project
+        $project->users()->attach([
+            $request->project_manager_id => ['role_on_project' => 'project_manager'],
+            $request->store_manager_id => ['role_on_project' => 'store_manager']
+        ]);
 
-            // Attach BOTH managers to the project
-            $project->users()->attach([
-                $request->project_manager_id => ['role_on_project' => 'project_manager'],
-                $request->store_manager_id => ['role_on_project' => 'store_manager']
-            ]);
-
-            // Add engineers if selected
-            if ($request->has('engineer_ids')) {
-                foreach ($request->engineer_ids as $engineerId) {
-                    $project->users()->attach($engineerId, ['role_on_project' => 'engineer']);
-                }
+        // Add engineers if selected
+        if ($request->has('engineer_ids')) {
+            foreach ($request->engineer_ids as $engineerId) {
+                $project->users()->attach($engineerId, ['role_on_project' => 'engineer']);
             }
+        }
 
-            // Add surveyors if selected - NEW
-            if ($request->has('surveyor_ids')) {
-                foreach ($request->surveyor_ids as $surveyorId) {
-                    $project->users()->attach($surveyorId, ['role_on_project' => 'surveyor']);
-                }
+        // Add surveyors if selected - NEW
+        if ($request->has('surveyor_ids')) {
+            foreach ($request->surveyor_ids as $surveyorId) {
+                $project->users()->attach($surveyorId, ['role_on_project' => 'surveyor']);
             }
+        }
 
-            // Create project store
-            $store = Store::create([
-                'name' => $project->name . ' Store',
-                'code' => 'STORE-' . $project->code,
-                'type' => 'project',
-                'address' => $project->location,
-                'project_id' => $project->id,
-            ]);
+        // Create project store
+        $store = Store::create([
+            'name' => $project->name . ' Store',
+            'code' => 'STORE-' . $project->code,
+            'type' => 'project',
+            'address' => $project->location,
+            'project_id' => $project->id,
+        ]);
 
-            // Create default milestones for the project - NEW
-            $this->createDefaultMilestones($project);
+        // Create default milestones for the project - NEW
+        $this->createDefaultMilestones($project);
 
-            DB::commit();
+        DB::commit();
 
-            $message = 'Project created successfully with associated store and default milestones';
-            if ($request->has('engineer_ids')) {
-                $message .= ' and ' . count($request->engineer_ids) . ' engineer(s) assigned';
-            }
-            if ($request->has('surveyor_ids')) {
-                $message .= ' and ' . count($request->surveyor_ids) . ' surveyor(s) assigned';
-            }
+        $message = 'Project created successfully with associated store and default milestones';
+        if ($request->has('engineer_ids')) {
+            $message .= ' and ' . count($request->engineer_ids) . ' engineer(s) assigned';
+        }
+        if ($request->has('surveyor_ids')) {
+            $message .= ' and ' . count($request->surveyor_ids) . ' surveyor(s) assigned';
+        }
 
-            return redirect()->route('admin.projects.index')
-                ->with('success', $message);
+        return redirect()->route('admin.projects.index')
+            ->with('success', $message);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Failed to create project: ' . $e->getMessage())
-                        ->withInput();
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Failed to create project: ' . $e->getMessage())
+                    ->withInput();
+    }
+}
+
+/**
+ * Format date for database (handle Safari weird formats)
+ */
+private function formatDateForDatabase($dateString)
+{
+    if (!$dateString) {
+        return null;
+    }
+
+    // If it's already in correct format (YYYY-MM-DD), return as is
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateString)) {
+        return $dateString;
+    }
+
+    // Handle Safari's weird date format (like 11/25/0007)
+    if (preg_match('#(\d{1,2})/(\d{1,2})/(\d{4})#', $dateString, $matches)) {
+        $month = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+        $day = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+        $year = $matches[3];
+        
+        // If year is weird (like 0007), it's likely Safari misinterpreting 2026 as 0007
+        // Let's fix this by using the current century
+        if (strlen($year) === 4 && intval($year) < 1000) {
+            // Extract the last two digits and assume 21st century
+            $lastTwoDigits = substr($year, -2);
+            $year = '20' . $lastTwoDigits;
+        }
+        
+        return "{$year}-{$month}-{$day}";
+    }
+
+    // Handle other common date formats
+    $formats = [
+        'Y-m-d', 'Y/m/d', 'd-m-Y', 'd/m/Y', 'm-d-Y', 'm/d/Y',
+        'Y-m-d H:i:s', 'Y/m/d H:i:s', 'd-m-Y H:i:s', 'd/m/Y H:i:s'
+    ];
+    
+    foreach ($formats as $format) {
+        $date = DateTime::createFromFormat($format, $dateString);
+        if ($date !== false) {
+            return $date->format('Y-m-d');
         }
     }
+
+    // Try to parse as DateTime as last resort
+    try {
+        $date = new DateTime($dateString);
+        return $date->format('Y-m-d');
+    } catch (\Exception $e) {
+        // If all else fails, return the original string and let validation handle it
+        return $dateString;
+    }
+}
 
      /**
      * Create default construction milestones for a project
@@ -494,6 +555,7 @@ private function createDefaultMilestones(Project $project)
     }
 
 public function update(Request $request, Project $project)
+
     {
         $request->validate([
             'name' => 'required|string|max:255',
