@@ -14,17 +14,41 @@ use App\Exports\ProductCatalogTemplateExport;
 
 class ProductCatalogController extends Controller
 {
-    public function index()
-    {
-        $products = ProductCatalog::with(['category'])
-            ->withCount(['requisitionItems', 'inventoryItems'])
-            ->latest()
-            ->paginate(20);
-
-        $categories = ProductCategory::active()->orderBy('name')->get();
-
-        return view('admin.product-catalog.index', compact('products', 'categories'));
+   public function index(Request $request)
+{
+    // Get filter parameters
+    $search = $request->get('search');
+    $categoryId = $request->get('category');
+    $status = $request->get('status');
+    
+    // Start query
+    $query = ProductCatalog::with(['category'])
+        ->withCount(['requisitionItems', 'inventoryItems']);
+    
+    // Apply search filter
+    if ($search) {
+        $query->search($search);
     }
+    
+    // Apply category filter
+    if ($categoryId) {
+        $query->where('category_id', $categoryId);
+    }
+    
+    // Apply status filter
+    if ($status === 'active') {
+        $query->where('is_active', true);
+    } elseif ($status === 'inactive') {
+        $query->where('is_active', false);
+    }
+    
+    // Order and paginate
+    $products = $query->latest()->paginate(20);
+    
+    $categories = ProductCategory::active()->orderBy('name')->get();
+    
+    return view('admin.product-catalog.index', compact('products', 'categories'));
+}
 
     public function create()
     {

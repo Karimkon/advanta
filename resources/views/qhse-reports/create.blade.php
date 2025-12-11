@@ -77,7 +77,7 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Report Title *</label>
+                                <label class="form-label">Report / Document Title *</label>
                                 <input type="text" name="title" class="form-control" 
                                        value="{{ old('title') }}" placeholder="e.g., Safety Inspection Report - Main Site" required>
                             </div>

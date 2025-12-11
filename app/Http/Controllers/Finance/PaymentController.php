@@ -13,14 +13,37 @@ use Illuminate\Support\Facades\DB;
 
 class PaymentController extends Controller
 {
-    public function index()
-    {
-        $payments = Payment::with(['lpo.requisition.project', 'supplier', 'paidBy'])
-            ->latest()
-            ->paginate(20);
-
-        return view('finance.payments.index', compact('payments'));
+    public function index(Request $request)
+{
+    $query = Payment::with(['lpo.requisition.project', 'supplier', 'paidBy'])
+        ->whereNotNull('paid_on');
+    
+    // Apply filters
+    if ($request->filled('payment_method')) {
+        $query->where('payment_method', $request->payment_method);
     }
+    
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+    
+    if ($request->filled('date_from')) {
+        $query->whereDate('paid_on', '>=', $request->date_from);
+    }
+    
+    if ($request->filled('date_to')) {
+        $query->whereDate('paid_on', '<=', $request->date_to);
+    }
+    
+    $payments = $query->latest()->paginate(20);
+    
+    // Calculate totals for the view
+    $totalAmount = $payments->sum('amount');
+    $totalVat = $payments->sum('vat_amount');
+    $totalBaseAmount = $totalAmount - $totalVat;
+
+    return view('finance.payments.index', compact('payments', 'totalAmount', 'totalVat', 'totalBaseAmount'));
+}
 
     public function pending()
     {
@@ -247,46 +270,58 @@ class PaymentController extends Controller
      * Export payments to CSV
      */
     public function export()
-    {
-        $payments = Payment::with(['lpo.requisition.project', 'supplier', 'paidBy'])
-            ->whereNotNull('paid_on')
-            ->latest()
-            ->get();
+{
+    $payments = Payment::with(['lpo.requisition.project', 'supplier', 'paidBy'])
+        ->whereNotNull('paid_on')
+        ->latest()
+        ->get();
 
-        return response()->streamDownload(function () use ($payments) {
-            $handle = fopen('php://output', 'w');
+    return response()->streamDownload(function () use ($payments) {
+        $handle = fopen('php://output', 'w');
+        
+        // Add UTF-8 BOM for Excel
+        fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        // Add headers
+        fputcsv($handle, [
+            'Payment ID',
+            'Payment Date', 
+            'Supplier',
+            'Payment Method',
+            'Base Amount',
+            'VAT Amount',
+            'Total Amount',
+            'Status',
+            'VAT %',
+            'Reference',
+            'Project',
+            'LPO Number',
+            'Processed By'
+        ]);
+
+        // Add data
+        foreach ($payments as $payment) {
+            $baseAmount = $payment->amount - $payment->vat_amount;
+            $vatPercentage = $baseAmount > 0 ? ($payment->vat_amount / $baseAmount) * 100 : 0;
             
-            // Add headers
             fputcsv($handle, [
-                'Payment ID',
-                'Payment Date', 
-                'Supplier',
-                'Payment Method',
-                'Amount',
-                'Status',
-                'Reference',
-                'Project',
-                'LPO Number',
-                'Processed By'
+                $payment->id,
+                $payment->paid_on ? $payment->paid_on->format('Y-m-d') : 'N/A',
+                $payment->supplier->name ?? 'N/A',
+                $payment->payment_method,
+                number_format($baseAmount, 2),
+                number_format($payment->vat_amount, 2),
+                number_format($payment->amount, 2),
+                $payment->status,
+                round($vatPercentage, 1) . '%',
+                $payment->reference ?? 'N/A',
+                $payment->lpo->requisition->project->name ?? 'N/A',
+                $payment->lpo->lpo_number ?? 'N/A',
+                $payment->paidBy->name ?? 'N/A'
             ]);
+        }
 
-            // Add data
-            foreach ($payments as $payment) {
-                fputcsv($handle, [
-                    $payment->id,
-                    $payment->paid_on ? $payment->paid_on->format('Y-m-d') : 'N/A',
-                    $payment->supplier->name ?? 'N/A',
-                    $payment->payment_method,
-                    $payment->amount,
-                    $payment->status,
-                    $payment->reference ?? 'N/A',
-                    $payment->lpo->requisition->project->name ?? 'N/A',
-                    $payment->lpo->lpo_number ?? 'N/A',
-                    $payment->paidBy->name ?? 'N/A'
-                ]);
-            }
-
-            fclose($handle);
-        }, 'payments_export_' . date('Y-m-d') . '.csv');
-    }
+        fclose($handle);
+    }, 'payments_with_vat_export_' . date('Y-m-d') . '.csv');
+}
 }

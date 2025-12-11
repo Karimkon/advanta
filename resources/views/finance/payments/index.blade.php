@@ -19,6 +19,49 @@
         </div>
     </div>
 
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Total Payments</h6>
+                            <h3 class="mb-0">UGX {{ number_format($totalAmount, 2) }}</h3>
+                        </div>
+                        <i class="bi bi-cash-coin fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Base Amount</h6>
+                            <h3 class="mb-0">UGX {{ number_format($totalBaseAmount, 2) }}</h3>
+                        </div>
+                        <i class="bi bi-currency-dollar fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Total VAT</h6>
+                            <h3 class="mb-0">UGX {{ number_format($totalVat, 2) }}</h3>
+                        </div>
+                        <i class="bi bi-percent fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Filters -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">
@@ -68,7 +111,9 @@
                             <th>Date</th>
                             <th>Supplier</th>
                             <th>Payment Method</th>
-                            <th>Amount</th>
+                            <th>Base Amount</th>
+                            <th>VAT</th>
+                            <th>Total</th>
                             <th>Status</th>
                             <th>Reference</th>
                             <th>Actions</th>
@@ -91,7 +136,19 @@
                                         {{ $payment->payment_method ? str_replace('_', ' ', $payment->payment_method) : 'Not set' }}
                                     </span>
                                 </td>
-                                <td>UGX {{ number_format($payment->amount, 2) }}</td>
+                                <td>
+                                    UGX {{ number_format($payment->amount - $payment->vat_amount, 2) }}
+                                </td>
+                                <td>
+                                    @if($payment->vat_amount > 0)
+                                        <span class="badge bg-info">
+                                            UGX {{ number_format($payment->vat_amount, 2) }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td><strong>UGX {{ number_format($payment->amount, 2) }}</strong></td>
                                 <td>
                                     <span class="badge bg-{{ $payment->status === 'completed' ? 'success' : ($payment->status === 'pending' ? 'warning' : 'danger') }}">
                                         {{ $payment->status ? ucfirst($payment->status) : 'Unknown' }}
@@ -101,15 +158,21 @@
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <a href="{{ route('finance.payments.show', $payment) }}" 
-                                           class="btn btn-outline-primary">
-                                            <i class="bi bi-eye"></i> View
+                                           class="btn btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
                                         </a>
+                                        @if($payment->payment_voucher_path)
+                                            <a href="{{ asset('storage/' . $payment->payment_voucher_path) }}" 
+                                               target="_blank" class="btn btn-outline-success" title="View Voucher">
+                                                <i class="bi bi-receipt"></i>
+                                            </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-4">
+                                <td colspan="10" class="text-center py-4">
                                     <div class="text-muted">
                                         <i class="bi bi-credit-card display-4 d-block mb-2"></i>
                                         No payments found.

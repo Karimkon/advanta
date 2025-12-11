@@ -157,6 +157,17 @@ class Payment extends Model
         return 0;
     }
 
+    // In Payment.php model
+public function getTotalWithVatAttribute()
+{
+    return $this->amount + $this->vat_amount;
+}
+
+public function getBaseAmountAttribute()
+{
+    return $this->amount - $this->vat_amount;
+}
+
     // NEW: Check if payment is pending CEO approval
     public function isPendingCeoApproval()
     {
