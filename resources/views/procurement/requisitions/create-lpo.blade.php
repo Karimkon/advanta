@@ -94,46 +94,62 @@
                             <strong>VAT Note:</strong> Some items attract 18% VAT while others don't. 
                             Please select which items should include VAT. Finance will use this information for payment processing.
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th width="40%">Item Description</th>
-                                        <th width="15%">Quantity</th>
-                                        <th width="15%">Unit Price</th>
-                                        <th width="15%">Total</th>
-                                        <th width="15%">Add VAT?</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($requisition->items as $item)
-                                    <tr>
-                                        <td>{{ $item->name }}</td>
-                                        <td>{{ number_format($item->quantity, 3) }} {{ $item->unit }}</td>
-                                        <td>UGX {{ number_format($item->unit_price, 2) }}</td>
-                                        <td>UGX {{ number_format($item->total_price, 2) }}</td>
-                                        <td>
-                                            <div class="form-check">
-                                                <input type="checkbox" 
-                                                       name="items_with_vat[]" 
-                                                       value="{{ $item->id }}" 
-                                                       id="vat_item_{{ $item->id }}"
-                                                       class="form-check-input vat-checkbox"
-                                                       data-item-id="{{ $item->id }}"
-                                                       data-item-total="{{ $item->total_price }}"
-                                                       {{ in_array($item->id, old('items_with_vat', [])) ? 'checked' : '' }}
-                                                <label class="form-check-label small" for="vat_item_{{ $item->id }}">
-                                                    18% VAT
-                                                </label>
-                                            </div>
-                                            <input type="hidden" name="vat_rates[{{ $item->id }}]" value="18" class="vat-rate-input">
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                        <!-- VAT Summary -->
+                        <!-- Replace the items table section -->
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th width="30%">Item Description</th>
+                <th width="15%">Quantity</th>
+                <th width="15%">Unit Price</th>
+                <th width="15%">Total</th>
+                <th width="15%">Add VAT?</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($requisition->items as $item)
+            <tr>
+                <td>{{ $item->name }}</td>
+                <td>
+                    <input type="number" 
+                           name="items[{{ $item->id }}][quantity]" 
+                           value="{{ $item->quantity }}" 
+                           step="0.001" 
+                           min="0.001" 
+                           class="form-control form-control-sm item-quantity"
+                           data-item-id="{{ $item->id }}"
+                           data-original-quantity="{{ $item->quantity }}"
+                           required>
+                </td>
+                <td>
+                    <input type="number" 
+                           name="items[{{ $item->id }}][unit_price]" 
+                           value="{{ $item->unit_price }}" 
+                           step="0.01" 
+                           min="0" 
+                           class="form-control form-control-sm item-unit-price"
+                           data-item-id="{{ $item->id }}"
+                           data-original-price="{{ $item->unit_price }}"
+                           required>
+                </td>
+                <td>
+                    <span class="item-total-display" id="item-total-{{ $item->id }}">
+                        UGX {{ number_format($item->total_price, 2) }}
+                    </span>
+                    <input type="hidden" 
+                           name="items[{{ $item->id }}][total]" 
+                           value="{{ $item->total_price }}"
+                           class="item-total-input">
+                </td>
+                <td>
+                    <!-- VAT checkbox remains the same -->
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+<!-- VAT Summary -->
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <div class="card bg-light">

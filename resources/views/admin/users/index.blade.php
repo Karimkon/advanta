@@ -52,6 +52,15 @@
                 <td>{{ $user->phone ?? 'N/A' }}</td>
                 <td>
                   <span class="badge bg-secondary">{{ ucfirst(str_replace('_', ' ', $user->role)) }}</span>
+                  @if($user->role === 'stores' && $user->store)
+                    <br><small class="text-muted">
+                      <i class="bi bi-shop me-1"></i>{{ $user->store->name }}
+                    </small>
+                  @elseif($user->role === 'stores' && !$user->store)
+                    <br><small class="text-warning">
+                      <i class="bi bi-exclamation-triangle me-1"></i>No store assigned
+                    </small>
+                  @endif
                 </td>
                 <td>
                   <span class="badge bg-success">
@@ -101,8 +110,36 @@
     </div>
     
     @if($users->hasPages())
-      <div class="card-footer bg-white">
-        {{ $users->links() }}
+      <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+        <div class="text-muted small">
+          Showing {{ $users->firstItem() }} to {{ $users->lastItem() }} of {{ $users->total() }} users
+        </div>
+        <nav>
+          <ul class="pagination pagination-sm mb-0">
+            {{-- Previous Page Link --}}
+            @if($users->onFirstPage())
+              <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+            @else
+              <li class="page-item"><a class="page-link" href="{{ $users->previousPageUrl() }}">&laquo;</a></li>
+            @endif
+
+            {{-- Page Numbers --}}
+            @foreach($users->getUrlRange(1, $users->lastPage()) as $page => $url)
+              @if($page == $users->currentPage())
+                <li class="page-item active"><span class="page-link">{{ $page }}</span></li>
+              @else
+                <li class="page-item"><a class="page-link" href="{{ $url }}">{{ $page }}</a></li>
+              @endif
+            @endforeach
+
+            {{-- Next Page Link --}}
+            @if($users->hasMorePages())
+              <li class="page-item"><a class="page-link" href="{{ $users->nextPageUrl() }}">&raquo;</a></li>
+            @else
+              <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+            @endif
+          </ul>
+        </nav>
       </div>
     @endif
   </div>

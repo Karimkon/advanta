@@ -44,13 +44,19 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Email Address</label>
-                                    <input type="email" class="form-control" value="{{ $user->email }}" disabled>
-                                    <small class="text-muted">Email cannot be changed</small>
-                                </div>
-                            </div>
+                          <div class="col-md-6">
+    <div class="mb-3">
+        <label class="form-label">Email Address</label>
+        <input type="email" name="email" 
+               class="form-control @error('email') is-invalid @enderror" 
+               value="{{ old('email', $user->email) }}" 
+               required>
+        @error('email')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+        <small class="text-muted">Changing email requires verification</small>
+    </div>
+</div>
 
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -66,10 +72,10 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">User Role <span class="text-danger">*</span></label>
-                                    <select name="role" class="form-select @error('role') is-invalid @enderror" required>
+                                    <select name="role" id="roleSelect" class="form-select @error('role') is-invalid @enderror" required>
                                         <option value="">Select Role</option>
                                         @foreach($roles as $role)
-                                            <option value="{{ $role }}" 
+                                            <option value="{{ $role }}"
                                                 {{ old('role', $user->role) === $role ? 'selected' : '' }}>
                                                 @if($role === 'engineer')
                                                     Engineer
@@ -82,6 +88,33 @@
                                     @error('role')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                </div>
+                            </div>
+
+                            <!-- Store Assignment (shown only for stores role) -->
+                            <div class="col-md-6" id="storeAssignmentSection" style="{{ old('role', $user->role) === 'stores' ? '' : 'display: none;' }}">
+                                <div class="mb-3">
+                                    <label class="form-label">Assign to Store</label>
+                                    <select name="shop_id" id="shopSelect" class="form-select @error('shop_id') is-invalid @enderror">
+                                        <option value="">No Store Assigned</option>
+                                        @foreach($availableStores as $store)
+                                            <option value="{{ $store->id }}" {{ old('shop_id', $user->shop_id) == $store->id ? 'selected' : '' }}>
+                                                {{ $store->name }} ({{ ucfirst($store->type) }})
+                                                @if($store->id == $user->shop_id)
+                                                    - Current Assignment
+                                                @endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('shop_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">
+                                        Only stores without a manager (or currently assigned to this user) are shown.
+                                        @if($availableStores->isEmpty())
+                                            <span class="text-warning">All stores already have managers assigned.</span>
+                                        @endif
+                                    </small>
                                 </div>
                             </div>
 
@@ -224,4 +257,18 @@
     border-bottom: 1px solid #e9ecef;
 }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+document.getElementById('roleSelect').addEventListener('change', function() {
+    const storeSection = document.getElementById('storeAssignmentSection');
+    if (this.value === 'stores') {
+        storeSection.style.display = 'block';
+    } else {
+        storeSection.style.display = 'none';
+        document.getElementById('shopSelect').value = '';
+    }
+});
+</script>
 @endpush

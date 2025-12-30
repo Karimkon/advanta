@@ -37,6 +37,23 @@ class Store extends Model
         return $this->hasMany(Requisition::class);
     }
 
+    // Get the store manager (user assigned to this store via shop_id - legacy)
+    public function manager()
+    {
+        return $this->hasOne(User::class, 'shop_id');
+    }
+
+    // Get the store manager through the project assignment
+    public function getStoreManagerAttribute()
+    {
+        if ($this->project) {
+            return $this->project->users()
+                ->wherePivot('role_on_project', 'store_manager')
+                ->first();
+        }
+        return null;
+    }
+
     // Check if this is a project store
     public function isMainStore()
     {

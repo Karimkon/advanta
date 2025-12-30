@@ -289,7 +289,7 @@ body {
                 </div>
             </div>
 
-            <!-- Procurement -->
+            <!-- Procurement
             <div class="accordion-item">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#procurementCollapse">
@@ -306,7 +306,7 @@ body {
                         </a>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <!-- LPOs -->
             <div class="accordion-item">
@@ -320,32 +320,11 @@ body {
                         <a href="{{ route('admin.lpos.index') }}" class="{{ request()->routeIs('admin.lpos.index') ? 'active' : '' }}">
                             <i class="bi bi-file-text"></i> All LPOs
                         </a>
-                        <a href="{{ route('admin.lpos.create') }}" class="{{ request()->routeIs('admin.lpos.create') ? 'active' : '' }}">
-                            <i class="bi bi-plus-circle"></i> Create LPO
-                        </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Finance -->
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#financeCollapse">
-                        <i class="bi bi-cash-stack"></i> Finance
-                    </button>
-                </h2>
-                <div id="financeCollapse" class="accordion-collapse collapse {{ request()->is('admin/finance*') ? 'show' : '' }}">
-                    <div class="accordion-body">
-                        <a href="{{ route('admin.finance.index') }}" class="{{ request()->routeIs('admin.finance.index') ? 'active' : '' }}">
-                            <i class="bi bi-graph-up"></i> Financial Overview
-                        </a>
-                        <a href="{{ route('admin.payments.index') }}" class="{{ request()->routeIs('admin.payments.*') ? 'active' : '' }}">
-                            <i class="bi bi-currency-dollar"></i> Payment Management
-                        </a>
-                    </div>
-                </div>
-            </div>
-
+          
             <!-- Inventory & Stores -->
             <div class="accordion-item">
                 <h2 class="accordion-header">

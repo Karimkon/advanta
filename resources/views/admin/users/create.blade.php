@@ -41,16 +41,51 @@
 
         <div class="mb-3">
             <label class="form-label">User Role</label>
-            <select name="role" class="form-select" required>
+            <select name="role" id="roleSelect" class="form-select" required>
                 <option value="">Select Role</option>
                 @foreach($roles as $role)
-                    <option value="{{ $role }}">{{ ucfirst(str_replace('_',' ', $role)) }}</option>
+                    <option value="{{ $role }}" {{ old('role') === $role ? 'selected' : '' }}>
+                        {{ ucfirst(str_replace('_',' ', $role)) }}
+                    </option>
                 @endforeach
             </select>
+        </div>
+
+        <!-- Store Assignment (shown only for stores role) -->
+        <div class="mb-3" id="storeAssignmentSection" style="{{ old('role') === 'stores' ? '' : 'display: none;' }}">
+            <label class="form-label">Assign to Store</label>
+            <select name="shop_id" id="shopSelect" class="form-select">
+                <option value="">No Store Assigned</option>
+                @foreach($availableStores as $store)
+                    <option value="{{ $store->id }}" {{ old('shop_id') == $store->id ? 'selected' : '' }}>
+                        {{ $store->name }} ({{ ucfirst($store->type) }})
+                    </option>
+                @endforeach
+            </select>
+            <small class="text-muted">
+                Only stores without a manager are shown.
+                @if($availableStores->isEmpty())
+                    <span class="text-warning">All stores already have managers assigned.</span>
+                @endif
+            </small>
         </div>
 
         <button class="btn btn-primary">Create User</button>
         <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">Cancel</a>
     </form>
 </div>
+
+@push('scripts')
+<script>
+document.getElementById('roleSelect').addEventListener('change', function() {
+    const storeSection = document.getElementById('storeAssignmentSection');
+    if (this.value === 'stores') {
+        storeSection.style.display = 'block';
+    } else {
+        storeSection.style.display = 'none';
+        document.getElementById('shopSelect').value = '';
+    }
+});
+</script>
+@endpush
 @endsection

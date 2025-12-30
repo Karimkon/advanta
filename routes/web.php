@@ -17,7 +17,6 @@ use App\Http\Controllers\Stores\StoresDashboardController;
 use App\Http\Controllers\CEO\CEODashboardController;
 use App\Http\Controllers\ProjectManager\ProjectManagerDashboardController;
 use App\Http\Controllers\SiteManager\SiteManagerDashboardController;
-use App\Http\Controllers\Supplier\SupplierDashboardController;
 use App\Http\Controllers\Admin\AdminRequisitionController;
 use App\Http\Controllers\ProjectManager\ProjectManagerRequisitionController;
 use App\Http\Controllers\Admin\AdminProcurementController;        
@@ -234,11 +233,21 @@ Route::get('product-catalog/export-data', [ProductCatalogController::class, 'exp
     // LPOs Management
     Route::prefix('lpos')->name('lpos.')->group(function () {
         Route::get('/', function () {
-            return view('admin.lpos.index');
+            $lpos = \App\Models\Lpo::with(['supplier', 'requisition.project', 'issuer'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+            return view('admin.lpos.index', compact('lpos'));
         })->name('index');
+
+        Route::get('/{lpo}', function (\App\Models\Lpo $lpo) {
+            $lpo->load(['supplier', 'requisition.project', 'items', 'issuer', 'receivedItems']);
+            return view('admin.lpos.show', compact('lpo'));
+        })->name('show');
+
         Route::get('/create', function () {
             return view('admin.lpos.create');
         })->name('create');
+
         Route::post('/', function (Request $request) {
             return redirect()->route('admin.lpos.index')->with('success', 'LPO created');
         })->name('store');
@@ -261,22 +270,224 @@ Route::get('product-catalog/export-data', [ProductCatalogController::class, 'exp
     // Stores & Inventory
 Route::prefix('stores')->name('stores.')->group(function () {
     Route::get('/', function () {
-        $stores = \App\Models\Store::with('project')->get();
-        return view('admin.stores.index', compact('stores'));
+        // Only fetch project stores (exclude main stores)
+        $stores = \App\Models\Store::with(['project.users', 'inventoryItems'])
+            ->where('type', 'project')
+            ->get();
+        $totalInventoryItems = \App\Models\InventoryItem::whereIn('store_id', $stores->pluck('id'))->count();
+        return view('admin.stores.index', compact('stores', 'totalInventoryItems'));
     })->name('index');
+
+    Route::get('/create', function () {
+        $projects = \App\Models\Project::where('status', 'active')->get();
+        return view('admin.stores.create', compact('projects'));
+    })->name('create');
+
+    Route::post('/', function (\Illuminate\Http\Request $request) {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:50|unique:stores,code',
+            'type' => 'required|in:main,project,warehouse',
+            'address' => 'nullable|string',
+            'project_id' => 'nullable|exists:projects,id',
+        ]);
+
+        \App\Models\Store::create($request->only(['name', 'code', 'type', 'address', 'project_id']));
+
+        return redirect()->route('admin.stores.index')->with('success', 'Store created successfully');
+    })->name('store');
+
+    Route::get('/{store}', function (\App\Models\Store $store) {
+        $store->load(['project.users', 'inventoryItems']);
+        return view('admin.stores.show', compact('store'));
+    })->name('show');
+
+    Route::get('/{store}/edit', function (\App\Models\Store $store) {
+        $projects = \App\Models\Project::where('status', 'active')->get();
+        // Get available managers (stores users not assigned to other stores)
+        $availableManagers = \App\Models\User::where('role', 'stores')
+            ->where(function($q) use ($store) {
+                $q->whereNull('shop_id')->orWhere('shop_id', $store->id);
+            })->get();
+        return view('admin.stores.edit', compact('store', 'projects', 'availableManagers'));
+    })->name('edit');
+
+    Route::put('/{store}', function (\Illuminate\Http\Request $request, \App\Models\Store $store) {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:50|unique:stores,code,' . $store->id,
+            'type' => 'required|in:main,project,warehouse',
+            'address' => 'nullable|string',
+            'project_id' => 'nullable|exists:projects,id',
+            'manager_id' => 'nullable|exists:users,id',
+        ]);
+
+        $store->update($request->only(['name', 'code', 'type', 'address', 'project_id']));
+
+        // Handle manager assignment
+        if ($request->has('manager_id')) {
+            // Remove old manager assignment
+            \App\Models\User::where('shop_id', $store->id)->update(['shop_id' => null]);
+
+            // Assign new manager
+            if ($request->manager_id) {
+                \App\Models\User::where('id', $request->manager_id)->update(['shop_id' => $store->id]);
+            }
+        }
+
+        return redirect()->route('admin.stores.index')->with('success', 'Store updated successfully');
+    })->name('update');
 });
 
 // Inventory Management
 Route::prefix('inventory')->name('inventory.')->group(function () {
     Route::get('/', function () {
-        return view('admin.inventory.index');
+        $inventoryItems = \App\Models\InventoryItem::with(['store', 'productCatalog'])
+            ->orderBy('store_id')
+            ->orderBy('name')
+            ->get();
+        $stores = \App\Models\Store::all();
+        return view('admin.inventory.index', compact('inventoryItems', 'stores'));
     })->name('index');
+
+    Route::post('/add', function (\Illuminate\Http\Request $request) {
+        $request->validate([
+            'store_id' => 'required|exists:stores,id',
+            'name' => 'required|string|max:255',
+            'sku' => 'nullable|string|max:100',
+            'category' => 'nullable|string|max:100',
+            'unit' => 'required|string|max:50',
+            'unit_price' => 'required|numeric|min:0',
+            'quantity' => 'required|numeric|min:0',
+            'reorder_level' => 'nullable|numeric|min:0',
+        ]);
+
+        $sku = $request->sku ?: 'SKU-' . strtoupper(uniqid());
+
+        \App\Models\InventoryItem::create([
+            'store_id' => $request->store_id,
+            'name' => $request->name,
+            'sku' => $sku,
+            'category' => $request->category ?? 'General',
+            'unit' => $request->unit,
+            'unit_price' => $request->unit_price,
+            'quantity' => $request->quantity,
+            'reorder_level' => $request->reorder_level ?? 10,
+        ]);
+
+        return redirect()->route('admin.inventory.index')->with('success', 'Item added successfully');
+    })->name('add');
+
+    Route::post('/{item}/adjust', function (\Illuminate\Http\Request $request, \App\Models\InventoryItem $item) {
+        $request->validate([
+            'adjustment_type' => 'required|in:add,reduce,set',
+            'quantity' => 'required|numeric|min:0',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $oldQty = $item->quantity;
+
+        if ($request->adjustment_type === 'add') {
+            $item->quantity += $request->quantity;
+        } elseif ($request->adjustment_type === 'reduce') {
+            $item->quantity = max(0, $item->quantity - $request->quantity);
+        } else {
+            $item->quantity = $request->quantity;
+        }
+
+        $item->save();
+
+        // Log the adjustment
+        \App\Models\InventoryLog::create([
+            'inventory_item_id' => $item->id,
+            'type' => $request->adjustment_type,
+            'quantity' => $request->quantity,
+            'notes' => $request->notes ?? "Adjusted from {$oldQty} to {$item->quantity}",
+            'recorded_by' => auth()->id(),
+        ]);
+
+        return redirect()->route('admin.inventory.index')->with('success', 'Stock adjusted successfully');
+    })->name('adjust');
+
+    Route::delete('/{item}', function (\App\Models\InventoryItem $item) {
+        $item->delete();
+        return redirect()->route('admin.inventory.index')->with('success', 'Item deleted successfully');
+    })->name('delete');
 });
 
     // Reports
     Route::prefix('reports')->name('reports.')->group(function () {
         Route::get('/', function () {
-            return view('admin.reports.index');
+            // Projects stats
+            $projects = \App\Models\Project::all();
+
+            // Requisitions stats
+            $requisitions = \App\Models\Requisition::all();
+
+            // LPOs stats
+            $lpos = \App\Models\Lpo::all();
+
+            // Payments stats
+            $payments = \App\Models\Payment::all();
+
+            // Inventory stats
+            $inventoryItems = \App\Models\InventoryItem::all();
+
+            // Suppliers stats
+            $suppliers = \App\Models\Supplier::all();
+
+            $stats = [
+                // Projects
+                'total_projects' => $projects->count(),
+                'active_projects' => $projects->where('status', 'active')->count(),
+                'completed_projects' => $projects->where('status', 'completed')->count(),
+                'on_hold_projects' => $projects->where('status', 'on_hold')->count(),
+                'total_budget' => $projects->sum('budget'),
+
+                // Requisitions
+                'total_requisitions' => $requisitions->count(),
+                'pending_requisitions' => $requisitions->where('status', 'pending')->count(),
+                'approved_requisitions' => $requisitions->whereIn('status', ['operations_approved', 'ceo_approved', 'lpo_issued'])->count(),
+                'completed_requisitions' => $requisitions->where('status', 'completed')->count(),
+                'rejected_requisitions' => $requisitions->where('status', 'rejected')->count(),
+                'requisitions_value' => $requisitions->sum('estimated_total'),
+
+                // LPOs
+                'total_lpos' => $lpos->count(),
+                'issued_lpos' => $lpos->whereIn('status', ['issued', 'sent', 'pending'])->count(),
+                'delivered_lpos' => $lpos->where('status', 'delivered')->count(),
+                'cancelled_lpos' => $lpos->where('status', 'cancelled')->count(),
+                'lpos_value' => $lpos->sum('total'),
+
+                // Payments
+                'total_payments' => $payments->sum('amount'),
+                'pending_payments' => $payments->whereIn('approval_status', ['pending_ceo'])->count(),
+                'approved_payments' => $payments->where('approval_status', 'ceo_approved')->count(),
+                'rejected_payments' => $payments->where('approval_status', 'ceo_rejected')->count(),
+                'total_paid' => $payments->where('approval_status', 'ceo_approved')->sum('amount'),
+
+                // Inventory
+                'total_stores' => \App\Models\Store::where('type', 'project')->count(),
+                'total_inventory_items' => $inventoryItems->count(),
+                'low_stock_items' => $inventoryItems->filter(fn($i) => $i->quantity < $i->reorder_level)->count(),
+                'inventory_value' => $inventoryItems->sum(fn($i) => $i->quantity * $i->unit_price),
+
+                // Suppliers
+                'total_suppliers' => $suppliers->count(),
+                'active_suppliers' => $suppliers->where('status', 'active')->count(),
+            ];
+
+            $recentRequisitions = \App\Models\Requisition::with('project')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+
+            $recentLpos = \App\Models\Lpo::with('supplier')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+
+            return view('admin.reports.index', compact('stats', 'recentRequisitions', 'recentLpos'));
         })->name('index');
     });
 
@@ -705,9 +916,4 @@ Route::middleware(['auth', 'role:admin,ceo'])->prefix('qhse-reports')->name('ceo
     Route::get('/{qhseReport}', [CEOQhseReportController::class, 'show'])->name('show');
     Route::delete('/{qhseReport}', [CEOQhseReportController::class, 'destroy'])->name('destroy');
     Route::get('/{qhseReport}/download/{index}', [CEOQhseReportController::class, 'downloadAttachment'])->name('download.attachment');
-});
-
-// SUPPLIER
-Route::middleware(['auth','role:supplier'])->prefix('supplier')->name('supplier.')->group(function () {
-    Route::get('/dashboard', [SupplierDashboardController::class,'index'])->name('dashboard');
 });

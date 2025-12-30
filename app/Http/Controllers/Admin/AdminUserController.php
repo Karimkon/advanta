@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -12,7 +13,7 @@ class AdminUserController extends Controller
     public function index()
     {
         return view('admin.users.index', [
-            'users' => User::latest()->paginate(10) // Change this line
+            'users' => User::with('store')->latest()->paginate(10)
         ]);
     }
 
@@ -31,7 +32,10 @@ class AdminUserController extends Controller
             'surveyor'
         ];
 
-        return view('admin.users.create', compact('roles'));
+        // Get stores that don't have a manager assigned
+        $availableStores = Store::whereDoesntHave('manager')->get();
+
+        return view('admin.users.create', compact('roles', 'availableStores'));
     }
 
     public function store(Request $request)
@@ -41,16 +45,24 @@ class AdminUserController extends Controller
             'email'    => 'required|email|unique:users,email',
             'phone'    => 'required|string|max:50',
             'password' => 'required|min:6',
-            'role'     => 'required|string'
+            'role'     => 'required|string',
+            'shop_id'  => 'nullable|exists:stores,id'
         ]);
 
-        User::create([
+        $userData = [
             'name'     => $request->name,
             'email'    => $request->email,
             'phone'    => $request->phone,
             'role'     => $request->role,
             'password' => Hash::make($request->password),
-        ]);
+        ];
+
+        // Only assign store if role is 'stores'
+        if ($request->role === 'stores' && $request->shop_id) {
+            $userData['shop_id'] = $request->shop_id;
+        }
+
+        User::create($userData);
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User created successfully');
@@ -71,34 +83,51 @@ class AdminUserController extends Controller
             'surveyor'
         ];
 
-        return view('admin.users.edit', compact('user', 'roles'));
+        // Get stores that don't have a manager OR are assigned to this user
+        $availableStores = Store::where(function($query) use ($user) {
+            $query->whereDoesntHave('manager')
+                  ->orWhere('id', $user->shop_id);
+        })->get();
+
+        return view('admin.users.edit', compact('user', 'roles', 'availableStores'));
     }
 
     public function update(Request $request, User $user)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'phone' => 'nullable|string|max:50',
-        'role' => 'required|string',
-        'password' => 'nullable|min:6|confirmed',
-    ]);
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:50',
+            'role' => 'required|string',
+            'password' => 'nullable|min:6|confirmed',
+            'shop_id' => 'nullable|exists:stores,id'
+        ]);
 
-    $updateData = [
-        'name' => $request->name,
-        'phone' => $request->phone,
-        'role' => $request->role,
-    ];
+        $updateData = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'role' => $request->role,
+        ];
 
-    // Only update password if provided
-    if ($request->filled('password')) {
-        $updateData['password'] = Hash::make($request->password);
+        // Handle store assignment
+        if ($request->role === 'stores') {
+            $updateData['shop_id'] = $request->shop_id;
+        } else {
+            // Clear store assignment if role is not stores
+            $updateData['shop_id'] = null;
+        }
+
+        // Only update password if provided
+        if ($request->filled('password')) {
+            $updateData['password'] = Hash::make($request->password);
+        }
+
+        $user->update($updateData);
+
+        return redirect()->route('admin.users.index')
+            ->with('success', 'User updated successfully');
     }
-
-    $user->update($updateData);
-
-    return redirect()->route('admin.users.index')
-        ->with('success', 'User updated successfully');
-}
 
     public function destroy(User $user)
     {

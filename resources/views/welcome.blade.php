@@ -92,6 +92,30 @@
         <p class="text-lg text-gray-300 mb-10 max-w-3xl mx-auto">
             Streamline projects, requisitions, LPOs, procurement, approvals and reporting.
         </p>
+
+        <div class="fade-in-up mb-12">
+        <div class="flex flex-wrap justify-center gap-6">
+            <a href="/advanta.apk" class="role-card flex items-center gap-4 px-8 py-4 rounded-2xl border border-white/10 hover:border-green-400/50 group">
+                <div class="bg-green-500/10 p-2 rounded-lg group-hover:scale-110 transition-transform">
+                    <i class="bi bi-android2 text-3xl text-green-400"></i>
+                </div>
+                <div class="text-left">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Download for</div>
+                    <div class="text-lg font-bold">Android (APK)</div>
+                </div>
+            </a>
+
+            <a href="#" class="role-card flex items-center gap-4 px-8 py-4 rounded-2xl border border-white/10 hover:border-blue-400/50 group">
+                <div class="bg-white/10 p-2 rounded-lg group-hover:scale-110 transition-transform">
+                    <i class="bi bi-apple text-3xl text-white"></i>
+                </div>
+                <div class="text-left">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Available on</div>
+                    <div class="text-lg font-bold">App Store</div>
+                </div>
+            </a>
+        </div>
+    </div>
     </div>
 
     <!-- Main Role Cards Grid -->

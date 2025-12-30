@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasApiTokens;
 
     protected $fillable = [
         'name','email','phone','password','role','shop_id','back_debt'
@@ -49,5 +50,11 @@ class User extends Authenticatable
     public function inventoryLogs()
     {
         return $this->hasMany(InventoryLog::class);
+    }
+
+    // Get the store this user manages (for stores role)
+    public function store()
+    {
+        return $this->belongsTo(Store::class, 'shop_id');
     }
 }

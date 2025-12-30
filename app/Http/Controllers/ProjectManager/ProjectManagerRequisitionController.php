@@ -15,22 +15,38 @@ use Illuminate\Support\Str;
 
 class ProjectManagerRequisitionController extends Controller
 {
-    public function index()
-    {
-        $user = auth()->user();
-        
-        $requisitions = Requisition::where('requested_by', $user->id)
-            ->with(['project', 'items', 'approvals'])
-            ->latest()
-            ->paginate(10);
+   public function index()
+{
+    $user = auth()->user();
+    
+    // Get ALL requisitions from projects managed by this PM (not just ones they created)
+    $query = Requisition::whereHas('project.users', function($query) use ($user) {
+        $query->where('user_id', $user->id);
+    })
+    ->with(['project', 'items', 'approvals', 'requester']);
 
-         // Get projects for filter
-        $projects = Project::whereHas('users', function($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->get();  
-
-        return view('project_manager.requisitions.index', compact('requisitions', 'projects'));
+    // Apply filters
+    if (request('status')) {
+        $query->where('status', request('status'));
     }
+    
+    if (request('type')) {
+        $query->where('type', request('type'));
+    }
+    
+    if (request('project_id')) {
+        $query->where('project_id', request('project_id'));
+    }
+
+    $requisitions = $query->latest()->paginate(10);
+
+    // Get projects for filter dropdown
+    $projects = Project::whereHas('users', function($query) use ($user) {
+        $query->where('user_id', $user->id);
+    })->get();  
+
+    return view('project_manager.requisitions.index', compact('requisitions', 'projects'));
+}
 
    public function create()
 {
@@ -165,23 +181,22 @@ class ProjectManagerRequisitionController extends Controller
     }
 
     public function pending()
-    {
-        $user = auth()->user();
-        
-        // Get pending requisitions that need project manager approval
-        $pendingRequisitions = Requisition::whereHas('project', function($query) use ($user) {
-            $query->whereHas('users', function($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
-        })
-        ->where('status', Requisition::STATUS_PENDING)
-        ->where('type', Requisition::TYPE_STORE) // Only store requisitions
-        ->with(['project', 'requester', 'items'])
-        ->latest()
-        ->paginate(20);
+{
+    $user = auth()->user();
+    
+    $pendingRequisitions = Requisition::whereHas('project', function($query) use ($user) {
+        $query->whereHas('users', function($q) use ($user) {
+            $q->where('user_id', $user->id);
+        });
+    })
+    ->where('status', Requisition::STATUS_PENDING)
+    // Removed: ->where('type', Requisition::TYPE_STORE)
+    ->with(['project', 'requester', 'items'])
+    ->latest()
+    ->paginate(20);
 
-        return view('project_manager.requisitions.pending', compact('pendingRequisitions'));
-    }
+    return view('project_manager.requisitions.pending', compact('pendingRequisitions'));
+}
 
     public function approve(Requisition $requisition)
     {
