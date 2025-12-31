@@ -64,11 +64,15 @@
                     <div class="mb-3">
                         <strong>Attachments:</strong>
                         <div class="mt-2">
-                            @foreach($qhseReport->attachments as $index => $attachment)
+                            @foreach($qhseReport->getAttachmentsArray() as $index => $attachment)
+                                @php
+                                    // Handle both formats: object with 'name' key or plain string
+                                    $attachmentName = is_array($attachment) ? ($attachment['name'] ?? basename($attachment['path'] ?? 'Attachment')) : basename($attachment);
+                                @endphp
                                 <div class="d-flex align-items-center mb-2">
                                     <i class="bi bi-paperclip me-2"></i>
-                                    <span class="me-3">{{ $attachment['name'] }}</span>
-                                    <a href="{{ route('operations.qhse-reports.download', ['qhseReport' => $qhseReport->id, 'index' => $index]) }}" 
+                                    <span class="me-3">{{ $attachmentName }}</span>
+                                    <a href="{{ route('operations.qhse-reports.download', ['qhseReport' => $qhseReport->id, 'index' => $index]) }}"
                                        class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-download"></i> Download
                                     </a>

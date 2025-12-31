@@ -63,6 +63,33 @@ class QhseReport extends Model
 
     public function getAttachmentsCount()
     {
-        return $this->attachments ? count($this->attachments) : 0;
+        if (!$this->attachments) {
+            return 0;
+        }
+
+        $attachments = $this->attachments;
+
+        // If still a string (JSON not auto-decoded), decode it manually
+        if (is_string($attachments)) {
+            $attachments = json_decode($attachments, true);
+        }
+
+        return is_array($attachments) ? count($attachments) : 0;
+    }
+
+    public function getAttachmentsArray()
+    {
+        if (!$this->attachments) {
+            return [];
+        }
+
+        $attachments = $this->attachments;
+
+        // If still a string (JSON not auto-decoded), decode it manually
+        if (is_string($attachments)) {
+            $attachments = json_decode($attachments, true);
+        }
+
+        return is_array($attachments) ? $attachments : [];
     }
 }

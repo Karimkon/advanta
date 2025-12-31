@@ -227,20 +227,32 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const vatCheckboxes = document.querySelectorAll('.vat-checkbox');
+    const quantityInputs = document.querySelectorAll('.item-quantity');
+    const priceInputs = document.querySelectorAll('.item-unit-price');
 
     function calculateVatSummary() {
         let subtotal = 0;
         let vatAmount = 0;
 
-        // Calculate subtotal from all items
-        @foreach($requisition->items as $item)
-            subtotal += {{ $item->total_price }};
-        @endforeach
+        // Calculate subtotal from form inputs
+        document.querySelectorAll('.item-unit-price').forEach(input => {
+            const itemId = input.dataset.itemId;
+            const quantityInput = document.querySelector(`.item-quantity[data-item-id="${itemId}"]`);
+            const quantity = parseFloat(quantityInput?.value) || 0;
+            const unitPrice = parseFloat(input.value) || 0;
+            const itemTotal = quantity * unitPrice;
 
-        // Calculate VAT only for checked items
-        vatCheckboxes.forEach(checkbox => {
-            if (checkbox.checked) {
-                const itemTotal = parseFloat(checkbox.dataset.itemTotal);
+            subtotal += itemTotal;
+
+            // Update item total display
+            const totalDisplay = document.getElementById(`item-total-${itemId}`);
+            if (totalDisplay) {
+                totalDisplay.textContent = 'UGX ' + itemTotal.toLocaleString('en-US', {minimumFractionDigits: 2});
+            }
+
+            // Check if item has VAT
+            const vatCheckbox = document.querySelector(`.vat-checkbox[data-item-id="${itemId}"]`);
+            if (vatCheckbox && vatCheckbox.checked) {
                 vatAmount += itemTotal * 0.18;
             }
         });
@@ -253,7 +265,16 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('grand-total-display').textContent = 'UGX ' + grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2});
     }
 
-    // Add event listeners
+    // Add event listeners for price and quantity changes
+    quantityInputs.forEach(input => {
+        input.addEventListener('input', calculateVatSummary);
+    });
+
+    priceInputs.forEach(input => {
+        input.addEventListener('input', calculateVatSummary);
+    });
+
+    // Add event listeners for VAT checkboxes
     vatCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', calculateVatSummary);
     });

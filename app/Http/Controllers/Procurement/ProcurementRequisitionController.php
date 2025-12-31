@@ -164,6 +164,7 @@ class ProcurementRequisitionController extends Controller
         $delivery_date = request('delivery_date');
         $terms = request('terms');
         $notes = request('notes');
+        $itemsInput = request('items', []); // Get item prices from form
 
         if (empty($terms)) {
             $terms = "• Payment will be made within 21 days after delivery\n" .
@@ -172,11 +173,11 @@ class ProcurementRequisitionController extends Controller
                     "• Provide proper packaging and documentation\n" .
                     "• Contact: procurement@advanta.ug / 0393 249740 or 0200 91644";
         }
-        
+
         // Get VAT configuration
         $items_with_vat = request('items_with_vat', []);
         $vat_rates = request('vat_rates', []);
-        
+
         if (!$supplier_id || !$delivery_date) {
             return back()->with('error', 'Supplier and delivery date are required.');
         }
@@ -186,18 +187,26 @@ class ProcurementRequisitionController extends Controller
 
         DB::beginTransaction();
 
-        // Calculate totals with VAT - ITEM BY ITEM
+        // Calculate totals with VAT - ITEM BY ITEM using FORM INPUT prices
         $subtotal = 0;
         $vatAmount = 0;
-        
+
         foreach ($requisition->items as $item) {
-            $itemTotal = $item->quantity * $item->unit_price;
+            // Use form input price if provided, otherwise fall back to requisition item price
+            $unitPrice = isset($itemsInput[$item->id]['unit_price'])
+                ? floatval($itemsInput[$item->id]['unit_price'])
+                : $item->unit_price;
+            $quantity = isset($itemsInput[$item->id]['quantity'])
+                ? floatval($itemsInput[$item->id]['quantity'])
+                : $item->quantity;
+
+            $itemTotal = $quantity * $unitPrice;
             $subtotal += $itemTotal;
-            
+
             // Check if THIS SPECIFIC ITEM has VAT
             $hasVat = in_array($item->id, $items_with_vat);
             $vatRate = $vat_rates[$item->id] ?? 18;
-            
+
             // Only add VAT if this specific item is marked for VAT
             if ($hasVat) {
                 $itemVat = $itemTotal * ($vatRate / 100);
@@ -206,6 +215,11 @@ class ProcurementRequisitionController extends Controller
         }
 
         $total = $subtotal + $vatAmount;
+
+        // Validate that prices are set
+        if ($subtotal <= 0) {
+            return back()->with('error', 'Please set unit prices for all items before creating the LPO.');
+        }
 
         // Create LPO
         $lpo = Lpo::create([
@@ -224,23 +238,43 @@ class ProcurementRequisitionController extends Controller
             'notes' => $notes,
         ]);
 
-        // Create LPO items with CORRECT VAT information
+        // Create LPO items with CORRECT prices and VAT information from FORM INPUT
         foreach ($requisition->items as $item) {
             $hasVat = in_array($item->id, $items_with_vat);
             $vatRate = $vat_rates[$item->id] ?? 18;
-            
+
+            // Use form input price if provided
+            $unitPrice = isset($itemsInput[$item->id]['unit_price'])
+                ? floatval($itemsInput[$item->id]['unit_price'])
+                : $item->unit_price;
+            $quantity = isset($itemsInput[$item->id]['quantity'])
+                ? floatval($itemsInput[$item->id]['quantity'])
+                : $item->quantity;
+            $itemTotalPrice = $quantity * $unitPrice;
+
             LpoItem::create([
                 'lpo_id' => $lpo->id,
                 'inventory_item_id' => null,
                 'description' => $item->name,
-                'quantity' => $item->quantity,
+                'quantity' => $quantity,
                 'unit' => $item->unit,
-                'unit_price' => $item->unit_price,
-                'total_price' => $item->total_price,
-                'has_vat' => $hasVat, // This should reflect the actual VAT status
+                'unit_price' => $unitPrice,
+                'total_price' => $itemTotalPrice,
+                'has_vat' => $hasVat,
                 'vat_rate' => $vatRate,
             ]);
+
+            // Also update the requisition item with the new price
+            $item->update([
+                'unit_price' => $unitPrice,
+                'total_price' => $itemTotalPrice,
+            ]);
         }
+
+        // Update requisition total
+        $requisition->update([
+            'estimated_total' => $subtotal,
+        ]);
 
         // Create approval record
         RequisitionApproval::create([

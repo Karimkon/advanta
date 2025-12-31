@@ -20,6 +20,12 @@ class Subcontractor extends Model
         return $this->hasMany(ProjectSubcontractor::class);
     }
 
+    // Alias for API compatibility - projectContracts refers to the same thing
+    public function projectContracts()
+    {
+        return $this->hasMany(ProjectSubcontractor::class);
+    }
+
     // FIXED: Get projects through project_subcontractors
     public function projects()
     {

@@ -55,26 +55,33 @@
         <!-- Sidebar -->
         <div class="col-lg-4">
             <!-- Attachments -->
-            @if($staffReport->attachments && count($staffReport->attachments) > 0)
+            @if($staffReport->getAttachmentsCount() > 0)
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">
                         <i class="bi bi-paperclip"></i> Attachments
-                        <span class="badge bg-primary">{{ count($staffReport->attachments) }}</span>
+                        <span class="badge bg-primary">{{ $staffReport->getAttachmentsCount() }}</span>
                     </h5>
                 </div>
                 <div class="card-body">
-                    @foreach($staffReport->attachments as $index => $attachment)
+                    @foreach($staffReport->getAttachmentsArray() as $index => $attachment)
+                        @php
+                            // Handle both formats: object with 'name' key or plain string
+                            $attachmentName = is_array($attachment) ? ($attachment['name'] ?? basename($attachment['path'] ?? 'Attachment')) : basename($attachment);
+                            $attachmentSize = is_array($attachment) && isset($attachment['size']) ? $attachment['size'] : null;
+                        @endphp
                         <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                             <div class="flex-grow-1">
                                 <i class="bi bi-file-earmark me-2"></i>
-                                <span class="small">{{ $attachment['name'] }}</span>
+                                <span class="small">{{ $attachmentName }}</span>
+                                @if($attachmentSize)
                                 <br>
                                 <small class="text-muted">
-                                    {{ number_format($attachment['size'] / 1024, 2) }} KB
+                                    {{ number_format($attachmentSize / 1024, 2) }} KB
                                 </small>
+                                @endif
                             </div>
-                            <a href="{{ route('ceo.staff-reports.download.attachment', ['staffReport' => $staffReport, 'index' => $index]) }}" 
+                            <a href="{{ route('ceo.staff-reports.download.attachment', ['staffReport' => $staffReport, 'index' => $index]) }}"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-download"></i>
                             </a>

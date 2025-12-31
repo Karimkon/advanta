@@ -141,9 +141,14 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="{{ route('admin.lpos.show', $lpo) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye"></i> View
-                                    </a>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ route('admin.lpos.show', $lpo) }}" class="btn btn-outline-primary" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{{ route('admin.lpos.fix', $lpo) }}" class="btn btn-outline-warning" title="Fix LPO">
+                                            <i class="bi bi-wrench"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @empty

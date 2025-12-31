@@ -251,6 +251,11 @@ Route::get('product-catalog/export-data', [ProductCatalogController::class, 'exp
         Route::post('/', function (Request $request) {
             return redirect()->route('admin.lpos.index')->with('success', 'LPO created');
         })->name('store');
+
+        // LPO Fix routes
+        Route::get('/{lpo}/fix', [\App\Http\Controllers\Admin\AdminLpoController::class, 'fix'])->name('fix');
+        Route::post('/{lpo}/fix-status', [\App\Http\Controllers\Admin\AdminLpoController::class, 'fixStatus'])->name('fix-status');
+        Route::post('/{lpo}/update-prices', [\App\Http\Controllers\Admin\AdminLpoController::class, 'updatePrices'])->name('update-prices');
     });
 
     // Finance

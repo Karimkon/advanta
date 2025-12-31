@@ -118,29 +118,41 @@ class QhseReportController extends Controller
     // Download attachment
     public function downloadAttachment(QhseReport $qhseReport, $index)
     {
-        $attachments = $qhseReport->attachments;
-        
+        $attachments = $qhseReport->getAttachmentsArray();
+
         if (!isset($attachments[$index])) {
             abort(404);
         }
 
         $attachment = $attachments[$index];
-        $path = storage_path('app/public/' . $attachment['path']);
 
-        if (!file_exists($path)) {
-            abort(404);
+        // Handle both formats: object with 'path' key or plain string
+        if (is_array($attachment)) {
+            $filePath = $attachment['path'] ?? '';
+            $fileName = $attachment['name'] ?? basename($filePath);
+        } else {
+            $filePath = $attachment;
+            $fileName = basename($attachment);
         }
 
-        return response()->download($path, $attachment['name']);
+        $path = storage_path('app/public/' . $filePath);
+
+        if (!file_exists($path)) {
+            abort(404, 'File not found');
+        }
+
+        return response()->download($path, $fileName);
     }
 
     // Delete QHSE report (admin only)
     public function destroy(QhseReport $qhseReport)
     {
         // Delete attached files
-        if ($qhseReport->attachments) {
-            foreach ($qhseReport->attachments as $attachment) {
-                Storage::disk('public')->delete($attachment['path']);
+        $attachments = $qhseReport->getAttachmentsArray();
+        foreach ($attachments as $attachment) {
+            $filePath = is_array($attachment) ? ($attachment['path'] ?? '') : $attachment;
+            if ($filePath) {
+                Storage::disk('public')->delete($filePath);
             }
         }
 

@@ -111,29 +111,41 @@ class StaffReportController extends Controller
     // Download attachment
     public function downloadAttachment(StaffReport $staffReport, $index)
     {
-        $attachments = $staffReport->attachments;
-        
+        $attachments = $staffReport->getAttachmentsArray();
+
         if (!isset($attachments[$index])) {
             abort(404);
         }
 
         $attachment = $attachments[$index];
-        $path = storage_path('app/public/' . $attachment['path']);
 
-        if (!file_exists($path)) {
-            abort(404);
+        // Handle both formats: object with 'path' key or plain string
+        if (is_array($attachment)) {
+            $filePath = $attachment['path'] ?? '';
+            $fileName = $attachment['name'] ?? basename($filePath);
+        } else {
+            $filePath = $attachment;
+            $fileName = basename($attachment);
         }
 
-        return response()->download($path, $attachment['name']);
+        $path = storage_path('app/public/' . $filePath);
+
+        if (!file_exists($path)) {
+            abort(404, 'File not found');
+        }
+
+        return response()->download($path, $fileName);
     }
 
     // Delete report (admin only)
     public function destroy(StaffReport $staffReport)
     {
         // Delete attached files
-        if ($staffReport->attachments) {
-            foreach ($staffReport->attachments as $attachment) {
-                Storage::disk('public')->delete($attachment['path']);
+        $attachments = $staffReport->getAttachmentsArray();
+        foreach ($attachments as $attachment) {
+            $filePath = is_array($attachment) ? ($attachment['path'] ?? '') : $attachment;
+            if ($filePath) {
+                Storage::disk('public')->delete($filePath);
             }
         }
 

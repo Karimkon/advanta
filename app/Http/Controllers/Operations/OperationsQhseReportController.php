@@ -57,19 +57,29 @@ class OperationsQhseReportController extends Controller
 
     public function downloadAttachment(QhseReport $qhseReport, $index)
     {
-        $attachments = $qhseReport->attachments;
-        
+        $attachments = $qhseReport->getAttachmentsArray();
+
         if (!isset($attachments[$index])) {
             abort(404);
         }
 
         $attachment = $attachments[$index];
-        $path = storage_path('app/public/' . $attachment['path']);
 
-        if (!file_exists($path)) {
-            abort(404);
+        // Handle both formats: object with 'path' key or plain string
+        if (is_array($attachment)) {
+            $filePath = $attachment['path'] ?? '';
+            $fileName = $attachment['name'] ?? basename($filePath);
+        } else {
+            $filePath = $attachment;
+            $fileName = basename($attachment);
         }
 
-        return response()->download($path, $attachment['name']);
+        $path = storage_path('app/public/' . $filePath);
+
+        if (!file_exists($path)) {
+            abort(404, 'File not found');
+        }
+
+        return response()->download($path, $fileName);
     }
 }

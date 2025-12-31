@@ -32,6 +32,12 @@ class LaborPayment extends Model
         return $this->belongsTo(LaborWorker::class);
     }
 
+    // Alias for API compatibility
+    public function worker()
+    {
+        return $this->belongsTo(LaborWorker::class, 'labor_worker_id');
+    }
+
     public function paidBy()
     {
         return $this->belongsTo(User::class, 'paid_by');

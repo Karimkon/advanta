@@ -95,12 +95,12 @@ Route::post('/login', function (Request $request) {
 Route::post('/public/staff-reports', function (Request $request) {
     $request->validate([
         'access_code' => 'required|string',
-        'reporter_name' => 'required|string|max:255',
-        'reporter_email' => 'nullable|email',
-        'report_type' => 'required|in:daily,weekly',
-        'project_id' => 'required|exists:projects,id',
-        'date' => 'required|date',
-        'content' => 'required|string',
+        'staff_name' => 'required|string|max:255',
+        'staff_email' => 'nullable|email',
+        'report_type' => 'required|string|max:255',
+        'title' => 'required|string|max:255',
+        'description' => 'required|string',
+        'report_date' => 'required|date',
         'attachments.*' => 'nullable|file|max:10240', // 10MB max
     ]);
 
@@ -121,12 +121,13 @@ Route::post('/public/staff-reports', function (Request $request) {
     }
 
     $report = StaffReport::create([
-        'reporter_name' => $request->reporter_name,
-        'reporter_email' => $request->reporter_email,
+        'staff_name' => $request->staff_name,
+        'staff_email' => $request->staff_email,
         'report_type' => $request->report_type,
-        'project_id' => $request->project_id,
-        'date' => $request->date,
-        'content' => $request->content,
+        'title' => $request->title,
+        'description' => $request->description,
+        'report_date' => $request->report_date,
+        'access_code' => $request->access_code,
         'attachments' => json_encode($attachments),
     ]);
 
@@ -137,17 +138,42 @@ Route::post('/public/staff-reports', function (Request $request) {
     ], 201);
 });
 
+// Staff Reports - Get reports by access code (for viewing own reports)
+Route::post('/public/staff-reports/my-reports', function (Request $request) {
+    $request->validate([
+        'access_code' => 'required|string',
+        'staff_email' => 'required|email',
+    ]);
+
+    if ($request->access_code !== 'ADVANTA2024') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid access code',
+        ], 403);
+    }
+
+    $reports = StaffReport::where('staff_email', $request->staff_email)
+        ->orderBy('report_date', 'desc')
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $reports,
+    ]);
+});
+
 // QHSE Reports - Public submission with access code
 Route::post('/public/qhse-reports', function (Request $request) {
     $request->validate([
         'access_code' => 'required|string',
-        'reporter_name' => 'required|string|max:255',
-        'reporter_email' => 'nullable|email',
+        'staff_name' => 'required|string|max:255',
+        'staff_email' => 'nullable|email',
         'report_type' => 'required|in:safety,quality,health,environment,incident,companydocuments',
-        'project_id' => 'required|exists:projects,id',
-        'incident_date' => 'required|date',
+        'title' => 'required|string|max:255',
         'description' => 'required|string',
-        'severity' => 'nullable|in:low,medium,high,critical',
+        'report_date' => 'required|date',
+        'location' => 'required|string|max:255',
+        'department' => 'required|string|max:255',
         'attachments.*' => 'nullable|file|max:10240',
     ]);
 
@@ -168,13 +194,15 @@ Route::post('/public/qhse-reports', function (Request $request) {
     }
 
     $report = QhseReport::create([
-        'reporter_name' => $request->reporter_name,
-        'reporter_email' => $request->reporter_email,
+        'staff_name' => $request->staff_name,
+        'staff_email' => $request->staff_email,
         'report_type' => $request->report_type,
-        'project_id' => $request->project_id,
-        'incident_date' => $request->incident_date,
+        'title' => $request->title,
         'description' => $request->description,
-        'severity' => $request->severity ?? 'medium',
+        'report_date' => $request->report_date,
+        'location' => $request->location,
+        'department' => $request->department,
+        'access_code' => $request->access_code,
         'attachments' => json_encode($attachments),
     ]);
 
@@ -183,6 +211,54 @@ Route::post('/public/qhse-reports', function (Request $request) {
         'message' => 'QHSE report submitted successfully',
         'data' => $report,
     ], 201);
+});
+
+// QHSE Reports - Get reports by access code (for viewing own or all reports)
+Route::post('/public/qhse-reports/my-reports', function (Request $request) {
+    $request->validate([
+        'access_code' => 'required|string',
+        'staff_email' => 'nullable|email',
+    ]);
+
+    if ($request->access_code !== 'QHSE2024') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid access code',
+        ], 403);
+    }
+
+    $query = QhseReport::query();
+
+    // If email is provided, filter by email
+    if ($request->staff_email) {
+        $query->where('staff_email', $request->staff_email);
+    }
+
+    $reports = $query->orderBy('report_date', 'desc')->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $reports,
+    ]);
+});
+
+// QHSE Reports - Get all reports (public read-only access with code)
+Route::get('/public/qhse-reports', function (Request $request) {
+    if ($request->header('X-Access-Code') !== 'QHSE2024' && $request->access_code !== 'QHSE2024') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid access code',
+        ], 403);
+    }
+
+    $reports = QhseReport::orderBy('report_date', 'desc')
+        ->limit(50)
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $reports,
+    ]);
 });
 
 // ====================
@@ -265,7 +341,7 @@ Route::middleware('auth:sanctum')->group(function () {
                     'total_users' => User::count(),
                     'pending_requisitions' => Requisition::where('status', 'pending')->count(),
                     'pending_lpos' => Lpo::where('status', 'pending')->count(),
-                    'pending_payments' => Payment::where('status', 'pending_ceo')->count(),
+                    'pending_payments' => Payment::where('ceo_approved', false)->where('status', 'pending')->count(),
                     'total_suppliers' => Supplier::count(),
                     'total_inventory_value' => InventoryItem::sum(DB::raw('quantity * unit_price')),
                     'total_revenue' => Payment::where('status', 'paid')->sum('amount'),
@@ -308,12 +384,38 @@ Route::middleware('auth:sanctum')->group(function () {
                 break;
 
             case 'stores':
+            case 'store_manager':
+                // Get stores assigned to this user (via project assignments)
+                $userProjectIds = DB::table('project_user')
+                    ->where('user_id', $user->id)
+                    ->pluck('project_id')
+                    ->toArray();
+
+                $storeIds = Store::whereIn('project_id', $userProjectIds)->pluck('id')->toArray();
+
+                // If no specific stores assigned, show all (for admin-level stores users)
+                if (empty($storeIds)) {
+                    $storeIds = Store::pluck('id')->toArray();
+                }
+
+                // Count store requisitions pending release (approved by PM or partial release)
+                $pendingRequisitionsQuery = Requisition::where('type', 'store')
+                    ->whereIn('status', ['project_manager_approved', 'partial_release']);
+
+                // Filter by user's projects if assigned
+                if (!empty($userProjectIds)) {
+                    $pendingRequisitionsQuery->whereIn('project_id', $userProjectIds);
+                }
+
                 $stats = [
-                    'total_stores' => Store::count(),
-                    'total_inventory_items' => InventoryItem::count(),
-                    'low_stock_items' => InventoryItem::whereColumn('quantity', '<=', 'reorder_level')->count(),
-                    'pending_releases' => StoreRelease::where('status', 'pending')->count(),
+                    'total_stores' => count($storeIds),
+                    'total_inventory_items' => InventoryItem::whereIn('store_id', $storeIds)->count(),
+                    'low_stock_items' => InventoryItem::whereIn('store_id', $storeIds)
+                        ->whereColumn('quantity', '<=', 'reorder_level')->count(),
+                    'pending_releases' => $pendingRequisitionsQuery->count(),
                     'pending_lpo_deliveries' => Lpo::where('status', 'issued')->count(),
+                    'total_inventory_value' => InventoryItem::whereIn('store_id', $storeIds)
+                        ->sum(DB::raw('quantity * unit_price')),
                 ];
                 break;
 
@@ -368,8 +470,9 @@ Route::middleware('auth:sanctum')->group(function () {
             $user = $request->user();
             $query = Project::query();
 
-            // Filter by user's assigned projects for non-admin/ceo roles
-            if (!in_array($user->role, ['admin', 'ceo'])) {
+            // Filter by user's assigned projects for non-admin/ceo/finance roles
+            // Finance needs access to all projects for labor/subcontractor management
+            if (!in_array($user->role, ['admin', 'ceo', 'finance'])) {
                 $projectIds = $user->projects->pluck('id');
                 $query->whereIn('id', $projectIds);
             }
@@ -544,8 +647,22 @@ Route::middleware('auth:sanctum')->group(function () {
                         ->orWhere('status', 'procurement');
                     break;
                 case 'stores':
+                case 'store_manager':
+                    // Get stores assigned to this user (via project assignments)
+                    $userProjectIds = DB::table('project_user')
+                        ->where('user_id', $user->id)
+                        ->pluck('project_id')
+                        ->toArray();
+
+                    // Store requisitions that are approved by project manager (ready for release)
+                    // or completed/in-progress releases
                     $query->where('type', 'store')
-                        ->whereIn('status', ['approved', 'completed']);
+                        ->whereIn('status', ['project_manager_approved', 'releasing', 'completed', 'partial_release']);
+
+                    // Filter by user's assigned projects if they have any
+                    if (!empty($userProjectIds)) {
+                        $query->whereIn('project_id', $userProjectIds);
+                    }
                     break;
             }
 
@@ -817,7 +934,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Get all LPOs
         Route::get('/', function (Request $request) {
-            $query = Lpo::with(['supplier', 'requisition', 'items']);
+            $query = Lpo::with(['supplier', 'requisition.project', 'requisition.requester', 'items']);
 
             if ($request->has('status')) {
                 $query->where('status', $request->status);
@@ -843,7 +960,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Get single LPO
         Route::get('/{id}', function ($id) {
-            $lpo = Lpo::with(['supplier', 'requisition', 'items', 'receivedItems'])->find($id);
+            $lpo = Lpo::with(['supplier', 'requisition.project', 'requisition.requester', 'items', 'receivedItems'])->find($id);
 
             if (!$lpo) {
                 return response()->json(['success' => false, 'message' => 'LPO not found'], 404);
@@ -853,6 +970,130 @@ Route::middleware('auth:sanctum')->group(function () {
                 'success' => true,
                 'data' => $lpo,
             ]);
+        });
+
+        // Update LPO (CEO can edit items before approval)
+        Route::put('/{id}', function (Request $request, $id) {
+            if (!in_array($request->user()->role, ['ceo', 'admin', 'procurement'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $lpo = Lpo::find($id);
+            if (!$lpo) {
+                return response()->json(['success' => false, 'message' => 'LPO not found'], 404);
+            }
+
+            // Only draft or pending LPOs can be edited
+            if (!in_array($lpo->status, ['draft', 'pending'])) {
+                return response()->json(['success' => false, 'message' => 'Only draft or pending LPOs can be edited'], 400);
+            }
+
+            $request->validate([
+                'items' => 'required|array|min:1',
+                'items.*.id' => 'required|exists:lpo_items,id',
+                'items.*.quantity' => 'required|numeric|min:0.01',
+                'items.*.unit_price' => 'required|numeric|min:0',
+                'items.*.has_vat' => 'nullable|boolean',
+                'delivery_date' => 'nullable|date',
+                'terms' => 'nullable|string',
+            ]);
+
+            DB::beginTransaction();
+            try {
+                // Update LPO items
+                $subtotal = 0;
+                $vatAmount = 0;
+
+                foreach ($request->items as $itemData) {
+                    $item = LpoItem::where('id', $itemData['id'])
+                        ->where('lpo_id', $lpo->id)
+                        ->first();
+
+                    if ($item) {
+                        $hasVat = $itemData['has_vat'] ?? $item->has_vat;
+                        $vatRate = $itemData['vat_rate'] ?? $item->vat_rate ?? 18.0;
+                        $itemTotal = $itemData['quantity'] * $itemData['unit_price'];
+                        $itemVat = $hasVat ? ($itemTotal * $vatRate / 100) : 0;
+
+                        $item->update([
+                            'quantity' => $itemData['quantity'],
+                            'unit_price' => $itemData['unit_price'],
+                            'total_price' => $itemTotal + $itemVat,
+                            'has_vat' => $hasVat,
+                        ]);
+
+                        $subtotal += $itemTotal;
+                        $vatAmount += $itemVat;
+                    }
+                }
+
+                // Update LPO totals
+                $lpo->update([
+                    'subtotal' => $subtotal,
+                    'vat_amount' => $vatAmount,
+                    'total' => $subtotal + $vatAmount,
+                    'delivery_date' => $request->delivery_date ?? $lpo->delivery_date,
+                    'terms' => $request->terms ?? $lpo->terms,
+                ]);
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'LPO updated successfully',
+                    'data' => $lpo->fresh(['items', 'supplier']),
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update LPO: ' . $e->getMessage(),
+                ], 500);
+            }
+        });
+
+        // Delete LPO (CEO can delete draft/pending LPOs)
+        Route::delete('/{id}', function (Request $request, $id) {
+            if (!in_array($request->user()->role, ['ceo', 'admin'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $lpo = Lpo::find($id);
+            if (!$lpo) {
+                return response()->json(['success' => false, 'message' => 'LPO not found'], 404);
+            }
+
+            // Only draft or pending LPOs can be deleted
+            if (!in_array($lpo->status, ['draft', 'pending'])) {
+                return response()->json(['success' => false, 'message' => 'Only draft or pending LPOs can be deleted'], 400);
+            }
+
+            DB::beginTransaction();
+            try {
+                // Delete LPO items first
+                LpoItem::where('lpo_id', $lpo->id)->delete();
+
+                // Update requisition status back to procurement if needed
+                if ($lpo->requisition) {
+                    $lpo->requisition->update(['status' => 'procurement']);
+                }
+
+                // Delete the LPO
+                $lpo->delete();
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'LPO deleted successfully',
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete LPO: ' . $e->getMessage(),
+                ], 500);
+            }
         });
 
         // Create LPO (Procurement role)
@@ -894,13 +1135,13 @@ Route::middleware('auth:sanctum')->group(function () {
                     'lpo_number' => $lpoNumber,
                     'requisition_id' => $request->requisition_id,
                     'supplier_id' => $request->supplier_id,
-                    'issued_by' => $request->user()->id,
+                    'prepared_by' => $request->user()->id,
                     'delivery_date' => $request->delivery_date,
                     'terms' => $request->terms,
                     'subtotal' => $subtotal,
                     'vat_amount' => $vatAmount,
                     'total' => $total,
-                    'status' => 'pending',
+                    'status' => 'draft', // Draft until CEO approves
                 ]);
 
                 // Create LPO items
@@ -958,19 +1199,33 @@ Route::middleware('auth:sanctum')->group(function () {
                 return response()->json(['success' => false, 'message' => 'LPO not found'], 404);
             }
 
-            if ($lpo->status !== 'pending') {
-                return response()->json(['success' => false, 'message' => 'Only pending LPOs can be approved'], 400);
+            if ($lpo->status !== 'draft' && $lpo->status !== 'pending') {
+                return response()->json(['success' => false, 'message' => 'Only draft or pending LPOs can be approved'], 400);
             }
 
+            DB::beginTransaction();
             try {
-                $lpo->update(['status' => 'ceo_approved']);
+                // Update LPO status to ceo_approved
+                $lpo->update([
+                    'status' => 'ceo_approved',
+                    'approved_by' => $request->user()->id,
+                    'approved_at' => now(),
+                ]);
+
+                // Update requisition status to CEO_APPROVED
+                if ($lpo->requisition) {
+                    $lpo->requisition->update(['status' => 'ceo_approved']);
+                }
+
+                DB::commit();
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'LPO approved successfully',
-                    'data' => $lpo->fresh(['items', 'supplier']),
+                    'message' => 'LPO approved successfully. Procurement can now issue to supplier.',
+                    'data' => $lpo->fresh(['items', 'supplier', 'requisition.project', 'requisition.requester']),
                 ]);
             } catch (\Exception $e) {
+                DB::rollBack();
                 return response()->json([
                     'success' => false,
                     'message' => 'Failed to approve LPO: ' . $e->getMessage(),
@@ -989,8 +1244,9 @@ Route::middleware('auth:sanctum')->group(function () {
                 return response()->json(['success' => false, 'message' => 'LPO not found'], 404);
             }
 
+            // Check LPO status for CEO approval
             if ($lpo->status !== 'ceo_approved') {
-                return response()->json(['success' => false, 'message' => 'Only CEO approved LPOs can be issued'], 400);
+                return response()->json(['success' => false, 'message' => 'Only CEO-approved LPOs can be issued to supplier'], 400);
             }
 
             DB::beginTransaction();
@@ -1231,9 +1487,22 @@ Route::middleware('auth:sanctum')->group(function () {
     // ==================== INVENTORY & STORES ====================
     Route::prefix('inventory')->group(function () {
 
-        // Get all stores
+        // Get all stores (filtered by user's assigned projects for stores role)
         Route::get('/stores', function (Request $request) {
+            $user = $request->user();
             $query = Store::query();
+
+            // Filter by user's assigned projects for stores/store_manager role
+            if (in_array($user->role, ['stores', 'store_manager'])) {
+                $userProjectIds = DB::table('project_user')
+                    ->where('user_id', $user->id)
+                    ->pluck('project_id')
+                    ->toArray();
+
+                if (!empty($userProjectIds)) {
+                    $query->whereIn('project_id', $userProjectIds);
+                }
+            }
 
             if ($request->has('type')) {
                 $query->where('type', $request->type);
@@ -1267,10 +1536,24 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Search inventory items
         Route::get('/items/search', function (Request $request) {
+            $user = $request->user();
             $query = InventoryItem::with(['store', 'productCatalog']);
 
+            // Filter by store_id if provided
             if ($request->has('store_id')) {
                 $query->where('store_id', $request->store_id);
+            } else if ($user->role === 'stores') {
+                // For stores users, filter by their assigned stores
+                $userProjectIds = DB::table('project_user')
+                    ->where('user_id', $user->id)
+                    ->pluck('project_id');
+
+                $storeIds = Store::whereIn('project_id', $userProjectIds)->pluck('id');
+
+                // If user has assigned stores, filter by them
+                if ($storeIds->isNotEmpty()) {
+                    $query->whereIn('store_id', $storeIds);
+                }
             }
 
             if ($request->has('search')) {
@@ -1313,6 +1596,204 @@ Route::middleware('auth:sanctum')->group(function () {
                     'total' => $logs->total(),
                 ],
             ]);
+        });
+
+        // Create store release from requisition (for stores user)
+        Route::post('/stores/{storeId}/releases', function (Request $request, $storeId) {
+            if (!in_array($request->user()->role, ['stores', 'store_manager', 'admin'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $request->validate([
+                'requisition_id' => 'required|exists:requisitions,id',
+                'items' => 'required|array|min:1',
+                'items.*.requisition_item_id' => 'required|exists:requisition_items,id',
+                'items.*.quantity' => 'required|numeric|min:0.01',
+                'notes' => 'nullable|string',
+            ]);
+
+            $requisition = Requisition::with(['items', 'project'])->find($request->requisition_id);
+
+            if (!$requisition) {
+                return response()->json(['success' => false, 'message' => 'Requisition not found'], 404);
+            }
+
+            if ($requisition->type !== 'store') {
+                return response()->json(['success' => false, 'message' => 'Only store requisitions can be released'], 400);
+            }
+
+            if (!in_array($requisition->status, ['project_manager_approved', 'partial_release'])) {
+                return response()->json(['success' => false, 'message' => 'Requisition is not ready for release'], 400);
+            }
+
+            // Get the store
+            $store = Store::find($storeId);
+            if (!$store) {
+                return response()->json(['success' => false, 'message' => 'Store not found'], 404);
+            }
+
+            DB::beginTransaction();
+            try {
+                $totalRequestedQty = 0;
+                $totalReleasedQty = 0;
+                $releaseDetails = [];
+
+                foreach ($request->items as $itemData) {
+                    $reqItem = RequisitionItem::find($itemData['requisition_item_id']);
+                    if (!$reqItem || $reqItem->requisition_id != $requisition->id) {
+                        continue;
+                    }
+
+                    $releaseQty = floatval($itemData['quantity']);
+                    $totalRequestedQty += $reqItem->quantity;
+
+                    // Find inventory item - try exact name match first
+                    $inventoryItem = InventoryItem::where('store_id', $storeId)
+                        ->where('name', $reqItem->name)
+                        ->first();
+
+                    // Try case-insensitive exact match
+                    if (!$inventoryItem) {
+                        $inventoryItem = InventoryItem::where('store_id', $storeId)
+                            ->whereRaw('LOWER(name) = ?', [strtolower($reqItem->name)])
+                            ->first();
+                    }
+
+                    // Try LIKE match if exact match fails
+                    if (!$inventoryItem) {
+                        $inventoryItem = InventoryItem::where('store_id', $storeId)
+                            ->where(function($q) use ($reqItem) {
+                                $q->where('name', 'like', '%' . $reqItem->name . '%')
+                                  ->orWhere('description', 'like', '%' . $reqItem->name . '%');
+                            })
+                            ->first();
+                    }
+
+                    // Try by product_catalog_id if still not found
+                    if (!$inventoryItem && $reqItem->product_catalog_id) {
+                        $inventoryItem = InventoryItem::where('store_id', $storeId)
+                            ->where('product_catalog_id', $reqItem->product_catalog_id)
+                            ->first();
+                    }
+
+                    if (!$inventoryItem) {
+                        // Debug info to help troubleshoot
+                        $availableItems = InventoryItem::where('store_id', $storeId)
+                            ->pluck('name')
+                            ->toArray();
+
+                        $releaseDetails[] = [
+                            'item' => $reqItem->name,
+                            'requested' => $reqItem->quantity,
+                            'released' => 0,
+                            'status' => 'not_in_stock',
+                            'debug' => [
+                                'store_id' => $storeId,
+                                'looking_for' => $reqItem->name,
+                                'available_in_store' => $availableItems
+                            ]
+                        ];
+                        continue;
+                    }
+
+                    // Check available stock
+                    $availableQty = $inventoryItem->quantity;
+                    $actualRelease = min($releaseQty, $availableQty, $reqItem->quantity);
+
+                    if ($actualRelease <= 0) {
+                        $releaseDetails[] = [
+                            'item' => $reqItem->name,
+                            'requested' => $reqItem->quantity,
+                            'released' => 0,
+                            'status' => 'insufficient_stock'
+                        ];
+                        continue;
+                    }
+
+                    // Deduct from inventory
+                    $inventoryItem->quantity -= $actualRelease;
+                    $inventoryItem->save();
+
+                    $totalReleasedQty += $actualRelease;
+
+                    // Log the inventory reduction
+                    InventoryLog::create([
+                        'inventory_item_id' => $inventoryItem->id,
+                        'project_id' => $requisition->project_id,
+                        'user_id' => $request->user()->id,
+                        'type' => 'out',
+                        'quantity' => $actualRelease,
+                        'unit_price' => $inventoryItem->unit_price,
+                        'balance_after' => $inventoryItem->quantity,
+                        'notes' => "Store Release for Requisition: {$requisition->ref} - {$reqItem->name}",
+                    ]);
+
+                    // Update requisition item with released quantity
+                    $reqItem->released_quantity = ($reqItem->released_quantity ?? 0) + $actualRelease;
+                    $reqItem->save();
+
+                    $releaseDetails[] = [
+                        'item' => $reqItem->name,
+                        'requested' => $reqItem->quantity,
+                        'released' => $actualRelease,
+                        'available' => $availableQty,
+                        'status' => $actualRelease >= $reqItem->quantity ? 'complete' : 'partial'
+                    ];
+                }
+
+                // Determine requisition status based on release
+                $allItemsFullyReleased = true;
+                foreach ($requisition->items as $item) {
+                    $item->refresh();
+                    if (($item->released_quantity ?? 0) < $item->quantity) {
+                        $allItemsFullyReleased = false;
+                        break;
+                    }
+                }
+
+                if ($allItemsFullyReleased) {
+                    $requisition->status = 'completed';
+                } else if ($totalReleasedQty > 0) {
+                    $requisition->status = 'partial_release';
+                }
+                $requisition->save();
+
+                DB::commit();
+
+                // If no items were released, return failure
+                if ($totalReleasedQty == 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No items could be released. Check inventory availability.',
+                        'data' => [
+                            'requisition_status' => $requisition->status,
+                            'total_requested' => $totalRequestedQty,
+                            'total_released' => $totalReleasedQty,
+                            'release_details' => $releaseDetails,
+                        ],
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $allItemsFullyReleased
+                        ? 'All items released successfully. Requisition completed.'
+                        : 'Partial release completed. Some items may need additional releases.',
+                    'data' => [
+                        'requisition_status' => $requisition->status,
+                        'total_requested' => $totalRequestedQty,
+                        'total_released' => $totalReleasedQty,
+                        'release_details' => $releaseDetails,
+                    ],
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to process release: ' . $e->getMessage(),
+                ], 500);
+            }
         });
     });
 
@@ -1440,7 +1921,12 @@ Route::middleware('auth:sanctum')->group(function () {
             $query = Payment::with(['lpo.supplier', 'paidBy']);
 
             if ($request->has('status')) {
-                $query->where('status', $request->status);
+                // Special handling for CEO pending payments
+                if ($request->status === 'pending_ceo') {
+                    $query->where('status', 'pending')->where('ceo_approved', false);
+                } else {
+                    $query->where('status', $request->status);
+                }
             }
 
             $perPage = $request->get('per_page', 20);
@@ -1638,33 +2124,86 @@ Route::middleware('auth:sanctum')->group(function () {
 
             $request->validate([
                 'project_id' => 'nullable|exists:projects,id',
-                'category' => 'required|string|max:255',
-                'description' => 'required|string',
+                'type' => 'required|string|max:255',
+                'description' => 'nullable|string',
                 'amount' => 'required|numeric|min:0',
                 'date' => 'required|date',
-                'receipt' => 'nullable|file|max:5120',
+                'notes' => 'nullable|string',
+                'reference' => 'nullable|string',
             ]);
-
-            $receipt = null;
-            if ($request->hasFile('receipt')) {
-                $receipt = $request->file('receipt')->store('expense-receipts', 'public');
-            }
 
             $expense = Expense::create([
                 'project_id' => $request->project_id,
-                'category' => $request->category,
+                'type' => $request->type,
                 'description' => $request->description,
                 'amount' => $request->amount,
-                'date' => $request->date,
-                'receipt' => $receipt,
-                'created_by' => $request->user()->id,
+                'incurred_on' => $request->date,
+                'notes' => $request->notes,
+                'recorded_by' => $request->user()->id,
+                'status' => 'unpaid',
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Expense recorded successfully',
-                'data' => $expense,
+                'data' => $expense->load('project'),
             ], 201);
+        });
+
+        // Update expense
+        Route::put('/{id}', function (Request $request, $id) {
+            if (!in_array($request->user()->role, ['finance', 'admin'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $expense = Expense::find($id);
+            if (!$expense) {
+                return response()->json(['success' => false, 'message' => 'Expense not found'], 404);
+            }
+
+            $request->validate([
+                'project_id' => 'nullable|exists:projects,id',
+                'type' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'amount' => 'required|numeric|min:0',
+                'date' => 'required|date',
+                'notes' => 'nullable|string',
+                'reference' => 'nullable|string',
+            ]);
+
+            $expense->update([
+                'project_id' => $request->project_id,
+                'type' => $request->type,
+                'description' => $request->description,
+                'amount' => $request->amount,
+                'incurred_on' => $request->date,
+                'notes' => $request->notes,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Expense updated successfully',
+                'data' => $expense->load('project'),
+            ]);
+        });
+
+        // Delete expense
+        Route::delete('/{id}', function (Request $request, $id) {
+            if (!in_array($request->user()->role, ['finance', 'admin'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $expense = Expense::find($id);
+            if (!$expense) {
+                return response()->json(['success' => false, 'message' => 'Expense not found'], 404);
+            }
+
+            $expense->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Expense deleted successfully',
+            ]);
         });
     });
 
@@ -1891,11 +2430,32 @@ Route::middleware('auth:sanctum')->group(function () {
                 return response()->json(['success' => false, 'message' => 'Access denied'], 403);
             }
 
-            $workers = LaborWorker::with(['latestPayments' => function($query) {
-                $query->latest()->take(5);
-            }])->orderBy('name')->get();
+            $workers = LaborWorker::with(['payments'])->orderBy('name')->get();
 
-            return response()->json(['success' => true, 'data' => $workers]);
+            // Transform for Flutter
+            $data = $workers->map(function ($w) {
+                return [
+                    'id' => $w->id,
+                    'name' => $w->name,
+                    'phone' => $w->phone,
+                    'email' => $w->email,
+                    'id_number' => $w->id_number,
+                    'nssf_number' => $w->nssf_number,
+                    'bank_name' => $w->bank_name,
+                    'bank_account' => $w->bank_account,
+                    'role' => $w->role,
+                    'payment_frequency' => $w->payment_frequency,
+                    'daily_rate' => $w->daily_rate,
+                    'monthly_rate' => $w->monthly_rate,
+                    'is_active' => $w->status === 'active' ? 1 : 0,
+                    'total_paid' => $w->payments->sum('amount'),
+                    'payments_count' => $w->payments->count(),
+                    'created_at' => $w->created_at,
+                    'updated_at' => $w->updated_at,
+                ];
+            });
+
+            return response()->json(['success' => true, 'data' => $data]);
         });
 
         // Get all labor workers (alternative endpoint)
@@ -1904,8 +2464,32 @@ Route::middleware('auth:sanctum')->group(function () {
                 return response()->json(['success' => false, 'message' => 'Access denied'], 403);
             }
 
-            $workers = LaborWorker::orderBy('name')->get();
-            return response()->json(['success' => true, 'data' => $workers]);
+            $workers = LaborWorker::with(['payments'])->orderBy('name')->get();
+
+            // Transform for Flutter
+            $data = $workers->map(function ($w) {
+                return [
+                    'id' => $w->id,
+                    'name' => $w->name,
+                    'phone' => $w->phone,
+                    'email' => $w->email,
+                    'id_number' => $w->id_number,
+                    'nssf_number' => $w->nssf_number,
+                    'bank_name' => $w->bank_name,
+                    'bank_account' => $w->bank_account,
+                    'role' => $w->role,
+                    'payment_frequency' => $w->payment_frequency,
+                    'daily_rate' => $w->daily_rate,
+                    'monthly_rate' => $w->monthly_rate,
+                    'is_active' => $w->status === 'active' ? 1 : 0,
+                    'total_paid' => $w->payments->sum('amount'),
+                    'payments_count' => $w->payments->count(),
+                    'created_at' => $w->created_at,
+                    'updated_at' => $w->updated_at,
+                ];
+            });
+
+            return response()->json(['success' => true, 'data' => $data]);
         });
 
         // Get labor payments
@@ -1917,7 +2501,7 @@ Route::middleware('auth:sanctum')->group(function () {
             $query = LaborPayment::with(['worker', 'paidBy']);
 
             if ($request->has('worker_id')) {
-                $query->where('worker_id', $request->worker_id);
+                $query->where('labor_worker_id', $request->worker_id);
             }
 
             if ($request->has('status')) {
@@ -1938,7 +2522,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ]);
         });
 
-        // Create worker
+        // Create worker (POST to /workers subroute)
         Route::post('/workers', function (Request $request) {
             if (!in_array($request->user()->role, ['finance', 'admin'])) {
                 return response()->json(['success' => false, 'message' => 'Access denied'], 403);
@@ -1947,19 +2531,152 @@ Route::middleware('auth:sanctum')->group(function () {
             $request->validate([
                 'name' => 'required|string|max:255',
                 'phone' => 'nullable|string|max:255',
-                'id_number' => 'nullable|string|max:255',
-                'rate_type' => 'required|in:daily,monthly',
-                'rate' => 'required|numeric|min:0',
-                'bank_account' => 'nullable|string|max:255',
-                'nssf_number' => 'nullable|string|max:255',
+                'role' => 'required|string|max:255',
+                'payment_frequency' => 'required|in:daily,weekly,monthly',
             ]);
 
-            $worker = LaborWorker::create($request->all());
+            // Get default project if not provided
+            $projectId = $request->project_id;
+            if (!$projectId) {
+                $defaultProject = \App\Models\Project::first();
+                $projectId = $defaultProject ? $defaultProject->id : 1;
+            }
+
+            $data = [
+                'project_id' => $projectId,
+                'name' => $request->name,
+                'phone' => $request->phone,
+                'email' => $request->email,
+                'id_number' => $request->id_number,
+                'nssf_number' => $request->nssf_number,
+                'bank_name' => $request->bank_name,
+                'bank_account' => $request->bank_account,
+                'role' => $request->role,
+                'daily_rate' => $request->daily_rate ?? 0,
+                'monthly_rate' => $request->monthly_rate ?? 0,
+                'payment_frequency' => $request->payment_frequency,
+                'start_date' => now()->toDateString(),
+                'status' => 'active',
+                'created_by' => $request->user()->id,
+            ];
+
+            $worker = LaborWorker::create($data);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Worker created successfully',
                 'data' => $worker,
+            ], 201);
+        });
+
+        // Create worker (POST to root - for Flutter compatibility)
+        Route::post('/', function (Request $request) {
+            if (!in_array($request->user()->role, ['finance', 'admin'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'phone' => 'nullable|string|max:255',
+                'role' => 'required|string|max:255',
+                'payment_frequency' => 'required|in:daily,weekly,monthly',
+            ]);
+
+            // Get default project if not provided
+            $projectId = $request->project_id;
+            if (!$projectId) {
+                $defaultProject = \App\Models\Project::first();
+                $projectId = $defaultProject ? $defaultProject->id : 1;
+            }
+
+            $data = [
+                'project_id' => $projectId,
+                'name' => $request->name,
+                'phone' => $request->phone,
+                'email' => $request->email,
+                'id_number' => $request->id_number,
+                'nssf_number' => $request->nssf_number,
+                'bank_name' => $request->bank_name,
+                'bank_account' => $request->bank_account,
+                'role' => $request->role,
+                'daily_rate' => $request->daily_rate ?? 0,
+                'monthly_rate' => $request->monthly_rate ?? 0,
+                'payment_frequency' => $request->payment_frequency,
+                'start_date' => now()->toDateString(),
+                'status' => 'active',
+                'created_by' => $request->user()->id,
+            ];
+
+            $worker = LaborWorker::create($data);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Worker created successfully',
+                'data' => $worker,
+            ], 201);
+        });
+
+        // Create labor payment for worker
+        Route::post('/{workerId}/payments', function (Request $request, $workerId) {
+            if (!in_array($request->user()->role, ['finance', 'admin'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $worker = LaborWorker::find($workerId);
+            if (!$worker) {
+                return response()->json(['success' => false, 'message' => 'Worker not found'], 404);
+            }
+
+            $request->validate([
+                'days_worked' => 'required|integer|min:1',
+                'gross_amount' => 'required|numeric|min:0',
+                'nssf_amount' => 'nullable|numeric|min:0',
+                'payment_method' => 'required|string',
+                'period_start' => 'required|date',
+                'period_end' => 'required|date',
+                'description' => 'required|string',
+            ]);
+
+            $grossAmount = $request->gross_amount;
+            $nssfAmount = $request->nssf_amount ?? ($grossAmount * 0.1);
+            $netAmount = $grossAmount - $nssfAmount;
+
+            // Generate payment reference
+            $paymentRef = 'PAY-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+
+            $payment = LaborPayment::create([
+                'labor_worker_id' => $workerId,
+                'payment_reference' => $paymentRef,
+                'payment_date' => $request->payment_date ?? now()->toDateString(),
+                'period_start' => $request->period_start,
+                'period_end' => $request->period_end,
+                'days_worked' => $request->days_worked,
+                'gross_amount' => $grossAmount,
+                'nssf_amount' => $nssfAmount,
+                'net_amount' => $netAmount,
+                'amount' => $netAmount,
+                'description' => $request->description,
+                'notes' => $request->notes,
+                'payment_method' => $request->payment_method,
+                'paid_by' => $request->user()->id,
+                'status' => 'paid',
+            ]);
+
+            // Create expense record
+            Expense::create([
+                'project_id' => $worker->project_id,
+                'type' => 'Labor',
+                'amount' => $netAmount,
+                'incurred_on' => $request->payment_date ?? now()->toDateString(),
+                'description' => "Labor payment for {$worker->name}: {$request->description}",
+                'labor_payment_id' => $payment->id,
+                'recorded_by' => $request->user()->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment recorded successfully',
+                'data' => $payment,
             ], 201);
         });
     });
@@ -1968,18 +2685,88 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('subcontractors')->group(function () {
 
         Route::get('/', function () {
-            $subcontractors = Subcontractor::orderBy('name')->get();
-            return response()->json(['success' => true, 'data' => $subcontractors]);
+            $subcontractors = Subcontractor::with(['projectContracts.payments'])->orderBy('name')->get();
+
+            // Transform to Flutter expected format with totals
+            $data = $subcontractors->map(function ($s) {
+                $totalContractValue = $s->projectContracts ? $s->projectContracts->sum('contract_amount') : 0;
+                $totalPaid = $s->projectContracts ? $s->projectContracts->sum(function ($c) {
+                    return $c->payments ? $c->payments->sum('amount') : 0;
+                }) : 0;
+
+                return [
+                    'id' => $s->id,
+                    'name' => $s->name,
+                    'company_name' => $s->contact_person,
+                    'phone' => $s->phone,
+                    'email' => $s->email,
+                    'specialization' => $s->specialization,
+                    'tin_number' => $s->tax_number,
+                    'address' => $s->address,
+                    'is_active' => $s->status === 'active' ? 1 : 0,
+                    'contracts_count' => $s->projectContracts ? $s->projectContracts->count() : 0,
+                    'total_contract_value' => $totalContractValue,
+                    'total_paid' => $totalPaid,
+                    'created_at' => $s->created_at,
+                    'updated_at' => $s->updated_at,
+                ];
+            });
+
+            return response()->json(['success' => true, 'data' => $data]);
         });
 
         Route::get('/{id}', function ($id) {
-            $subcontractor = Subcontractor::with(['projectContracts', 'payments'])->find($id);
+            $subcontractor = Subcontractor::with(['projectContracts.project', 'projectContracts.payments'])->find($id);
 
             if (!$subcontractor) {
                 return response()->json(['success' => false, 'message' => 'Subcontractor not found'], 404);
             }
 
-            return response()->json(['success' => true, 'data' => $subcontractor]);
+            // Transform contracts with project names and totals
+            $contracts = $subcontractor->projectContracts->map(function ($contract) {
+                $totalPaid = $contract->payments ? $contract->payments->sum('amount') : 0;
+                return [
+                    'id' => $contract->id,
+                    'project_id' => $contract->project_id,
+                    'project_name' => $contract->project->name ?? 'Unknown Project',
+                    'contract_number' => $contract->contract_number,
+                    'contract_amount' => $contract->contract_amount,
+                    'work_description' => $contract->work_description,
+                    'terms' => $contract->terms,
+                    'start_date' => $contract->start_date,
+                    'end_date' => $contract->end_date,
+                    'status' => $contract->status,
+                    'total_paid' => $totalPaid,
+                    'balance' => $contract->contract_amount - $totalPaid,
+                    'created_at' => $contract->created_at,
+                ];
+            });
+
+            $totalContractValue = $subcontractor->projectContracts->sum('contract_amount');
+            $totalPaid = $subcontractor->projectContracts->sum(function ($c) {
+                return $c->payments ? $c->payments->sum('amount') : 0;
+            });
+
+            // Transform to Flutter expected format
+            $data = [
+                'id' => $subcontractor->id,
+                'name' => $subcontractor->name,
+                'company_name' => $subcontractor->contact_person,
+                'phone' => $subcontractor->phone,
+                'email' => $subcontractor->email,
+                'specialization' => $subcontractor->specialization,
+                'tin_number' => $subcontractor->tax_number,
+                'address' => $subcontractor->address,
+                'is_active' => $subcontractor->status === 'active' ? 1 : 0,
+                'contracts_count' => $subcontractor->projectContracts->count(),
+                'total_contract_value' => $totalContractValue,
+                'total_paid' => $totalPaid,
+                'created_at' => $subcontractor->created_at,
+                'updated_at' => $subcontractor->updated_at,
+                'contracts' => $contracts,
+            ];
+
+            return response()->json(['success' => true, 'data' => $data]);
         });
 
         Route::post('/', function (Request $request) {
@@ -1990,18 +2777,191 @@ Route::middleware('auth:sanctum')->group(function () {
             $request->validate([
                 'name' => 'required|string|max:255',
                 'contact_person' => 'nullable|string|max:255',
+                'company_name' => 'nullable|string|max:255',
                 'phone' => 'nullable|string|max:255',
                 'email' => 'nullable|email',
+                'specialization' => 'nullable|string|max:255',
                 'address' => 'nullable|string',
+                'tin_number' => 'nullable|string|max:255',
+                'tax_number' => 'nullable|string|max:255',
             ]);
 
-            $subcontractor = Subcontractor::create($request->all());
+            // Map Flutter fields to database fields
+            $data = [
+                'name' => $request->name,
+                'contact_person' => $request->company_name ?? $request->contact_person,
+                'phone' => $request->phone,
+                'email' => $request->email,
+                'specialization' => $request->specialization ?? 'General',
+                'address' => $request->address,
+                'tax_number' => $request->tin_number ?? $request->tax_number,
+                'status' => 'active',
+            ];
+
+            $subcontractor = Subcontractor::create($data);
+
+            // Return transformed data for Flutter
+            $responseData = [
+                'id' => $subcontractor->id,
+                'name' => $subcontractor->name,
+                'company_name' => $subcontractor->contact_person,
+                'phone' => $subcontractor->phone,
+                'email' => $subcontractor->email,
+                'specialization' => $subcontractor->specialization,
+                'tin_number' => $subcontractor->tax_number,
+                'address' => $subcontractor->address,
+                'is_active' => 1,
+                'contracts_count' => 0,
+                'total_contract_value' => 0,
+                'total_paid' => 0,
+                'created_at' => $subcontractor->created_at,
+                'updated_at' => $subcontractor->updated_at,
+            ];
 
             return response()->json([
                 'success' => true,
                 'message' => 'Subcontractor created successfully',
-                'data' => $subcontractor,
+                'data' => $responseData,
             ], 201);
+        });
+
+        // Create contract for subcontractor
+        Route::post('/{subcontractorId}/contracts', function (Request $request, $subcontractorId) {
+            if (!in_array($request->user()->role, ['admin', 'finance'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $subcontractor = Subcontractor::find($subcontractorId);
+            if (!$subcontractor) {
+                return response()->json(['success' => false, 'message' => 'Subcontractor not found'], 404);
+            }
+
+            $request->validate([
+                'project_id' => 'required|exists:projects,id',
+                'contract_amount' => 'required|numeric|min:0',
+                'work_description' => 'required|string',
+                'start_date' => 'required|date',
+            ]);
+
+            // Generate contract number
+            $contractNumber = 'CNT-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+
+            $contract = ProjectSubcontractor::create([
+                'subcontractor_id' => $subcontractorId,
+                'project_id' => $request->project_id,
+                'contract_number' => $contractNumber,
+                'contract_amount' => $request->contract_amount,
+                'work_description' => $request->work_description,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'terms' => $request->terms,
+                'status' => 'active',
+            ]);
+
+            // Load project name
+            $contract->load('project');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Contract created successfully',
+                'data' => array_merge($contract->toArray(), [
+                    'project_name' => $contract->project->name ?? 'Unknown',
+                    'total_paid' => 0,
+                ]),
+            ], 201);
+        });
+
+        // Record payment for contract
+        Route::post('/contract/{contractId}/payments', function (Request $request, $contractId) {
+            if (!in_array($request->user()->role, ['admin', 'finance'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $contract = ProjectSubcontractor::with(['subcontractor', 'project'])->find($contractId);
+            if (!$contract) {
+                return response()->json(['success' => false, 'message' => 'Contract not found'], 404);
+            }
+
+            $request->validate([
+                'amount' => 'required|numeric|min:0',
+                'payment_date' => 'required|date',
+                'payment_type' => 'required|string',
+                'payment_method' => 'required|string',
+                'description' => 'required|string',
+            ]);
+
+            // Check balance
+            $totalPaid = SubcontractorPayment::where('project_subcontractor_id', $contractId)->sum('amount');
+            $balance = $contract->contract_amount - $totalPaid;
+
+            if ($request->amount > $balance) {
+                return response()->json(['success' => false, 'message' => 'Payment amount exceeds balance'], 422);
+            }
+
+            // Generate payment reference
+            $paymentRef = 'SUB-PAY-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+
+            $payment = SubcontractorPayment::create([
+                'project_subcontractor_id' => $contractId,
+                'payment_reference' => $paymentRef,
+                'amount' => $request->amount,
+                'payment_date' => $request->payment_date,
+                'payment_type' => $request->payment_type,
+                'payment_method' => $request->payment_method,
+                'description' => $request->description,
+                'reference_number' => $request->reference_number,
+                'notes' => $request->notes,
+                'paid_by' => $request->user()->id,
+            ]);
+
+            // Create expense record
+            Expense::create([
+                'project_id' => $contract->project_id,
+                'type' => 'Subcontractor',
+                'amount' => $request->amount,
+                'incurred_on' => $request->payment_date,
+                'description' => "Subcontractor payment to {$contract->subcontractor->name}: {$request->description}",
+                'subcontractor_payment_id' => $payment->id,
+                'recorded_by' => $request->user()->id,
+            ]);
+
+            // Update contract status if fully paid
+            $newTotalPaid = $totalPaid + $request->amount;
+            if ($newTotalPaid >= $contract->contract_amount) {
+                $contract->update(['status' => 'completed']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment recorded successfully',
+                'data' => $payment,
+            ], 201);
+        });
+
+        // Get contract ledger
+        Route::get('/contract/{contractId}/ledger', function ($contractId) {
+            $contract = ProjectSubcontractor::with(['subcontractor', 'project', 'payments' => function($q) {
+                $q->orderBy('payment_date', 'asc');
+            }])->find($contractId);
+
+            if (!$contract) {
+                return response()->json(['success' => false, 'message' => 'Contract not found'], 404);
+            }
+
+            $totalPaid = $contract->payments->sum('amount');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'contract' => array_merge($contract->toArray(), [
+                        'project_name' => $contract->project->name ?? 'Unknown',
+                        'subcontractor_name' => $contract->subcontractor->name ?? 'Unknown',
+                        'total_paid' => $totalPaid,
+                        'balance' => $contract->contract_amount - $totalPaid,
+                    ]),
+                    'payments' => $contract->payments,
+                ],
+            ]);
         });
     });
 
@@ -2071,22 +3031,22 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // QHSE reports
         Route::get('/qhse', function (Request $request) {
-            $query = QhseReport::with('project');
-
-            if ($request->has('project_id')) {
-                $query->where('project_id', $request->project_id);
-            }
+            $query = QhseReport::query();
 
             if ($request->has('report_type')) {
                 $query->where('report_type', $request->report_type);
             }
 
-            if ($request->has('severity')) {
-                $query->where('severity', $request->severity);
+            if ($request->has('department')) {
+                $query->where('department', $request->department);
+            }
+
+            if ($request->has('location')) {
+                $query->where('location', $request->location);
             }
 
             $perPage = $request->get('per_page', 20);
-            $reports = $query->orderBy('incident_date', 'desc')->paginate($perPage);
+            $reports = $query->orderBy('report_date', 'desc')->paginate($perPage);
 
             return response()->json([
                 'success' => true,
