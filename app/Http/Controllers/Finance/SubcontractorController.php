@@ -14,7 +14,7 @@ class SubcontractorController extends Controller
 {
     public function index()
     {
-        $subcontractors = Subcontractor::with(['projectSubcontractors', 'payments'])
+        $subcontractors = Subcontractor::with(['projectSubcontractors.project', 'payments'])
             ->withCount('projectSubcontractors')
             ->latest()
             ->paginate(20);

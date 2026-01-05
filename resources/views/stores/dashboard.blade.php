@@ -69,7 +69,7 @@
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <h6 class="card-subtitle text-muted mb-2">Store Value</h6>
-                                <h2 class="fw-bold text-info mb-1">UGX {{ number_format($stats['store_value'] ?? 0) }}</h2>
+                                <h4 class="fw-bold text-info mb-1">UGX {{ number_format($stats['store_value'] ?? 0) }}</h4>
                                 <small class="text-info">Total inventory value</small>
                             </div>
                             <div class="icon-wrapper bg-info bg-opacity-10 rounded-circle p-3">

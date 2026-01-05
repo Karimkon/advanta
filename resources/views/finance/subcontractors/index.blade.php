@@ -1,4 +1,4 @@
-{{-- resources/views/finance/subcontractors/index.blade.php - FIXED --}}
+{{-- resources/views/finance/subcontractors/index.blade.php --}}
 @extends('finance.layouts.app')
 
 @section('title', 'Subcontractors Management')
@@ -24,8 +24,8 @@
                             <th>Name</th>
                             <th>Specialization</th>
                             <th>Contact</th>
-                            <th>Projects</th>
-                            <th>Total Contracts</th>
+                            <th>Project</th> {{-- CHANGED from "Projects" to "Project" --}}
+                            <th>Contract Amount</th>
                             <th>Total Paid</th>
                             <th>Balance</th>
                             <th>Status</th>
@@ -51,12 +51,54 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <span class="badge bg-info">{{ $subcontractor->project_subcontractors_count }}</span>
+                                    {{-- SHOW PROJECT NAME INSTEAD OF COUNT --}}
+                                    @if($subcontractor->projectSubcontractors->count() > 0)
+                                        @foreach($subcontractor->projectSubcontractors as $contract)
+                                            <div class="mb-1">
+                                                <strong>{{ $contract->project->name ?? 'N/A' }}</strong>
+                                                <small class="text-muted d-block">
+                                                    Contract: {{ $contract->contract_number }}
+                                                </small>
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <span class="text-muted">No project assigned</span>
+                                    @endif
                                 </td>
-                                <td class="text-success">UGX {{ number_format($subcontractor->total_contracts_amount, 2) }}</td>
-                                <td class="text-primary">UGX {{ number_format($subcontractor->total_paid_amount, 2) }}</td>
-                                <td class="fw-bold {{ $subcontractor->balance > 0 ? 'text-warning' : 'text-success' }}">
-                                    UGX {{ number_format($subcontractor->balance, 2) }}
+                                <td>
+                                    {{-- SHOW CONTRACT AMOUNT --}}
+                                    @if($subcontractor->projectSubcontractors->count() > 0)
+                                        @foreach($subcontractor->projectSubcontractors as $contract)
+                                            <div class="mb-1">
+                                                UGX {{ number_format($contract->contract_amount, 2) }}
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    {{-- SHOW TOTAL PAID --}}
+                                    @if($subcontractor->payments->count() > 0)
+                                        UGX {{ number_format($subcontractor->payments->sum('amount'), 2) }}
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    {{-- SHOW BALANCE --}}
+                                    @if($subcontractor->projectSubcontractors->count() > 0)
+                                        @php
+                                            $totalContracts = $subcontractor->projectSubcontractors->sum('contract_amount');
+                                            $totalPaid = $subcontractor->payments->sum('amount');
+                                            $balance = $totalContracts - $totalPaid;
+                                        @endphp
+                                        <strong class="{{ $balance > 0 ? 'text-warning' : 'text-success' }}">
+                                            UGX {{ number_format($balance, 2) }}
+                                        </strong>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
                                 </td>
                                 <td>
                                     <span class="badge bg-{{ $subcontractor->status === 'active' ? 'success' : 'secondary' }}">
@@ -66,9 +108,17 @@
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <a href="{{ route('finance.subcontractors.show', $subcontractor) }}" 
-                                           class="btn btn-outline-primary">
+                                           class="btn btn-outline-primary" 
+                                           title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
+                                        @if($subcontractor->projectSubcontractors->count() > 0)
+                                            <a href="{{ route('finance.subcontractors.ledger', $subcontractor->projectSubcontractors->first()) }}" 
+                                               class="btn btn-outline-info" 
+                                               title="View Ledger">
+                                                <i class="bi bi-journal-text"></i>
+                                            </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
