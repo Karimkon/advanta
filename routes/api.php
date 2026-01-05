@@ -326,6 +326,127 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json(['success' => true, 'message' => 'Password changed successfully']);
     });
 
+    // ==================== USER MANAGEMENT (Admin Only) ====================
+    Route::prefix('users')->group(function () {
+        
+        // List all users
+        Route::get('/', function (Request $request) {
+            if ($request->user()->role !== 'admin') {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $query = User::query();
+            
+            if ($request->has('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+            
+            if ($request->has('role')) {
+                $query->where('role', $request->role);
+            }
+            
+            $users = $query->orderBy('name')->get();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $users,
+            ]);
+        });
+        
+        // Create user
+        Route::post('/', function (Request $request) {
+            if ($request->user()->role !== 'admin') {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email',
+                'password' => 'required|min:8',
+                'role' => 'required|string',
+                'phone' => 'nullable|string|max:255',
+                'shop_id' => 'nullable|integer',
+            ]);
+            
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => $request->role,
+                'phone' => $request->phone,
+                'shop_id' => $request->shop_id,
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'User created successfully',
+                'data' => $user,
+            ], 201);
+        });
+        
+        // Update user
+        Route::put('/{id}', function (Request $request, $id) {
+            if ($request->user()->role !== 'admin') {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $user = User::find($id);
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'User not found'], 404);
+            }
+            
+            $request->validate([
+                'name' => 'sometimes|required|string|max:255',
+                'email' => 'sometimes|required|email|unique:users,email,' . $id,
+                'password' => 'nullable|min:8',
+                'role' => 'sometimes|required|string',
+                'phone' => 'nullable|string|max:255',
+                'shop_id' => 'nullable|integer',
+            ]);
+            
+            $data = $request->only(['name', 'email', 'role', 'phone', 'shop_id']);
+            if ($request->filled('password')) {
+                $data['password'] = Hash::make($request->password);
+            }
+            
+            $user->update($data);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'User updated successfully',
+                'data' => $user,
+            ]);
+        });
+        
+        // Delete user
+        Route::delete('/{id}', function (Request $request, $id) {
+            if ($request->user()->role !== 'admin') {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $user = User::find($id);
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'User not found'], 404);
+            }
+            
+            // Prevent deleting self
+            if ($user->id === $request->user()->id) {
+                return response()->json(['success' => false, 'message' => 'You cannot delete yourself'], 400);
+            }
+            
+            $user->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'User deleted successfully',
+            ]);
+        });
+    });
+
     // ==================== DASHBOARD ====================
     Route::get('/dashboard', function (Request $request) {
         $user = $request->user();
@@ -2235,6 +2356,106 @@ Route::middleware('auth:sanctum')->group(function () {
             $categories = ProductCategory::orderBy('name')->get();
             return response()->json(['success' => true, 'data' => $categories]);
         });
+        
+        // Create product (Admin only)
+        Route::post('/', function (Request $request) {
+            if ($request->user()->role !== 'admin') {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'sku' => 'nullable|string|max:255|unique:product_catalogs,sku',
+                'description' => 'nullable|string',
+                'category_id' => 'required|exists:product_categories,id',
+                'unit' => 'required|string|max:255',
+                'is_active' => 'nullable|boolean',
+            ]);
+            
+            $product = ProductCatalog::create($request->all());
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Product added to catalog successfully',
+                'data' => $product->load('category'),
+            ], 201);
+        });
+        
+        // Update product (Admin only)
+        Route::put('/{id}', function (Request $request, $id) {
+            if ($request->user()->role !== 'admin') {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $product = ProductCatalog::find($id);
+            if (!$product) {
+                return response()->json(['success' => false, 'message' => 'Product not found'], 404);
+            }
+            
+            $request->validate([
+                'name' => 'sometimes|required|string|max:255',
+                'sku' => 'nullable|string|max:255|unique:product_catalogs,sku,' . $id,
+                'description' => 'nullable|string',
+                'category_id' => 'sometimes|required|exists:product_categories,id',
+                'unit' => 'sometimes|required|string|max:255',
+                'is_active' => 'nullable|boolean',
+            ]);
+            
+            $product->update($request->all());
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Product updated successfully',
+                'data' => $product->load('category'),
+            ]);
+        });
+        
+        // Delete product (Admin only)
+        Route::delete('/{id}', function (Request $request, $id) {
+            if ($request->user()->role !== 'admin') {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $product = ProductCatalog::find($id);
+            if (!$product) {
+                return response()->json(['success' => false, 'message' => 'Product not found'], 404);
+            }
+            
+            // Check if product is in use before deleting
+            if (!$product->canBeDeleted()) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Cannot delete product as it is already being used in requisitions or inventory'
+                ], 400);
+            }
+            
+            $product->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Product removed from catalog successfully',
+            ]);
+        });
+        
+        // Create category (Admin only)
+        Route::post('/categories', function (Request $request) {
+            if ($request->user()->role !== 'admin') {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $request->validate([
+                'name' => 'required|string|max:255|unique:product_categories,name',
+                'description' => 'nullable|string',
+            ]);
+            
+            $category = ProductCategory::create($request->all());
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Category created successfully',
+                'data' => $category,
+            ], 201);
+        });
     });
 
     // ==================== MILESTONES ====================
@@ -2272,11 +2493,85 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json(['success' => true, 'data' => $data]);
         });
 
-        // Create new milestone (Surveyor role)
-        Route::post('/create', function (Request $request) {
+        // Create new milestone (PM/Admin)
+        Route::post('/', function (Request $request) {
             if (!in_array($request->user()->role, ['surveyor', 'admin', 'project_manager'])) {
                 return response()->json(['success' => false, 'message' => 'Access denied'], 403);
             }
+            
+            $request->validate([
+                'project_id' => 'required|exists:projects,id',
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+                'due_date' => 'required|date',
+                'cost_estimate' => 'nullable|numeric|min:0',
+            ]);
+            
+            $milestone = ProjectMilestone::create($request->all());
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Milestone created successfully',
+                'data' => $milestone,
+            ], 201);
+        });
+
+        // Update milestone details (PM/Admin)
+        Route::put('/{id}', function (Request $request, $id) {
+            if (!in_array($request->user()->role, ['admin', 'project_manager'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $milestone = ProjectMilestone::find($id);
+            if (!$milestone) {
+                return response()->json(['success' => false, 'message' => 'Milestone not found'], 404);
+            }
+            
+            $request->validate([
+                'title' => 'sometimes|required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+                'due_date' => 'sometimes|required|date',
+                'cost_estimate' => 'nullable|numeric|min:0',
+                'status' => 'nullable|in:pending,in_progress,completed,delayed',
+                'completion_percentage' => 'nullable|numeric|min:0|max:100',
+            ]);
+            
+            $milestone->update($request->all());
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Milestone updated successfully',
+                'data' => $milestone,
+            ]);
+        });
+        
+        // Delete milestone (PM/Admin)
+        Route::delete('/{id}', function (Request $request, $id) {
+            if (!in_array($request->user()->role, ['admin', 'project_manager'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $milestone = ProjectMilestone::find($id);
+            if (!$milestone) {
+                return response()->json(['success' => false, 'message' => 'Milestone not found'], 404);
+            }
+            
+            // Delete photo if exists
+            if ($milestone->photo_path && Storage::disk('public')->exists($milestone->photo_path)) {
+                Storage::disk('public')->delete($milestone->photo_path);
+            }
+            
+            $milestone->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Milestone deleted successfully',
+            ]);
+        });
+
+        // Create new milestone (Surveyor role) - Keep for backward compatibility if needed, but the root POST / matches it.
+        // Re-routing /create to the same logic or leaving it if surveyor uses it specifically.
+        Route::post('/create', function (Request $request) {
 
             $request->validate([
                 'project_id' => 'required|exists:projects,id',

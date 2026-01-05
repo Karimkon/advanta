@@ -18,6 +18,23 @@ class Project extends Model
         'budget' => 'decimal:2',
     ];
 
+    protected $appends = ['total_spent', 'manager'];
+
+    public function getTotalSpentAttribute()
+    {
+        // Calculate project payments through LPOs
+        $projectPayments = \DB::table('payments')
+            ->join('lpos', 'payments.lpo_id', '=', 'lpos.id')
+            ->join('requisitions', 'lpos.requisition_id', '=', 'requisitions.id')
+            ->where('requisitions.project_id', $this->id)
+            ->where('payments.status', 'completed')
+            ->sum('payments.amount');
+
+        $projectExpenses = $this->expenses()->sum('amount');
+        
+        return (float) ($projectPayments + $projectExpenses);
+    }
+
     public function users()
     {
         return $this->belongsToMany(User::class)->withTimestamps();
