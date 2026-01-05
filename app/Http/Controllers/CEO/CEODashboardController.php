@@ -77,6 +77,9 @@ class CEODashboardController extends Controller
         // Monthly Spending Trends
         $monthlyTrends = $this->getMonthlyTrends();
 
+        // Equipment Statistics
+        $equipmentStats = $this->getEquipmentStats();
+
         // Calculate pending counts
         $pendingRequisitionCount = $pendingRequisitions->count();
         $pendingLpoCount = $pendingLpos->count();
@@ -99,8 +102,19 @@ class CEODashboardController extends Controller
             'recentFinancialActivities',
             'monthlyTrends',
             'projectMilestones',    
-            'attentionMilestones'
+            'attentionMilestones',
+            'equipmentStats'
         ));
+    }
+
+    private function getEquipmentStats()
+    {
+        return [
+            'total_count' => \App\Models\Equipment::count(),
+            'total_value' => \App\Models\Equipment::sum('value') ?? 0,
+            'active_count' => \App\Models\Equipment::where('status', 'active')->count(),
+            'active_value' => \App\Models\Equipment::where('status', 'active')->sum('value') ?? 0,
+        ];
     }
 
     // Add this method to get pending payment count

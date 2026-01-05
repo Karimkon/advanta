@@ -61,6 +61,12 @@ class Project extends Model
         return $this->hasMany(Store::class);
     }
 
+    // Add equipments relationship
+    public function equipments()
+    {
+        return $this->hasMany(Equipment::class);
+    }
+
     // Get project manager
     public function getManagerAttribute()
     {

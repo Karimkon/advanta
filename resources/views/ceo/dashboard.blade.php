@@ -510,6 +510,41 @@
     </div>
 </div>
 
+<!-- Company Equipment Quick Overview -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-start border-4 border-success">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-truck text-success me-2"></i>
+                    Company Equipments Worth
+                </h5>
+                <a href="{{ route('ceo.equipments.index') }}" class="btn btn-sm btn-outline-success">View All Equipments</a>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-3">
+                        <h4 class="text-primary">{{ number_format($equipmentStats['total_count'] ?? 0) }}</h4>
+                        <small class="text-muted">Total Equipment</small>
+                    </div>
+                    <div class="col-3">
+                        <h4 class="text-success">UGX {{ number_format(($equipmentStats['total_value'] ?? 0) / 1000000, 2) }}M</h4>
+                        <small class="text-muted">Total Worth</small>
+                    </div>
+                    <div class="col-3">
+                        <h4 class="text-info">{{ number_format($equipmentStats['active_count'] ?? 0) }}</h4>
+                        <small class="text-muted">Active Items</small>
+                    </div>
+                    <div class="col-3">
+                        <h4 class="text-warning">UGX {{ number_format(($equipmentStats['active_value'] ?? 0) / 1000000, 2) }}M</h4>
+                        <small class="text-muted">Active Value</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 </div>
 
 <style>

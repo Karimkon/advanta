@@ -154,6 +154,12 @@
                             </a>
                         </li>   
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('ceo.equipments.*') ? 'active' : '' }}" 
+                            href="{{ route('ceo.equipments.index') }}">
+                                <i class="bi bi-truck"></i> Company Equipments
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('ceo.reports.*') ? 'active' : '' }}" 
                             href="{{ route('ceo.reports.index') }}">
                                 <i class="bi bi-bar-chart"></i> Financial Overview

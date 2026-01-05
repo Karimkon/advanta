@@ -158,6 +158,10 @@
             <i class="bi bi-cash-coin"></i> Expenses
         </a>
 
+        <a href="{{ route('finance.equipments.index') }}" class="{{ request()->routeIs('finance.equipments.*') ? 'active' : '' }}">
+            <i class="bi bi-truck"></i> Company Equipments
+        </a>
+
         <a href="{{ route('finance.reports.index') }}" class="{{ request()->routeIs('finance.reports.*') ? 'active' : '' }}">
             <i class="bi bi-graph-up"></i> Financial Reports
         </a>

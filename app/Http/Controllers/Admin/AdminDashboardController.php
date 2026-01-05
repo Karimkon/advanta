@@ -96,10 +96,19 @@ class AdminDashboardController extends Controller
             $requisitionSeries[] = $requisitionsPerDay[$d] ?? 0;
         }
 
+        // Equipment stats
+        $equipmentStats = [
+            'total_count' => \App\Models\Equipment::count(),
+            'total_value' => \App\Models\Equipment::sum('value') ?? 0,
+            'active_count' => \App\Models\Equipment::where('status', 'active')->count(),
+            'active_value' => \App\Models\Equipment::where('status', 'active')->sum('value') ?? 0,
+        ];
+
         return view('admin.dashboard', compact(
             'stats',
             'financials',
             'inventory',
+            'equipmentStats',
             'recentRequisitions',
             'recentProjects',
             'filter',

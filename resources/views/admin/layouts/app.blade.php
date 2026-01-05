@@ -372,6 +372,11 @@ body {
             <i class="bi bi-people"></i> Users & Roles
         </a>
 
+        <!-- Company Equipments -->
+        <a href="{{ route('admin.equipments.index') }}" class="{{ request()->routeIs('admin.equipments.*') ? 'active' : '' }}">
+            <i class="bi bi-truck"></i> Company Equipments
+        </a>
+
         <!-- Reports -->
         <a href="{{ route('admin.reports.index') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
             <i class="bi bi-graph-up-arrow"></i> Reports & Analytics

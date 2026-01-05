@@ -508,6 +508,14 @@ Route::prefix('milestones')->name('milestones.')->group(function () {
     Route::delete('/project/{project}/milestone/{milestone}', [AdminMilestoneController::class, 'destroy'])->name('destroy');
     Route::delete('/project/{project}/milestone/{milestone}/photo', [AdminMilestoneController::class, 'removePhoto'])->name('remove-photo');
 });
+
+    // Equipment Management
+    Route::prefix('equipments')->name('equipments.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'index'])->name('index');
+        Route::get('/{equipment}', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'show'])->name('show');
+        Route::get('/{equipment}/edit', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'edit'])->name('edit');
+        Route::put('/{equipment}', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'update'])->name('update');
+    });
 });
 
 // Replace your current API route with this:
@@ -719,6 +727,17 @@ Route::prefix('labor')->name('labor.')->group(function () {
             Route::get('/report', [\App\Http\Controllers\Finance\BulkLaborPaymentController::class, 'getMonthlyReport'])->name('report');
         });
 });
+
+    // Equipment Management
+    Route::prefix('equipments')->name('equipments.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Finance\EquipmentController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Finance\EquipmentController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Finance\EquipmentController::class, 'store'])->name('store');
+        Route::get('/{equipment}', [\App\Http\Controllers\Finance\EquipmentController::class, 'show'])->name('show');
+        Route::get('/{equipment}/edit', [\App\Http\Controllers\Finance\EquipmentController::class, 'edit'])->name('edit');
+        Route::put('/{equipment}', [\App\Http\Controllers\Finance\EquipmentController::class, 'update'])->name('update');
+        Route::delete('/{equipment}', [\App\Http\Controllers\Finance\EquipmentController::class, 'destroy'])->name('destroy');
+    });
 });
 
 // STORES
@@ -820,6 +839,12 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
         Route::get('/{staffReport}', [CEOStaffReportController::class, 'show'])->name('show');
         Route::delete('/{staffReport}', [CEOStaffReportController::class, 'destroy'])->name('destroy');
         Route::get('/{staffReport}/download/{index}', [CEOStaffReportController::class, 'downloadAttachment'])->name('download.attachment');
+    });
+
+    // Equipment Overview
+    Route::prefix('equipments')->name('equipments.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\CEO\CEOEquipmentController::class, 'index'])->name('index');
+        Route::get('/{equipment}', [\App\Http\Controllers\CEO\CEOEquipmentController::class, 'show'])->name('show');
     });
 });
 
