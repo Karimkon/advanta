@@ -832,7 +832,9 @@ Route::middleware(['auth','role:project_manager'])->prefix('project-manager')->n
         Route::get('/', [ProjectManagerRequisitionController::class, 'index'])->name('index');
         Route::get('/create', [ProjectManagerRequisitionController::class, 'create'])->name('create');
         Route::post('/', [ProjectManagerRequisitionController::class, 'store'])->name('store');
-        Route::get('/pending', [ProjectManagerRequisitionController::class, 'pending'])->name('pending'); // MOVED HERE - BEFORE {requisition}
+        Route::get('/search-products', [\App\Http\Controllers\ProjectManager\ProjectManagerRequisitionController::class, 'searchProducts'])
+            ->name('search-products');
+        Route::get('/pending', [ProjectManagerRequisitionController::class, 'pending'])->name('pending'); 
         Route::get('/{requisition}', [ProjectManagerRequisitionController::class, 'show'])->name('show');
         Route::get('/{requisition}/edit', [ProjectManagerRequisitionController::class, 'edit'])->name('edit'); // NEW
     Route::put('/{requisition}', [ProjectManagerRequisitionController::class, 'update'])->name('update'); // NEW

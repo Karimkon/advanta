@@ -9,8 +9,11 @@ use App\Models\RequisitionItem;
 use App\Models\RequisitionApproval;
 use App\Models\User;
 use App\Models\Store;
+use App\Models\ProductCatalog;
+use App\Models\ProductCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ProjectManagerRequisitionController extends Controller
@@ -57,43 +60,83 @@ class ProjectManagerRequisitionController extends Controller
         $query->where('user_id', $user->id);
     })->get();
 
-    // Get project stores with their inventory
+    // Get project stores
     $projectStores = Store::whereHas('project.users', function($query) use ($user) {
         $query->where('user_id', $user->id);
-    })->with(['inventoryItems' => function($query) {
-        $query->where('quantity', '>', 0);
-    }])->get();
+    })->get();
 
-    return view('project_manager.requisitions.create', compact('projects', 'projectStores'));
+    // Get product catalog with stock information
+    $products = ProductCatalog::active()
+        ->with(['inventoryItems' => function($query) use ($projects) {
+            $query->whereIn('store_id', Store::whereIn('project_id', $projects->pluck('id'))->pluck('id'));
+        }])
+        ->get();
+    
+    $categories = ProductCategory::whereHas('products')
+        ->orderBy('name')
+        ->pluck('name');
+
+    return view('project_manager.requisitions.create', compact(
+        'projects', 
+        'projectStores', 
+        'products',
+        'categories'
+    ));
 }
 
     public function store(Request $request)
     {
-        $user = auth()->user();
+        // STEP 1: Log everything that comes in
+        Log::info('=== PROJECT MANAGER REQUISITION STORE METHOD CALLED ===');
+        Log::info('Request Method: ' . $request->method());
+        Log::info('Request URL: ' . $request->fullUrl());
+        Log::info('User: ' . auth()->user()->email);
+        Log::info('All Request Data:', $request->all());
         
-        $validated = $request->validate([
-            'project_id' => 'required|exists:projects,id',
-            'type' => 'required|in:store,purchase',
-            'urgency' => 'required|in:low,medium,high',
-            'reason' => 'required|string|max:1000',
-            'items' => 'required|array|min:1',
-            'items.*.name' => 'required|string|max:255',
-            'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.unit' => 'required|string|max:50',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.notes' => 'nullable|string|max:500',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240',
-        ]);
+        // STEP 2: Check if items exist
+        if (!$request->has('items')) {
+            Log::error('NO ITEMS IN REQUEST!');
+            return back()->with('error', 'No items provided. Please add at least one product.')->withInput();
+        }
+        
+        Log::info('Items Count: ' . count($request->items));
+        
+        // STEP 3: Try validation
+        try {
+            $validated = $request->validate([
+                'project_id' => 'required|exists:projects,id',
+                'type' => 'required|in:store,purchase',
+                'urgency' => 'required|in:low,medium,high',
+                'reason' => 'required|string|max:1000',
+                'items' => 'required|array|min:1',
+                'items.*.product_catalog_id' => 'nullable|exists:product_catalogs,id',
+                'items.*.name' => 'required|string|max:255',
+                'items.*.quantity' => 'required|numeric|min:0.01',
+                'items.*.unit' => 'required|string|max:50',
+                'items.*.unit_price' => 'required|numeric|min:0',
+                'items.*.notes' => 'nullable|string|max:500',
+                'items.*.from_store' => 'nullable|boolean',
+                'attachments' => 'nullable|array',
+                'attachments.*' => 'file|max:10240',
+            ]);
+            
+            Log::info('Validation PASSED!');
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation FAILED!', $e->errors());
+            return back()->withErrors($e->errors())->withInput();
+        }
 
-        // Validate store_id for store requisitions
+        // STEP 4: Additional validation for store type
         if ($request->type === 'store') {
             $request->validate(['store_id' => 'required|exists:stores,id']);
         }
 
+        // STEP 5: Start database transaction
         DB::beginTransaction();
+        
         try {
-            // Generate reference number
+            // Generate reference
             $ref = 'REQ-' . strtoupper(Str::random(8));
 
             // Calculate total
@@ -102,37 +145,29 @@ class ProjectManagerRequisitionController extends Controller
                 $estimatedTotal += $item['quantity'] * $item['unit_price'];
             }
 
-            // For purchase requisitions created by Project Manager, auto-approve and send to operations
+            // For purchase requisitions created by PM, auto-approve
             $status = $validated['type'] === 'purchase' ? 'project_manager_approved' : 'pending';
 
-            // Create requisition
+            // STEP 6: Create requisition
             $requisition = Requisition::create([
                 'ref' => $ref,
                 'project_id' => $validated['project_id'],
-                'requested_by' => $user->id,
+                'requested_by' => auth()->id(),
                 'type' => $validated['type'],
                 'urgency' => $validated['urgency'],
-                'status' => $status, // CHANGED THIS LINE
+                'status' => $status,
                 'estimated_total' => $estimatedTotal,
                 'reason' => $validated['reason'],
                 'store_id' => $request->store_id,
                 'attachments' => $this->handleAttachments($request),
             ]);
 
-            // Create requisition items
+            // STEP 7: Create items
             foreach ($validated['items'] as $itemData) {
-                RequisitionItem::create([
-                    'requisition_id' => $requisition->id,
-                    'name' => $itemData['name'],
-                    'quantity' => $itemData['quantity'],
-                    'unit' => $itemData['unit'],
-                    'unit_price' => $itemData['unit_price'],
-                    'total_price' => $itemData['quantity'] * $itemData['unit_price'],
-                    'notes' => $itemData['notes'] ?? null,
-                ]);
+                $this->createRequisitionItem($requisition, $itemData);
             }
 
-            // Create initial approval record
+            // STEP 8: Create approval record
             $action = $validated['type'] === 'purchase' ? 'auto_approved' : 'created';
             $comment = $validated['type'] === 'purchase' 
                 ? 'Purchase requisition created and auto-approved by Project Manager' 
@@ -140,7 +175,7 @@ class ProjectManagerRequisitionController extends Controller
 
             RequisitionApproval::create([
                 'requisition_id' => $requisition->id,
-                'approved_by' => $user->id,
+                'approved_by' => auth()->id(),
                 'role' => 'project_manager',
                 'action' => $action,
                 'comment' => $comment,
@@ -149,16 +184,87 @@ class ProjectManagerRequisitionController extends Controller
             DB::commit();
 
             $message = $validated['type'] === 'purchase' 
-                ? 'Purchase requisition created and sent to Operations!' 
-                : 'Store requisition created successfully!';
+                ? "Purchase requisition $ref created and sent to Operations!" 
+                : "Store requisition $ref created successfully!";
 
             return redirect()->route('project_manager.requisitions.index')
                 ->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to create requisition: ' . $e->getMessage());
+            Log::error('Error creating PM requisition: ' . $e->getMessage());
+            return back()->with('error', 'Failed to create requisition: ' . $e->getMessage())->withInput();
         }
+    }
+
+    private function createRequisitionItem($requisition, $itemData)
+    {
+        $productCatalogId = $itemData['product_catalog_id'] ?? null;
+        
+        if (!$productCatalogId) {
+            $product = ProductCatalog::where('name', 'LIKE', $itemData['name'])->first();
+            if (!$product) {
+                $product = ProductCatalog::create([
+                    'name' => $itemData['name'],
+                    'unit' => $itemData['unit'],
+                    'category' => 'Custom Items',
+                    'description' => 'Auto-created from requisition',
+                    'is_active' => true,
+                ]);
+            }
+            $productCatalogId = $product->id;
+        }
+        
+        return RequisitionItem::create([
+            'requisition_id' => $requisition->id,
+            'product_catalog_id' => $productCatalogId,
+            'name' => $itemData['name'],
+            'quantity' => $itemData['quantity'],
+            'unit' => $itemData['unit'],
+            'unit_price' => $itemData['unit_price'],
+            'total_price' => $itemData['quantity'] * $itemData['unit_price'],
+            'notes' => $itemData['notes'] ?? null,
+            'from_store' => $itemData['from_store'] ?? false,
+        ]);
+    }
+
+    public function searchProducts(Request $request)
+    {
+        $search = $request->q;
+        $category = $request->category;
+        
+        $query = ProductCatalog::active();
+        
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+        
+        if ($category) {
+            $query->where('category', $category);
+        }
+        
+        $products = $query->limit(50)->get();
+        
+        $results = $products->map(function($product) {
+            $totalStock = $product->inventoryItems->where('quantity', '>', 0)->sum('quantity');
+                
+            return [
+                'id' => $product->id,
+                'text' => $product->name . ($product->sku ? " ({$product->sku})" : ''),
+                'name' => $product->name,
+                'description' => $product->description,
+                'category' => $product->category,
+                'unit' => $product->unit,
+                'available_stock' => $totalStock,
+                'has_stock' => $totalStock > 0
+            ];
+        });
+        
+        return response()->json(['results' => $results]);
     }
 
     
@@ -318,88 +424,112 @@ class ProjectManagerRequisitionController extends Controller
             $query->where('user_id', $user->id);
         })->get();
 
-        // Get project stores with their inventory
+        // Get project stores
         $projectStores = Store::whereHas('project.users', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })->get();
 
-        $requisition->load('items');
+        // Get product catalog with stock information
+        $products = ProductCatalog::active()
+            ->with(['inventoryItems' => function($query) use ($projects) {
+                $query->whereIn('store_id', Store::whereIn('project_id', $projects->pluck('id'))->pluck('id'));
+            }])
+            ->get();
+        
+        $categories = ProductCategory::whereHas('products')
+            ->orderBy('name')
+            ->pluck('name');
 
-        return view('project_manager.requisitions.edit', compact('requisition', 'projects', 'projectStores'));
+        $requisition->load('items.productCatalog');
+
+        return view('project_manager.requisitions.edit', compact(
+            'requisition', 
+            'projects', 
+            'projectStores', 
+            'products', 
+            'categories'
+        ));
     }
 
     public function update(Request $request, Requisition $requisition)
     {
-        // Authorization - ensure project manager owns this requisition
+        Log::info('=== PROJECT MANAGER REQUISITION UPDATE METHOD CALLED ===');
+        Log::info('Requisition ID: ' . $requisition->id);
+        Log::info('User: ' . auth()->user()->email);
+        
+        // Authorization
         $this->authorizeRequisitionAccess($requisition);
 
-        // Only allow editing of pending requisitions
         if (!$requisition->canBeEdited()) {
-            return back()->with('error', 'Only pending requisitions can be edited.');
+            return back()->with('error', 'This requisition cannot be edited in its current status.');
         }
 
-        $validated = $request->validate([
-            'project_id' => 'required|exists:projects,id',
-            'urgency' => 'required|in:low,medium,high',
-            'reason' => 'required|string|max:1000',
-            'items' => 'required|array|min:1',
-            'items.*.name' => 'required|string|max:255',
-            'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.unit' => 'required|string|max:50',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.notes' => 'nullable|string|max:500',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240',
-        ]);
+        try {
+            $validated = $request->validate([
+                'project_id' => 'required|exists:projects,id',
+                'urgency' => 'required|in:low,medium,high',
+                'reason' => 'required|string|max:1000',
+                'items' => 'required|array|min:1',
+                'items.*.product_catalog_id' => 'nullable|exists:product_catalogs,id',
+                'items.*.name' => 'required|string|max:255',
+                'items.*.quantity' => 'required|numeric|min:0.01',
+                'items.*.unit' => 'required|string|max:50',
+                'items.*.unit_price' => 'required|numeric|min:0',
+                'items.*.notes' => 'nullable|string|max:500',
+                'items.*.from_store' => 'nullable|boolean',
+                'attachments' => 'nullable|array',
+                'attachments.*' => 'file|max:10240',
+            ]);
+            
+            Log::info('Update Validation PASSED!');
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Update Validation FAILED!', $e->errors());
+            return back()->withErrors($e->errors())->withInput();
+        }
 
         DB::beginTransaction();
+        
         try {
-            // Calculate new total
+            // Calculate total
             $estimatedTotal = 0;
             foreach ($validated['items'] as $item) {
                 $estimatedTotal += $item['quantity'] * $item['unit_price'];
             }
 
-            // Store old values for audit trail
-            $oldValues = [
-                'project_id' => $requisition->project_id,
-                'urgency' => $requisition->urgency,
-                'reason' => $requisition->reason,
-                'estimated_total' => $requisition->estimated_total,
-            ];
+            // Handle attachments if new ones are uploaded
+            $newAttachments = $this->handleAttachments($request);
+            $attachments = $requisition->attachments;
+            
+            if ($newAttachments) {
+                $existing = json_decode($attachments, true) ?? [];
+                $added = json_decode($newAttachments, true) ?? [];
+                $attachments = json_encode(array_merge($existing, $added));
+            }
 
             // Update requisition
             $requisition->update([
                 'project_id' => $validated['project_id'],
                 'urgency' => $validated['urgency'],
-                'estimated_total' => $estimatedTotal,
                 'reason' => $validated['reason'],
-                'attachments' => $this->handleAttachments($request, $requisition->attachments),
+                'estimated_total' => $estimatedTotal,
+                'attachments' => $attachments,
             ]);
 
-            // Delete existing items and create new ones
+            // Sync items: Delete old items and create new ones
             $requisition->items()->delete();
+            
             foreach ($validated['items'] as $itemData) {
-                RequisitionItem::create([
-                    'requisition_id' => $requisition->id,
-                    'name' => $itemData['name'],
-                    'quantity' => $itemData['quantity'],
-                    'unit' => $itemData['unit'],
-                    'unit_price' => $itemData['unit_price'],
-                    'total_price' => $itemData['quantity'] * $itemData['unit_price'],
-                    'notes' => $itemData['notes'] ?? null,
-                ]);
+                $this->createRequisitionItem($requisition, $itemData);
             }
 
-            // Create edit approval record for audit trail
-            $changes = $this->getChangesDescription($oldValues, $requisition);
-            
+            // Record update action
             RequisitionApproval::create([
                 'requisition_id' => $requisition->id,
                 'approved_by' => auth()->id(),
                 'role' => 'project_manager',
-                'action' => 'edited',
-                'comment' => 'Requisition updated: ' . $changes,
+                'action' => 'updated',
+                'comment' => 'Requisition details and items updated',
             ]);
 
             DB::commit();
@@ -409,35 +539,8 @@ class ProjectManagerRequisitionController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to update requisition: ' . $e->getMessage());
+            Log::error('Error updating PM requisition: ' . $e->getMessage());
+            return back()->with('error', 'Failed to update requisition: ' . $e->getMessage())->withInput();
         }
-    }
-
-    /**
-     * Generate description of changes for audit trail
-     */
-    private function getChangesDescription($oldValues, $requisition)
-    {
-        $changes = [];
-        
-        if ($oldValues['project_id'] != $requisition->project_id) {
-            $oldProject = Project::find($oldValues['project_id']);
-            $newProject = Project::find($requisition->project_id);
-            $changes[] = "Project changed from {$oldProject->name} to {$newProject->name}";
-        }
-        
-        if ($oldValues['urgency'] != $requisition->urgency) {
-            $changes[] = "Urgency changed from {$oldValues['urgency']} to {$requisition->urgency}";
-        }
-        
-        if ($oldValues['estimated_total'] != $requisition->estimated_total) {
-            $changes[] = "Total amount changed from UGX " . number_format($oldValues['estimated_total'], 2) . " to UGX " . number_format($requisition->estimated_total, 2);
-        }
-        
-        if ($oldValues['reason'] != $requisition->reason) {
-            $changes[] = "Reason updated";
-        }
-        
-        return $changes ? implode(', ', $changes) : 'Details updated';
     }
 }
