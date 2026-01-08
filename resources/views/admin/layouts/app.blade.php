@@ -372,6 +372,11 @@ body {
             <i class="bi bi-people"></i> Users & Roles
         </a>
 
+        <!-- Office Staff -->
+        <a href="{{ route('admin.office-staff.index') }}" class="{{ request()->routeIs('admin.office-staff.*') ? 'active' : '' }}">
+            <i class="bi bi-person-badge"></i> Office Staff
+        </a>
+
         <!-- Company Equipments -->
         <a href="{{ route('admin.equipments.index') }}" class="{{ request()->routeIs('admin.equipments.*') ? 'active' : '' }}">
             <i class="bi bi-truck"></i> Company Equipments

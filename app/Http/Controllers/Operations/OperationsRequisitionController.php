@@ -12,18 +12,24 @@ use App\Models\RequisitionItem;
 class OperationsRequisitionController extends Controller
 {
     public function index()
-    {
-        $requisitions = Requisition::whereIn('status', [
-            Requisition::STATUS_PROJECT_MANAGER_APPROVED,
-            Requisition::STATUS_OPERATIONS_APPROVED,
-            Requisition::STATUS_PROCUREMENT
-        ])
-        ->with(['project', 'requester', 'items', 'approvals'])
-        ->latest()
-        ->paginate(10);
+{
+    // Operations should see all requisitions that are relevant to them
+    $requisitions = Requisition::whereIn('status', [
+        Requisition::STATUS_PROJECT_MANAGER_APPROVED,  // Waiting for operations approval
+        Requisition::STATUS_OPERATIONS_APPROVED,       // Approved by operations
+        Requisition::STATUS_PROCUREMENT,               // Sent to procurement
+        Requisition::STATUS_CEO_APPROVED,              // CEO approved (optional)
+        Requisition::STATUS_LPO_ISSUED,                // LPO issued (optional)
+        Requisition::STATUS_DELIVERED                  // Delivered (optional)
+    ])
+    ->with(['project', 'requester', 'items', 'approvals' => function($query) {
+        $query->where('role', 'operations'); // Show operations approvals
+    }])
+    ->latest()
+    ->paginate(10);
 
-        return view('operations.requisitions.index', compact('requisitions'));
-    }
+    return view('operations.requisitions.index', compact('requisitions'));
+}
 
     public function pending()
     {
@@ -37,8 +43,14 @@ class OperationsRequisitionController extends Controller
 
     public function approved()
     {
-        $approvedRequisitions = Requisition::where('status', Requisition::STATUS_OPERATIONS_APPROVED)
-            ->with(['project', 'requester', 'items'])
+        // Get requisitions where operations role has approved them
+        $approvedRequisitions = Requisition::whereHas('approvals', function($query) {
+                $query->where('role', 'operations')
+                      ->where('action', 'approved');
+            })
+            ->with(['project', 'requester', 'items', 'approvals' => function($query) {
+                $query->where('role', 'operations');
+            }])
             ->latest()
             ->paginate(10);
 

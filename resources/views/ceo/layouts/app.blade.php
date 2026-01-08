@@ -116,6 +116,13 @@
                                 @endif
                             </a>
                         </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('ceo.office-staff.*') ? 'active' : '' }}" 
+                               href="{{ route('ceo.office-staff.index') }}">
+                                <i class="bi bi-person-badge"></i> Office Staff & Salaries
+                            </a>
+                        </li>
                          <!-- ✅ NEW: Staff Reports Link -->
     <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('ceo.staff-reports.*') ? 'active' : '' }}" 

@@ -154,6 +154,10 @@
             <i class="bi bi-people"></i> Labor Costs
         </a>
 
+        <a href="{{ route('finance.office-staff.index') }}" class="{{ request()->routeIs('finance.office-staff.*') ? 'active' : '' }}">
+            <i class="bi bi-person-badge"></i> Office Staff
+        </a>
+
         <a href="{{ route('finance.expenses.index') }}" class="{{ request()->routeIs('finance.expenses.*') ? 'active' : '' }}">
             <i class="bi bi-cash-coin"></i> Expenses
         </a>

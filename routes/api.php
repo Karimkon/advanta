@@ -32,6 +32,7 @@ use App\Models\ProjectSubcontractor;
 use App\Models\StaffReport;
 use App\Models\QhseReport;
 use App\Models\InAppNotification;
+use App\Models\Equipment;
 
 /*
 |--------------------------------------------------------------------------
@@ -3354,4 +3355,174 @@ Route::middleware('auth:sanctum')->group(function () {
             ]);
         });
     });
+
+    // ==================== EQUIPMENTS ====================
+    Route::prefix('equipments')->group(function () {
+        
+        // Get all equipments
+        Route::get('/', function (Request $request) {
+            $user = $request->user();
+            $query = Equipment::with(['project', 'addedBy']);
+            
+            // Search functionality
+            if ($request->has('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('model', 'like', "%{$search}%")
+                      ->orWhere('serial_number', 'like', "%{$search}%");
+                });
+            }
+
+            // Filter by status
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+            
+            // Filter by category
+            if ($request->has('category')) {
+                $query->where('category', $request->category);
+            }
+
+            $equipments = $query->orderBy('created_at', 'desc')->get();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $equipments,
+            ]);
+        });
+
+        // Get single equipment
+        Route::get('/{id}', function ($id) {
+            $equipment = Equipment::with(['project', 'addedBy'])->find($id);
+            
+            if (!$equipment) {
+                return response()->json(['success' => false, 'message' => 'Equipment not found'], 404);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'data' => $equipment,
+            ]);
+        });
+
+        // Add equipment
+        Route::post('/', function (Request $request) {
+            $user = $request->user();
+            
+            // Allow Admin and Finance to add
+            if (!in_array($user->role, ['admin', 'finance', 'ceo'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+            
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'model' => 'required|string|max:255',
+                'category' => 'required|string',
+                'description' => 'nullable|string',
+                'serial_number' => 'nullable|string',
+                'condition' => 'required|in:new,good,fair,poor,needs_repair',
+                'location' => 'nullable|string',
+                'value' => 'nullable|numeric|min:0',
+                'purchase_date' => 'nullable|date',
+                'status' => 'required|in:active,inactive,maintenance,disposed',
+                'project_id' => 'nullable|exists:projects,id',
+            ]);
+            
+            $data = $request->except('images');
+            $data['added_by'] = $user->id;
+            
+            // Handle image uploads
+            $imagePaths = [];
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                     // Store in storage/app/public/equipments
+                    $path = $image->store('equipments', 'public');
+                    // We store just the path (e.g. 'equipments/filename.jpg')
+                    // The mobile app handles appending base URL
+                    $imagePaths[] = $path;
+                }
+            } else if ($request->images && is_array($request->images)) {
+                // Handle base64 if needed, but Flutter is sending files
+            }
+            
+            $data['images'] = $imagePaths;
+
+            $equipment = Equipment::create($data);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Equipment added successfully',
+                'data' => $equipment,
+            ], 201);
+        });
+
+        // Update equipment
+        Route::put('/{id}', function (Request $request, $id) {
+            $user = $request->user();
+            
+             // Allow Admin and Finance to update
+             if (!in_array($user->role, ['admin', 'finance', 'ceo'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $equipment = Equipment::find($id);
+            if (!$equipment) {
+                return response()->json(['success' => false, 'message' => 'Equipment not found'], 404);
+            }
+
+            $request->validate([
+                'name' => 'sometimes|required|string|max:255',
+                'model' => 'sometimes|required|string|max:255',
+                'category' => 'sometimes|required|string',
+                'description' => 'nullable|string',
+                'serial_number' => 'nullable|string',
+                'condition' => 'sometimes|required|in:new,good,fair,poor,needs_repair',
+                'location' => 'nullable|string',
+                'value' => 'nullable|numeric|min:0',
+                'purchase_date' => 'nullable|date',
+                'status' => 'sometimes|required|in:active,inactive,maintenance,disposed',
+                'project_id' => 'nullable|exists:projects,id',
+            ]);
+
+            $data = $request->except(['images', '_method']);
+
+            // Handle image uploads
+            if ($request->hasFile('images')) {
+                $imagePaths = $equipment->images ?? [];
+                foreach ($request->file('images') as $image) {
+                    $path = $image->store('equipments', 'public');
+                    $imagePaths[] = $path;
+                }
+                $data['images'] = $imagePaths; // Append new images to existing
+            }
+
+            $equipment->update($data);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Equipment updated successfully',
+                'data' => $equipment,
+            ]);
+        });
+        
+        // Delete equipment
+        Route::delete('/{id}', function (Request $request, $id) {
+             if ($request->user()->role !== 'admin') {
+                return response()->json(['success' => false, 'message' => 'Access denied. Only Admin can delete equipment.'], 403);
+            }
+            
+            $equipment = Equipment::find($id);
+            if (!$equipment) {
+                return response()->json(['success' => false, 'message' => 'Equipment not found'], 404);
+            }
+            
+            $equipment->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Equipment deleted successfully',
+            ]);
+        });
+});
 });

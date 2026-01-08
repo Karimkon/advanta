@@ -155,4 +155,27 @@ class AdminEquipmentController extends Controller
             ->route('admin.equipments.show', $equipment)
             ->with('success', 'Equipment updated successfully.');
     }
+
+    /**
+     * Remove the specified equipment from storage.
+     */
+    public function destroy(Equipment $equipment)
+    {
+        // Delete images
+        if ($equipment->images) {
+            foreach ($equipment->images as $image) {
+                // Ensure we get a string path, leveraging the recent model fix if needed
+                $path = is_array($image) ? ($image[0] ?? null) : $image;
+                if ($path) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+        }
+
+        $equipment->delete();
+
+        return redirect()
+            ->route('admin.equipments.index')
+            ->with('success', 'Equipment deleted successfully.');
+    }
 }

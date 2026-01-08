@@ -138,7 +138,15 @@ class Equipment extends Model
         if (!$this->images || count($this->images) === 0) {
             return null;
         }
-        return $this->images[0];
+        
+        $image = $this->images[0];
+        
+        // Handle case where image might be nested array or non-string
+        if (is_array($image)) {
+            return $image[0] ?? null;
+        }
+        
+        return $image;
     }
 
     /**

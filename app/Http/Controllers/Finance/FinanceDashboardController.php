@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\Payment;
 use App\Models\Expense;
 use App\Models\Lpo;
+use App\Models\SalaryPayment;
 
 class FinanceDashboardController extends Controller
 {
@@ -111,8 +112,8 @@ class FinanceDashboardController extends Controller
                 'pending_total_vat_inclusive' => $pendingTotalVatInclusive,
                 'pending_total_base' => $pendingTotalBase,
                 'pending_total_vat' => $pendingTotalVat,
-                'total_payments_this_month' => $currentMonthPayments->count(),
-                'total_amount_this_month' => $currentMonthPayments->sum('amount') ?? 0,
+                'total_payments_this_month' => $currentMonthPayments->count() + SalaryPayment::whereMonth('payment_date', now()->month)->count(),
+                'total_amount_this_month' => ($currentMonthPayments->sum('amount') ?? 0) + (SalaryPayment::whereMonth('payment_date', now()->month)->sum('amount') ?? 0),
                 'total_vat_this_month' => $currentMonthPayments->sum('vat_amount') ?? 0,
                 'base_amount_this_month' => $currentMonthPayments->sum('amount') - $currentMonthPayments->sum('vat_amount'),
                 'overdue_payments' => 0,

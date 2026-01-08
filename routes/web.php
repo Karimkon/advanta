@@ -272,6 +272,14 @@ Route::get('product-catalog/export-data', [ProductCatalogController::class, 'exp
         })->name('index');
     });
 
+    // Office Staff Management (Admin)
+    Route::resource('office-staff', \App\Http\Controllers\Finance\OfficeStaffController::class);
+    Route::get('office-staff/{officeStaff}/pay', [\App\Http\Controllers\Finance\OfficeStaffController::class, 'createPayment'])->name('office-staff.create-payment');
+    
+    // Salary Payments (Admin)
+    Route::post('salary-payments', [\App\Http\Controllers\Finance\SalaryPaymentController::class, 'store'])->name('salary-payments.store');
+    Route::delete('salary-payments/{payment}', [\App\Http\Controllers\Finance\SalaryPaymentController::class, 'destroy'])->name('salary-payments.destroy');
+
     // Stores & Inventory
 Route::prefix('stores')->name('stores.')->group(function () {
     Route::get('/', function () {
@@ -515,6 +523,7 @@ Route::prefix('milestones')->name('milestones.')->group(function () {
         Route::get('/{equipment}', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'show'])->name('show');
         Route::get('/{equipment}/edit', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'edit'])->name('edit');
         Route::put('/{equipment}', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'update'])->name('update');
+        Route::delete('/{equipment}', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'destroy'])->name('destroy');
     });
 });
 
@@ -738,6 +747,21 @@ Route::prefix('labor')->name('labor.')->group(function () {
         Route::put('/{equipment}', [\App\Http\Controllers\Finance\EquipmentController::class, 'update'])->name('update');
         Route::delete('/{equipment}', [\App\Http\Controllers\Finance\EquipmentController::class, 'destroy'])->name('destroy');
     });
+
+    // Office Staff Management
+    Route::resource('office-staff', \App\Http\Controllers\Finance\OfficeStaffController::class);
+    Route::get('office-staff/{officeStaff}/pay', [\App\Http\Controllers\Finance\OfficeStaffController::class, 'createPayment'])->name('office-staff.create-payment');
+    
+    // Salary Payments
+
+    // Office Staff Management
+    Route::resource('office-staff', \App\Http\Controllers\Finance\OfficeStaffController::class);
+    Route::get('office-staff/{officeStaff}/pay', [\App\Http\Controllers\Finance\OfficeStaffController::class, 'createPayment'])->name('office-staff.create-payment');
+    
+    // Salary Payments
+    Route::post('salary-payments', [\App\Http\Controllers\Finance\SalaryPaymentController::class, 'store'])->name('salary-payments.store');
+    Route::delete('salary-payments/{payment}', [\App\Http\Controllers\Finance\SalaryPaymentController::class, 'destroy'])->name('salary-payments.destroy');
+    
 });
 
 // STORES
@@ -789,11 +813,19 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
         Route::get('/pending', [CEORequisitionController::class, 'pending'])->name('pending');
         Route::get('/{requisition}', [CEORequisitionController::class, 'show'])->name('show');
          Route::get('/{requisition}/edit', [CEORequisitionController::class, 'edit'])->name('edit');
-        Route::put('/{requisition}', [CEORequisitionController::class, 'update'])->name('update'); 
-        Route::post('/{requisition}/approve', [CEORequisitionController::class, 'approveRequisition'])->name('approve');
-        Route::post('/{requisition}/reject', [CEORequisitionController::class, 'rejectRequisition'])->name('reject');
-        Route::post('/lpos/{lpo}/approve', [CEORequisitionController::class, 'approveLpo'])->name('lpos.approve');
+        Route::put('/{requisition}', [CEORequisitionController::class, 'update'])->name('update');
+        
+        // Approval routes
+        Route::post('/{requisition}/approve', [CEORequisitionController::class, 'approve'])->name('approve');
+        Route::post('/{requisition}/reject', [CEORequisitionController::class, 'reject'])->name('reject');
     });
+    
+    // Move out of Requisitions Group
+    Route::resource('office-staff', \App\Http\Controllers\Finance\OfficeStaffController::class);
+    Route::get('office-staff/{officeStaff}/pay', [\App\Http\Controllers\Finance\OfficeStaffController::class, 'createPayment'])->name('office-staff.create-payment');
+    // Salary Payments
+    Route::post('salary-payments', [\App\Http\Controllers\Finance\SalaryPaymentController::class, 'store'])->name('salary-payments.store');
+    Route::delete('salary-payments/{payment}', [\App\Http\Controllers\Finance\SalaryPaymentController::class, 'destroy'])->name('salary-payments.destroy');
 
      // Payment Approval Routes
     Route::prefix('payments')->name('payments.')->group(function () {
@@ -845,6 +877,14 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
     Route::prefix('equipments')->name('equipments.')->group(function () {
         Route::get('/', [\App\Http\Controllers\CEO\CEOEquipmentController::class, 'index'])->name('index');
         Route::get('/{equipment}', [\App\Http\Controllers\CEO\CEOEquipmentController::class, 'show'])->name('show');
+    });
+
+    // QHSE Reports (Admin/CEO)
+    Route::prefix('qhse-reports')->name('qhse-reports.')->group(function () {
+        Route::get('/', [CEOQhseReportController::class, 'index'])->name('index');
+        Route::get('/{qhseReport}', [CEOQhseReportController::class, 'show'])->name('show');
+        Route::delete('/{qhseReport}', [CEOQhseReportController::class, 'destroy'])->name('destroy');
+        Route::get('/{qhseReport}/download/{index}', [CEOQhseReportController::class, 'downloadAttachment'])->name('download.attachment');
     });
 });
 
@@ -941,6 +981,7 @@ Route::prefix('qhse-reports')->name('qhse-reports.')->group(function () {
     Route::post('/submit', [QhseReportController::class, 'store'])->name('store');
     Route::get('/success', [QhseReportController::class, 'success'])->name('success');
 });
+
 
 // QHSE Reports Admin/CEO Routes (protected) - USING CEO CONTROLLER
 Route::middleware(['auth', 'role:admin,ceo'])->prefix('qhse-reports')->name('ceo.qhse-reports.')->group(function () {
