@@ -10,7 +10,7 @@ class Requisition extends Model
     use HasFactory;
 
     protected $fillable = [
-        'ref', 'project_id', 'requested_by', 'urgency', 'status', 
+        'ref', 'project_id', 'requested_by', 'subcontractor_id', 'urgency', 'status',
         'estimated_total', 'reason', 'attachments', 'type', 'store_id'
     ];
 
@@ -53,6 +53,30 @@ class Requisition extends Model
     public function requester()
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    public function subcontractor()
+    {
+        return $this->belongsTo(Subcontractor::class);
+    }
+
+    /**
+     * Check if requisition was made by a subcontractor
+     */
+    public function isSubcontractorRequisition()
+    {
+        return !is_null($this->subcontractor_id);
+    }
+
+    /**
+     * Get the requester name (either user or subcontractor)
+     */
+    public function getRequesterNameAttribute()
+    {
+        if ($this->isSubcontractorRequisition()) {
+            return $this->subcontractor?->name . ' (Subcontractor)';
+        }
+        return $this->requester?->name;
     }
 
     public function items()

@@ -51,6 +51,13 @@
                     <div class="col-md-6 mb-3">
                         <label for="email" class="form-label">Email Address</label>
                         <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}">
+                        <small class="text-muted">Used for portal login</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="password" class="form-label">Portal Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               placeholder="Leave blank to disable login">
+                        <small class="text-muted">If set, subcontractor can login to make requisitions</small>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="tax_number" class="form-label">Tax Number</label>

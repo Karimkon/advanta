@@ -1,17 +1,27 @@
 <?php
-// app/Models/Subcontractor.php - FIXED
+// app/Models/Subcontractor.php - Updated for Authentication
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-class Subcontractor extends Model
+class Subcontractor extends Authenticatable
 {
-    use HasFactory;
+    use HasFactory, Notifiable;
 
     protected $fillable = [
-        'name', 'contact_person', 'phone', 'email', 'specialization', 
+        'name', 'contact_person', 'phone', 'email', 'password', 'specialization',
         'address', 'tax_number', 'status'
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected $casts = [
+        'last_login_at' => 'datetime',
     ];
 
     // FIXED: Use the correct relationship name
@@ -53,5 +63,32 @@ class Subcontractor extends Model
     public function getBalanceAttribute()
     {
         return $this->total_contracts_amount - $this->total_paid_amount;
+    }
+
+    /**
+     * Get requisitions made by this subcontractor
+     */
+    public function requisitions()
+    {
+        return $this->hasMany(Requisition::class);
+    }
+
+    /**
+     * Get active project contracts
+     */
+    public function activeContracts()
+    {
+        return $this->projectSubcontractors()->where('status', 'active');
+    }
+
+    /**
+     * Check if subcontractor has an active contract on a project
+     */
+    public function hasActiveContractOn($projectId)
+    {
+        return $this->projectSubcontractors()
+            ->where('project_id', $projectId)
+            ->where('status', 'active')
+            ->exists();
     }
 }

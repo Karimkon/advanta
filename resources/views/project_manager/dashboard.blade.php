@@ -175,7 +175,7 @@
                                     <tr>
                                         <td><strong>{{ $requisition->ref }}</strong></td>
                                         <td>{{ $requisition->project->name }}</td>
-                                        <td>{{ $requisition->requester->name }}</td>
+                                        <td>{{ $requisition->requester_name }}</td>
                                         <td>UGX {{ number_format($requisition->estimated_total, 2) }}</td>
                                         <td>
                                             <span class="badge bg-{{ $requisition->isStoreRequisition() ? 'info' : 'primary' }}">

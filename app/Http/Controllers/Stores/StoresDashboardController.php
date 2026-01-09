@@ -89,10 +89,27 @@ class StoresDashboardController extends Controller
                 ->count();
         }
 
+        // Build comprehensive notification data for the bell icon
+        $notifications = [
+            'pending_requisitions' => $pendingRequisitions->count(),
+            'pending_lpos' => $pendingLposCount,
+            'low_stock' => $stats['low_stock_items'],
+            'out_of_stock' => $stats['out_of_stock_items'],
+            'recent_releases_today' => StoreRelease::where('store_id', $currentStore->id)
+                ->whereDate('created_at', today())
+                ->count(),
+        ];
+        $notifications['total'] = $notifications['pending_requisitions']
+            + $notifications['pending_lpos']
+            + $notifications['low_stock']
+            + $notifications['out_of_stock'];
+
         // Share counts with ALL store views (for layout)
         view()->share('pendingCount', $pendingRequisitions->count());
-        view()->share('pendingLposCount', $pendingLposCount); // ADD THIS LINE
-        view()->share('stores', $stores); // ADD THIS LINE
+        view()->share('pendingLposCount', $pendingLposCount);
+        view()->share('stores', $stores);
+        view()->share('notifications', $notifications);
+        view()->share('currentStore', $currentStore);
 
         return view('stores.dashboard', compact(
             'stores',

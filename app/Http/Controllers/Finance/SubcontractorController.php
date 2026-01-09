@@ -9,6 +9,7 @@ use App\Models\ProjectSubcontractor;
 use App\Models\SubcontractorPayment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class SubcontractorController extends Controller
 {
@@ -35,6 +36,7 @@ class SubcontractorController extends Controller
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email',
+            'password' => 'nullable|string|min:6',
             'specialization' => 'required|string|max:255',
             'address' => 'nullable|string',
             'tax_number' => 'nullable|string|max:50',
@@ -44,10 +46,17 @@ class SubcontractorController extends Controller
         ]);
 
         DB::transaction(function () use ($request) {
-            $subcontractor = Subcontractor::create($request->only([
-                'name', 'contact_person', 'phone', 'email', 
+            $data = $request->only([
+                'name', 'contact_person', 'phone', 'email',
                 'specialization', 'address', 'tax_number'
-            ]));
+            ]);
+
+            // Hash password if provided
+            if ($request->filled('password')) {
+                $data['password'] = Hash::make($request->password);
+            }
+
+            $subcontractor = Subcontractor::create($data);
 
             foreach ($request->projects as $projectData) {
                 ProjectSubcontractor::create([

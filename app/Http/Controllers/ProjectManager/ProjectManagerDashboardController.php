@@ -42,7 +42,7 @@ class ProjectManagerDashboardController extends Controller
         $recentRequisitions = Requisition::whereHas('project.users', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })
-        ->with(['project', 'requester', 'items'])
+        ->with(['project', 'requester', 'subcontractor', 'items'])
         ->latest()
         ->take(5)
         ->get();
@@ -52,7 +52,7 @@ class ProjectManagerDashboardController extends Controller
             $query->where('user_id', $user->id);
         })
         ->where('status', 'pending')
-        ->with(['project', 'requester', 'items'])
+        ->with(['project', 'requester', 'subcontractor', 'items'])
         ->latest()
         ->take(5)
         ->get();

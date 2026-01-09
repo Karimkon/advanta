@@ -177,14 +177,140 @@
                             
                             <ul class="navbar-nav">
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        <i class="bi bi-bell"></i>
-                                        @if(isset($pendingCount) && $pendingCount > 0)
-                                            <span class="badge bg-danger">{{ $pendingCount }}</span>
+                                    <a class="nav-link dropdown-toggle position-relative" href="#" role="button" data-bs-toggle="dropdown">
+                                        <i class="bi bi-bell fs-5"></i>
+                                        @if(isset($notifications) && $notifications['total'] > 0)
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                                {{ $notifications['total'] > 99 ? '99+' : $notifications['total'] }}
+                                            </span>
                                         @endif
                                     </a>
-                                    <ul class="dropdown-menu">
-                                        <li><span class="dropdown-item-text">Pending releases: {{ $pendingCount ?? 0 }}</span></li>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width: 320px;">
+                                        <li class="dropdown-header bg-light border-bottom">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <strong><i class="bi bi-bell me-2"></i>Notifications</strong>
+                                                @if(isset($notifications) && $notifications['total'] > 0)
+                                                    <span class="badge bg-danger">{{ $notifications['total'] }}</span>
+                                                @endif
+                                            </div>
+                                        </li>
+
+                                        @if(isset($notifications))
+                                            {{-- Pending Requisitions --}}
+                                            @if($notifications['pending_requisitions'] > 0)
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{{ isset($currentStore) ? route('stores.releases.index', $currentStore) : '#' }}">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                                            <i class="bi bi-clipboard-check text-primary"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-semibold">Pending Requisitions</div>
+                                                            <small class="text-muted">{{ $notifications['pending_requisitions'] }} awaiting release</small>
+                                                        </div>
+                                                        <span class="badge bg-primary">{{ $notifications['pending_requisitions'] }}</span>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            @endif
+
+                                            {{-- Pending LPO Deliveries --}}
+                                            @if($notifications['pending_lpos'] > 0)
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{{ isset($currentStore) ? route('stores.lpos.index', $currentStore) : '#' }}">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                                            <i class="bi bi-truck text-warning"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-semibold">LPO Deliveries</div>
+                                                            <small class="text-muted">{{ $notifications['pending_lpos'] }} awaiting confirmation</small>
+                                                        </div>
+                                                        <span class="badge bg-warning text-dark">{{ $notifications['pending_lpos'] }}</span>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            @endif
+
+                                            {{-- Low Stock Alert --}}
+                                            @if($notifications['low_stock'] > 0)
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{{ isset($currentStore) ? route('stores.inventory.index', $currentStore) . '?filter=low_stock' : '#' }}">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                                            <i class="bi bi-exclamation-triangle text-warning"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-semibold">Low Stock Alert</div>
+                                                            <small class="text-muted">{{ $notifications['low_stock'] }} items need reorder</small>
+                                                        </div>
+                                                        <span class="badge bg-warning text-dark">{{ $notifications['low_stock'] }}</span>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            @endif
+
+                                            {{-- Out of Stock (Critical) --}}
+                                            @if($notifications['out_of_stock'] > 0)
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{{ isset($currentStore) ? route('stores.inventory.index', $currentStore) . '?filter=out_of_stock' : '#' }}">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-3">
+                                                            <i class="bi bi-x-circle text-danger"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-semibold text-danger">Out of Stock!</div>
+                                                            <small class="text-muted">{{ $notifications['out_of_stock'] }} items at zero</small>
+                                                        </div>
+                                                        <span class="badge bg-danger">{{ $notifications['out_of_stock'] }}</span>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            @endif
+
+                                            {{-- Today's Releases (info) --}}
+                                            @if($notifications['recent_releases_today'] > 0)
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{{ isset($currentStore) ? route('stores.releases.index', $currentStore) : '#' }}">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                                            <i class="bi bi-check-circle text-success"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-semibold">Today's Activity</div>
+                                                            <small class="text-muted">{{ $notifications['recent_releases_today'] }} releases processed</small>
+                                                        </div>
+                                                        <span class="badge bg-success">{{ $notifications['recent_releases_today'] }}</span>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            @endif
+
+                                            {{-- All Clear Message --}}
+                                            @if($notifications['total'] == 0)
+                                            <li>
+                                                <div class="dropdown-item py-3 text-center">
+                                                    <i class="bi bi-check-circle text-success fs-3 d-block mb-2"></i>
+                                                    <span class="text-muted">All caught up! No pending actions.</span>
+                                                </div>
+                                            </li>
+                                            @endif
+                                        @else
+                                            <li>
+                                                <div class="dropdown-item py-3 text-center text-muted">
+                                                    <i class="bi bi-bell-slash fs-3 d-block mb-2"></i>
+                                                    No notifications
+                                                </div>
+                                            </li>
+                                        @endif
+
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-center text-primary small" href="{{ isset($currentStore) ? route('stores.dashboard') : '#' }}">
+                                                <i class="bi bi-grid me-1"></i> View Dashboard
+                                            </a>
+                                        </li>
                                     </ul>
                                 </li>
                                 <li class="nav-item">

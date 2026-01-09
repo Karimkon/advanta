@@ -990,3 +990,35 @@ Route::middleware(['auth', 'role:admin,ceo'])->prefix('qhse-reports')->name('ceo
     Route::delete('/{qhseReport}', [CEOQhseReportController::class, 'destroy'])->name('destroy');
     Route::get('/{qhseReport}/download/{index}', [CEOQhseReportController::class, 'downloadAttachment'])->name('download.attachment');
 });
+
+// ====================================================
+// SUBCONTRACTOR ROUTES
+// ====================================================
+use App\Http\Controllers\Subcontractor\SubcontractorAuthController;
+use App\Http\Controllers\Subcontractor\SubcontractorDashboardController;
+use App\Http\Controllers\Subcontractor\SubcontractorRequisitionController;
+
+// Subcontractor Auth Routes (Public)
+Route::prefix('subcontractor')->name('subcontractor.')->group(function () {
+    Route::get('/login', [SubcontractorAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [SubcontractorAuthController::class, 'login'])->name('login.submit');
+    Route::post('/logout', [SubcontractorAuthController::class, 'logout'])->name('logout');
+});
+
+// Subcontractor Protected Routes
+Route::middleware(['auth:subcontractor'])->prefix('subcontractor')->name('subcontractor.')->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [SubcontractorDashboardController::class, 'index'])->name('dashboard');
+
+    // Requisitions
+    Route::prefix('requisitions')->name('requisitions.')->group(function () {
+        Route::get('/', [SubcontractorRequisitionController::class, 'index'])->name('index');
+        Route::get('/create', [SubcontractorRequisitionController::class, 'create'])->name('create');
+        Route::post('/', [SubcontractorRequisitionController::class, 'store'])->name('store');
+        Route::get('/search-products', [SubcontractorRequisitionController::class, 'searchProducts'])->name('search-products');
+        Route::get('/{requisition}', [SubcontractorRequisitionController::class, 'show'])->name('show');
+        Route::get('/{requisition}/edit', [SubcontractorRequisitionController::class, 'edit'])->name('edit');
+        Route::put('/{requisition}', [SubcontractorRequisitionController::class, 'update'])->name('update');
+        Route::delete('/{requisition}', [SubcontractorRequisitionController::class, 'destroy'])->name('destroy');
+    });
+});

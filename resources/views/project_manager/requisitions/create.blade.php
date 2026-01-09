@@ -92,7 +92,7 @@
                                     <select name="store_id" id="store_id" class="form-select @error('store_id') is-invalid @enderror">
                                         <option value="">Select Store</option>
                                         @foreach($projectStores as $store)
-                                            <option value="{{ $store->id }}" {{ old('store_id') == $store->id ? 'selected' : '' }} data-inventory-url="{{ route('api.store.inventory', $store->id) }}">
+                                            <option value="{{ $store->id }}" {{ old('store_id') == $store->id ? 'selected' : '' }} data-inventory-url="{{ route('api.store.inventory', $store->id) }}" data-project-id="{{ $store->project_id }}">
                                                 {{ $store->name }}
                                             </option>
                                         @endforeach
@@ -407,6 +407,38 @@
 document.addEventListener('DOMContentLoaded', function() {
     let productCounter = 0;
     let storeInventory = [];
+
+    // Filter stores by selected project
+    $('#project_id').change(function() {
+        const selectedProjectId = $(this).val();
+        const storeSelect = $('#store_id');
+
+        // Show all stores first, then hide non-matching ones
+        storeSelect.find('option').each(function() {
+            const option = $(this);
+            const projectId = option.data('project-id');
+
+            if (!option.val()) {
+                // Keep the default empty option visible
+                option.show();
+            }} else if (projectId == selectedProjectId) {
+                option.show();
+            }} else {
+                option.hide();
+            }}
+        }});
+
+        // Reset selection if current store doesn't match project
+        const currentStore = storeSelect.find('option:selected');
+        if (currentStore.val() && currentStore.data('project-id') != selectedProjectId) {
+            storeSelect.val('').trigger('change');
+        }}
+    }});
+
+    // Trigger on page load to filter based on initial project selection
+    if ($('#project_id').val()) {
+        $('#project_id').trigger('change');
+    }}
 
     // Initialize Select2 for product search
     $('#product-search').select2({
