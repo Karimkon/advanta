@@ -49,9 +49,9 @@ class PaymentsExport implements FromCollection, WithHeadings, WithStyles, WithCo
             return [
                 'id' => $payment->id,
                 'date' => $payment->paid_on ? $payment->paid_on->format('Y-m-d') : 'N/A',
-                'project' => $payment->lpo->requisition->project->name ?? 'N/A',
-                'supplier' => $payment->supplier->name ?? 'N/A',
-                'lpo_number' => $payment->lpo->lpo_number ?? 'N/A',
+                'project' => $payment->lpo?->requisition?->project?->name ?? 'N/A',
+                'supplier' => $payment->supplier?->name ?? 'N/A',
+                'lpo_number' => $payment->lpo?->lpo_number ?? 'N/A',
                 'payment_method' => ucfirst(str_replace('_', ' ', $payment->payment_method ?? '')),
                 'base_amount' => number_format($baseAmount, 2),
                 'vat_percentage' => $vatPercentage . '%',
@@ -60,7 +60,7 @@ class PaymentsExport implements FromCollection, WithHeadings, WithStyles, WithCo
                 'status' => ucfirst($payment->status ?? 'unknown'),
                 'approval_status' => ucfirst(str_replace('_', ' ', $payment->approval_status ?? '')),
                 'reference' => $payment->reference ?? 'N/A',
-                'processed_by' => $payment->paidBy->name ?? 'N/A',
+                'processed_by' => $payment->paidBy?->name ?? 'N/A',
             ];
         });
     }

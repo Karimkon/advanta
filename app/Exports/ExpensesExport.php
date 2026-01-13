@@ -49,12 +49,12 @@ class ExpensesExport implements FromCollection, WithHeadings, WithStyles, WithCo
             return [
                 'id' => $expense->id,
                 'date' => $expense->incurred_on ? date('Y-m-d', strtotime($expense->incurred_on)) : 'N/A',
-                'project' => $expense->project->name ?? 'General',
+                'project' => $expense->project?->name ?? 'General',
                 'type' => ucfirst(str_replace('_', ' ', $expense->type ?? '')),
                 'description' => $expense->description ?? '',
                 'amount' => number_format($expense->amount, 2),
                 'status' => ucfirst($expense->status ?? 'pending'),
-                'recorded_by' => $expense->recordedBy->name ?? 'N/A',
+                'recorded_by' => $expense->recordedBy?->name ?? 'N/A',
                 'notes' => $expense->notes ?? '',
             ];
         });

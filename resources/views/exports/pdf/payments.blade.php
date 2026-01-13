@@ -53,8 +53,8 @@
         <tr>
             <td>#{{ $payment->id }}</td>
             <td>{{ $payment->paid_on ? $payment->paid_on->format('M d, Y') : 'N/A' }}</td>
-            <td>{{ $payment->lpo->requisition->project->name ?? 'N/A' }}</td>
-            <td>{{ $payment->supplier->name ?? 'N/A' }}</td>
+            <td>{{ $payment->lpo?->requisition?->project?->name ?? 'N/A' }}</td>
+            <td>{{ $payment->supplier?->name ?? 'N/A' }}</td>
             <td>{{ ucfirst(str_replace('_', ' ', $payment->payment_method ?? '')) }}</td>
             <td class="amount">{{ number_format($baseAmount, 2) }}</td>
             <td class="amount">{{ number_format($payment->vat_amount, 2) }}</td>

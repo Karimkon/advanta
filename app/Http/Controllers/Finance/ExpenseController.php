@@ -128,7 +128,13 @@ class ExpenseController extends Controller
         return response()->streamDownload(function () use ($expenses) {
             echo "Date,Project,Type,Description,Amount,Status\n";
             foreach ($expenses as $expense) {
-                echo "{$expense->incurred_on},{$expense->project->name},{$expense->type},{$expense->description},{$expense->amount},{$expense->status}\n";
+                $projectName = $expense->project->name ?? 'N/A';
+                $incurredOn = $expense->incurred_on ?? 'N/A';
+                $type = $expense->type ?? 'N/A';
+                $description = str_replace(',', ' ', $expense->description ?? '');
+                $amount = $expense->amount ?? 0;
+                $status = $expense->status ?? 'N/A';
+                echo "{$incurredOn},{$projectName},{$type},{$description},{$amount},{$status}\n";
             }
         }, 'expenses_export_' . date('Y-m-d') . '.csv');
     }

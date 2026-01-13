@@ -23,7 +23,7 @@ class CEORequisitionsExport implements FromCollection, WithHeadings, WithStyles,
 
     public function collection()
     {
-        $query = Requisition::with(['project', 'requestedBy', 'items', 'supplier', 'lpo']);
+        $query = Requisition::with(['project', 'requester', 'items', 'supplier', 'lpo']);
 
         if ($this->status) {
             $query->where('status', $this->status);
@@ -34,10 +34,10 @@ class CEORequisitionsExport implements FromCollection, WithHeadings, WithStyles,
 
             return [
                 'ref' => $requisition->ref,
-                'project' => $requisition->project->name ?? 'N/A',
+                'project' => $requisition->project?->name ?? 'N/A',
                 'type' => ucfirst(str_replace('_', ' ', $requisition->type)),
-                'requested_by' => $requisition->requestedBy->name ?? 'N/A',
-                'supplier' => $requisition->supplier->name ?? 'N/A',
+                'requested_by' => $requisition->requester?->name ?? 'N/A',
+                'supplier' => $requisition->supplier?->name ?? 'N/A',
                 'items_count' => $requisition->items->count(),
                 'estimated_total' => number_format($requisition->estimated_total ?? 0, 2),
                 'lpo_total' => number_format($lpoTotal, 2),

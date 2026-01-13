@@ -37,7 +37,7 @@
         <tr>
             <td>#{{ $expense->id }}</td>
             <td>{{ $expense->incurred_on ? date('M d, Y', strtotime($expense->incurred_on)) : 'N/A' }}</td>
-            <td>{{ $expense->project->name ?? 'General' }}</td>
+            <td>{{ $expense->project?->name ?? 'General' }}</td>
             <td>{{ ucfirst(str_replace('_', ' ', $expense->type ?? '')) }}</td>
             <td>{{ Str::limit($expense->description, 40) }}</td>
             <td class="amount">{{ number_format($expense->amount, 2) }}</td>
@@ -52,7 +52,7 @@
                     {{ ucfirst($expense->status ?? 'pending') }}
                 </span>
             </td>
-            <td>{{ $expense->recordedBy->name ?? 'N/A' }}</td>
+            <td>{{ $expense->recordedBy?->name ?? 'N/A' }}</td>
         </tr>
         @endforeach
     </tbody>

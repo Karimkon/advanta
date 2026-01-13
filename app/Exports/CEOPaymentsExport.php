@@ -35,16 +35,16 @@ class CEOPaymentsExport implements FromCollection, WithHeadings, WithStyles, Wit
             return [
                 'id' => $payment->id,
                 'date' => $payment->paid_on ? $payment->paid_on->format('Y-m-d') : 'N/A',
-                'project' => $payment->lpo->requisition->project->name ?? 'N/A',
-                'supplier' => $payment->supplier->name ?? 'N/A',
-                'lpo_number' => $payment->lpo->lpo_number ?? 'N/A',
+                'project' => $payment->lpo?->requisition?->project?->name ?? 'N/A',
+                'supplier' => $payment->supplier?->name ?? 'N/A',
+                'lpo_number' => $payment->lpo?->lpo_number ?? 'N/A',
                 'base_amount' => number_format($baseAmount, 2),
                 'vat_amount' => number_format($payment->vat_amount, 2),
                 'total_amount' => number_format($payment->amount, 2),
                 'payment_method' => ucfirst(str_replace('_', ' ', $payment->payment_method ?? '')),
                 'approval_status' => ucfirst(str_replace('_', ' ', $payment->approval_status ?? '')),
-                'approved_by' => $payment->approvedBy->name ?? 'Pending',
-                'processed_by' => $payment->paidBy->name ?? 'N/A',
+                'approved_by' => $payment->approvedBy?->name ?? 'Pending',
+                'processed_by' => $payment->paidBy?->name ?? 'N/A',
                 'ceo_notes' => $payment->ceo_notes ?? '',
             ];
         });

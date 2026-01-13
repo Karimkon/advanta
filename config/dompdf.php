@@ -13,7 +13,9 @@ return [
     */
     'show_warnings' => false,   // Throw an Exception on warnings from dompdf
 
-    'public_path' => null,  // Override the public path if needed
+    // For shared hosting, set explicit public path
+    // Hostinger uses: /home/username/domains/domain/public_html
+    'public_path' => env('DOMPDF_PUBLIC_PATH', base_path('public')),
 
     /*
      * Dejavu Sans font is missing glyphs for converted entities, turn it off if you need to show € and £.

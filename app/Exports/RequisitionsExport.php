@@ -23,7 +23,7 @@ class RequisitionsExport implements FromCollection, WithHeadings, WithStyles, Wi
 
     public function collection()
     {
-        $query = Requisition::with(['project', 'requestedBy', 'items', 'supplier']);
+        $query = Requisition::with(['project', 'requester', 'items', 'supplier']);
 
         if (!empty($this->filters['status'])) {
             $query->where('status', $this->filters['status']);
@@ -44,10 +44,10 @@ class RequisitionsExport implements FromCollection, WithHeadings, WithStyles, Wi
         return $query->latest()->get()->map(function ($requisition) {
             return [
                 'ref' => $requisition->ref,
-                'project' => $requisition->project->name ?? 'N/A',
+                'project' => $requisition->project?->name ?? 'N/A',
                 'type' => ucfirst(str_replace('_', ' ', $requisition->type)),
-                'requested_by' => $requisition->requestedBy->name ?? 'N/A',
-                'supplier' => $requisition->supplier->name ?? 'N/A',
+                'requested_by' => $requisition->requester?->name ?? 'N/A',
+                'supplier' => $requisition->supplier?->name ?? 'N/A',
                 'items_count' => $requisition->items->count(),
                 'estimated_total' => number_format($requisition->estimated_total ?? 0, 2),
                 'status' => ucfirst(str_replace('_', ' ', $requisition->status)),

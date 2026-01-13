@@ -36,8 +36,8 @@
         @foreach($lpos as $lpo)
         <tr>
             <td>{{ $lpo->lpo_number }}</td>
-            <td>{{ $lpo->requisition->project->name ?? 'N/A' }}</td>
-            <td>{{ $lpo->supplier->name ?? 'N/A' }}</td>
+            <td>{{ $lpo->requisition?->project?->name ?? 'N/A' }}</td>
+            <td>{{ $lpo->supplier?->name ?? 'N/A' }}</td>
             <td class="amount">{{ number_format($lpo->subtotal ?? 0, 2) }}</td>
             <td class="amount">{{ number_format($lpo->vat_amount ?? 0, 2) }}</td>
             <td class="amount">{{ number_format($lpo->total ?? 0, 2) }}</td>

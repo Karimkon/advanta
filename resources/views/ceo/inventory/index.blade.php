@@ -10,12 +10,12 @@
             <h2 class="mb-1">Inventory Overview</h2>
             <p class="text-muted mb-0">Complete inventory management across all stores</p>
         </div>
-        <div class="btn-group">
-            <a href="{{ route('ceo.inventory.export') }}" class="btn btn-success">
-                <i class="bi bi-download"></i> Export Report
-            </a>
+        <div class="d-flex gap-2">
             <a href="{{ route('ceo.inventory.movements') }}" class="btn btn-info">
                 <i class="bi bi-arrow-left-right"></i> Stock Movements
+            </a>
+            <a href="{{ route('ceo.inventory.export.excel') }}" class="btn btn-success">
+                <i class="bi bi-download"></i> Export Excel
             </a>
         </div>
     </div>

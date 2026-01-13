@@ -393,7 +393,7 @@ private function handlePostApprovalActions(Requisition $requisition, string $use
      */
     public function exportPdf(Request $request)
     {
-        $query = Requisition::with(['project', 'requestedBy', 'items', 'supplier']);
+        $query = Requisition::with(['project', 'requester', 'items', 'supplier']);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);

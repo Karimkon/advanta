@@ -10,7 +10,7 @@
             <h2 class="mb-1">All Requisitions</h2>
             <p class="text-muted mb-0">Complete overview of all requisitions across the company</p>
         </div>
-        <div class="btn-group">
+        <div class="d-flex gap-2">
             <a href="{{ route('ceo.dashboard') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back to Dashboard
             </a>
@@ -22,6 +22,9 @@
                 @if($pendingCount > 0)
                     <span class="badge bg-danger ms-1">{{ $pendingCount }}</span>
                 @endif
+            </a>
+            <a href="{{ route('ceo.requisitions.export.excel') }}" class="btn btn-success">
+                <i class="bi bi-download"></i> Export Excel
             </a>
         </div>
     </div>

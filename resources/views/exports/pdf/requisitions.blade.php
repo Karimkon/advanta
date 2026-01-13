@@ -36,10 +36,10 @@
         @foreach($requisitions as $requisition)
         <tr>
             <td>{{ $requisition->ref }}</td>
-            <td>{{ $requisition->project->name ?? 'N/A' }}</td>
+            <td>{{ $requisition->project?->name ?? 'N/A' }}</td>
             <td>{{ ucfirst(str_replace('_', ' ', $requisition->type)) }}</td>
-            <td>{{ $requisition->requestedBy->name ?? 'N/A' }}</td>
-            <td>{{ $requisition->supplier->name ?? 'N/A' }}</td>
+            <td>{{ $requisition->requester?->name ?? 'N/A' }}</td>
+            <td>{{ $requisition->supplier?->name ?? 'N/A' }}</td>
             <td class="amount">{{ number_format($requisition->estimated_total ?? 0, 2) }}</td>
             <td class="text-center">
                 @php

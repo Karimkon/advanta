@@ -36,14 +36,14 @@ class LposExport implements FromCollection, WithHeadings, WithStyles, WithColumn
         return $query->latest()->get()->map(function ($lpo) {
             return [
                 'lpo_number' => $lpo->lpo_number,
-                'project' => $lpo->requisition->project->name ?? 'N/A',
-                'supplier' => $lpo->supplier->name ?? 'N/A',
+                'project' => $lpo->requisition?->project?->name ?? 'N/A',
+                'supplier' => $lpo->supplier?->name ?? 'N/A',
                 'items_count' => $lpo->items->count(),
                 'subtotal' => number_format($lpo->subtotal ?? 0, 2),
                 'vat_amount' => number_format($lpo->vat_amount ?? 0, 2),
                 'total' => number_format($lpo->total ?? 0, 2),
                 'status' => ucfirst(str_replace('_', ' ', $lpo->status)),
-                'issued_by' => $lpo->issuer->name ?? 'N/A',
+                'issued_by' => $lpo->issuer?->name ?? 'N/A',
                 'issued_date' => $lpo->created_at->format('Y-m-d'),
                 'delivery_date' => $lpo->delivery_date ? date('Y-m-d', strtotime($lpo->delivery_date)) : 'Pending',
             ];

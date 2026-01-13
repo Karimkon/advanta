@@ -10,13 +10,19 @@
             <h2 class="mb-1">Financial Reports</h2>
             <p class="text-muted mb-0">Executive financial overview and insights</p>
         </div>
-        <div class="btn-group">
-            <a href="{{ route('ceo.reports.export.summary') }}" class="btn btn-success">
-                <i class="bi bi-download"></i> Export Summary
-            </a>
+        <div class="d-flex gap-2">
             <a href="{{ route('ceo.reports.requisitions') }}" class="btn btn-info">
                 <i class="bi bi-list-check"></i> Requisitions Report
             </a>
+            <div class="btn-group">
+                <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-download"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{{ route('ceo.reports.export.excel') }}"><i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('ceo.reports.export.pdf') }}"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 
