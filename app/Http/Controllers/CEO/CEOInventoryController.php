@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Store;
 use App\Models\InventoryItem;
 use App\Models\InventoryLog;
+use App\Exports\InventoryExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CEOInventoryController extends Controller
 {
@@ -260,5 +262,14 @@ class CEOInventoryController extends Controller
 
             fclose($file);
         }, $filename, $headers);
+    }
+
+    /**
+     * Export inventory to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $storeId = $request->get('store_id');
+        return Excel::download(new InventoryExport($storeId), 'ceo_inventory_' . date('Y-m-d') . '.xlsx');
     }
 }

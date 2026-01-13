@@ -8,9 +8,12 @@ use App\Models\Project;
 use App\Models\RequisitionItem;
 use App\Models\RequisitionApproval;
 use App\Models\User;
+use App\Exports\RequisitionsExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class AdminRequisitionController extends Controller
 {
@@ -365,7 +368,7 @@ private function handlePostApprovalActions(Requisition $requisition, string $use
         }
 
         $attachments = $existingAttachments ? json_decode($existingAttachments, true) : [];
-        
+
         foreach ($request->file('attachments') as $file) {
             if ($file->isValid()) {
                 $path = $file->store('requisitions/attachments', 'public');
@@ -374,5 +377,40 @@ private function handlePostApprovalActions(Requisition $requisition, string $use
         }
 
         return json_encode($attachments);
+    }
+
+    /**
+     * Export requisitions to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $filters = $request->only(['status', 'project_id', 'date_from', 'date_to']);
+        return Excel::download(new RequisitionsExport($filters), 'requisitions_' . date('Y-m-d') . '.xlsx');
+    }
+
+    /**
+     * Export requisitions to PDF
+     */
+    public function exportPdf(Request $request)
+    {
+        $query = Requisition::with(['project', 'requestedBy', 'items', 'supplier']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('project_id')) {
+            $query->where('project_id', $request->project_id);
+        }
+
+        $requisitions = $query->latest()->get();
+
+        $pdf = Pdf::loadView('exports.pdf.requisitions', [
+            'requisitions' => $requisitions,
+            'title' => 'Requisitions Report'
+        ]);
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download('requisitions_' . date('Y-m-d') . '.pdf');
     }
 }   

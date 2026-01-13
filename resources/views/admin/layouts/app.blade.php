@@ -282,33 +282,10 @@ body {
                         <a href="{{ route('admin.requisitions.index') }}" class="{{ request()->routeIs('admin.requisitions.index') ? 'active' : '' }}">
                             <i class="bi bi-list-check"></i> All Requisitions
                         </a>
-                        <a href="{{ route('admin.requisitions.create') }}" class="{{ request()->routeIs('admin.requisitions.create') ? 'active' : '' }}">
-                            <i class="bi bi-plus-circle"></i> New Requisition
-                        </a>
                     </div>
                 </div>
             </div>
-
-            <!-- Procurement
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#procurementCollapse">
-                        <i class="bi bi-bag-check"></i> Procurement
-                    </button>
-                </h2>
-                <div id="procurementCollapse" class="accordion-collapse collapse {{ request()->is('admin/procurement*') ? 'show' : '' }}">
-                    <div class="accordion-body">
-                        <a href="{{ route('admin.procurement.index') }}" class="{{ request()->routeIs('admin.procurement.index') ? 'active' : '' }}">
-                            <i class="bi bi-cart-check"></i> Procurement Dashboard
-                        </a>
-                        <a href="{{ route('admin.suppliers.index') }}" class="{{ request()->routeIs('admin.suppliers.*') ? 'active' : '' }}">
-                            <i class="bi bi-truck"></i> Supplier Management
-                        </a>
-                    </div>
-                </div>
-            </div> -->
-
-            <!-- LPOs -->
+                        <!-- LPOs -->
             <div class="accordion-item">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#lposCollapse">

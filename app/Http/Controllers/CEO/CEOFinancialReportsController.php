@@ -9,7 +9,10 @@ use App\Models\Expense;
 use App\Models\Requisition;
 use App\Models\Project;
 use App\Models\Lpo;
+use App\Exports\CEOFinancialSummaryExport;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class CEOFinancialReportsController extends Controller
 {
@@ -262,5 +265,56 @@ class CEOFinancialReportsController extends Controller
             return redirect()->route('ceo.reports.index')
                 ->with('error', 'Error loading requisitions report: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Export financial summary to Excel
+     */
+    public function exportExcel()
+    {
+        return Excel::download(new CEOFinancialSummaryExport, 'ceo_financial_summary_' . date('Y-m-d') . '.xlsx');
+    }
+
+    /**
+     * Export financial summary to PDF
+     */
+    public function exportPdf()
+    {
+        $stats = [
+            'total_projects' => Project::count(),
+            'total_budget' => Project::sum('budget'),
+            'total_expenses' => Expense::sum('amount'),
+            'total_payments' => Payment::sum('amount'),
+        ];
+
+        $projects = Project::all()->map(function ($project) {
+            $projectPayments = DB::table('payments')
+                ->join('lpos', 'payments.lpo_id', '=', 'lpos.id')
+                ->join('requisitions', 'lpos.requisition_id', '=', 'requisitions.id')
+                ->where('requisitions.project_id', $project->id)
+                ->sum('payments.amount');
+
+            $projectExpenses = Expense::where('project_id', $project->id)->sum('amount');
+
+            $project->total_spent = $projectPayments + $projectExpenses;
+            return $project;
+        });
+
+        $recentPayments = Payment::with(['lpo.requisition.project', 'supplier'])
+            ->whereNotNull('paid_on')
+            ->latest()
+            ->take(10)
+            ->get();
+
+        $pdf = Pdf::loadView('exports.pdf.financial-summary', [
+            'stats' => $stats,
+            'projects' => $projects,
+            'recentPayments' => $recentPayments,
+            'title' => 'CEO Financial Summary Report'
+        ]);
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download('ceo_financial_summary_' . date('Y-m-d') . '.pdf');
     }
 }

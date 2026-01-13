@@ -7,7 +7,7 @@
   <div class="d-flex justify-content-between align-items-start mb-3">
     <div>
       <h4>Requisition {{ $requisition->ref }}</h4>
-      <small class="text-muted">{{ $requisition->project->name }} — Requested by {{ $requisition->requester->name }}</small>
+      <small class="text-muted">{{ $requisition->project->name }} — Requested by {{ $requisition->requester_name ?? 'N/A' }}</small>
     </div>
     <div>
       <a href="{{ route('admin.requisitions.index') }}" class="btn btn-light">Back</a>
@@ -87,7 +87,7 @@
             <button class="btn btn-outline-danger" onclick="return confirm('Reject this requisition?')">Reject</button>
           </form>
 
-          <form action="{{ route('admin.requisitions.sendToProcurement', $requisition) }}" method="POST" class="d-grid gap-2">
+          <form action="{{ route('admin.requisitions.send-to-procurement', $requisition) }}" method="POST" class="d-grid gap-2">
             @csrf
             <button class="btn btn-outline-primary" onclick="return confirm('Send to procurement?')">Send to Procurement</button>
           </form>

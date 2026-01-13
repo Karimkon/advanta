@@ -23,42 +23,79 @@ class StoreLpoController extends Controller
             abort(403, 'Unauthorized access to this store.');
         }
 
-        $lpos = Lpo::whereHas('requisition', function($query) use ($store) {
-                $query->where('project_id', $store->project_id);
+        // Get all stores this user can access
+        $user = auth()->user();
+        $accessibleStores = Store::where(function($query) use ($user) {
+                if ($user->id === 6) {
+                    $query->where('type', Store::TYPE_MAIN);
+                } else {
+                    $query->where('type', Store::TYPE_PROJECT)
+                        ->whereHas('project.users', function($projectQuery) use ($user) {
+                            $projectQuery->where('user_id', $user->id);
+                        });
+                }
+            })->get();
+        
+        $allProjectIds = $accessibleStores->pluck('project_id')->filter()->toArray();
+
+        // Get LPOs for ALL accessible stores
+        $lpos = Lpo::whereHas('requisition', function($query) use ($allProjectIds) {
+                $query->whereIn('project_id', $allProjectIds);
             })
             ->where('status', 'issued')
             ->with(['requisition', 'requisition.project', 'supplier'])
             ->latest()
             ->paginate(20);
 
-        $stores = Store::all();
+        $stores = $accessibleStores;
 
         return view('stores.lpos.index', compact('store', 'lpos', 'stores'));
     }
 
     /**
-     * Show form to confirm LPO delivery
-     */
-    public function confirmDelivery(Store $store, Lpo $lpo)
-    {
-        // Authorization check
-        if (!$this->canAccessStore(auth()->user(), $store)) {
-            abort(403, 'Unauthorized access to this store.');
-        }
-
-        // Verify LPO belongs to this store's project
-        if ($lpo->requisition->project_id !== $store->project_id) {
-            abort(403, 'This LPO does not belong to your project store.');
-        }
-
-        if ($lpo->status !== 'issued') {
-            abort(403, 'Only issued LPOs can be confirmed as delivered.');
-        }
-
-        $lpo->load(['items', 'requisition', 'supplier']);
-
-        return view('stores.lpos.confirm-delivery', compact('store', 'lpo'));
+ * Show form to confirm LPO delivery
+ */
+public function confirmDelivery(Store $store, Lpo $lpo)
+{
+    // Authorization check
+    if (!$this->canAccessStore(auth()->user(), $store)) {
+        abort(403, 'Unauthorized access to this store.');
     }
+
+    // Get all stores this user can access
+    $user = auth()->user();
+    $accessibleStores = Store::where(function($query) use ($user) {
+            if ($user->id === 6) {
+                $query->where('type', Store::TYPE_MAIN);
+            } else {
+                $query->where('type', Store::TYPE_PROJECT)
+                      ->whereHas('project.users', function($projectQuery) use ($user) {
+                          $projectQuery->where('user_id', $user->id);
+                      });
+            }
+        })->get();
+    
+    $allProjectIds = $accessibleStores->pluck('project_id')->filter()->toArray();
+
+    // Check if LPO belongs to ANY of user's accessible stores
+    if (!in_array($lpo->requisition->project_id, $allProjectIds)) {
+        abort(403, 'This LPO does not belong to your project stores.');
+    }
+
+    if ($lpo->status !== 'issued') {
+        abort(403, 'Only issued LPOs can be confirmed as delivered.');
+    }
+
+    // Get the correct store for this LPO
+    $correctStore = $accessibleStores->firstWhere('project_id', $lpo->requisition->project_id);
+    if ($correctStore) {
+        $store = $correctStore;
+    }
+
+    $lpo->load(['items', 'requisition', 'supplier']);
+
+    return view('stores.lpos.confirm-delivery', compact('store', 'lpo'));
+}
 
     /**
      * Process LPO delivery confirmation
@@ -122,7 +159,7 @@ class StoreLpoController extends Controller
         }
     }
 
-    /**
+   /**
      * Show delivered LPOs
      */
     public function delivered(Store $store)
@@ -132,39 +169,75 @@ class StoreLpoController extends Controller
             abort(403, 'Unauthorized access to this store.');
         }
 
-        $lpos = Lpo::whereHas('requisition', function($query) use ($store) {
-                $query->where('project_id', $store->project_id);
+        // Get all stores this user can access
+        $user = auth()->user();
+        $accessibleStores = Store::where(function($query) use ($user) {
+                if ($user->id === 6) {
+                    $query->where('type', Store::TYPE_MAIN);
+                } else {
+                    $query->where('type', Store::TYPE_PROJECT)
+                        ->whereHas('project.users', function($projectQuery) use ($user) {
+                            $projectQuery->where('user_id', $user->id);
+                        });
+                }
+            })->get();
+        
+        $allProjectIds = $accessibleStores->pluck('project_id')->filter()->toArray();
+
+        // Get delivered LPOs for ALL accessible stores
+        $lpos = Lpo::whereHas('requisition', function($query) use ($allProjectIds) {
+                $query->whereIn('project_id', $allProjectIds);
             })
             ->where('status', 'delivered')
             ->with(['requisition', 'requisition.project', 'supplier'])
             ->latest()
             ->paginate(20);
 
-        $stores = Store::all();
+        $stores = $accessibleStores;
 
         return view('stores.lpos.delivered', compact('store', 'lpos', 'stores'));
     }
 
     /**
-     * Show LPO details
-     */
-    public function show(Store $store, Lpo $lpo)
-    {
-        // Authorization check
-        if (!$this->canAccessStore(auth()->user(), $store)) {
-            abort(403, 'Unauthorized access to this store.');
-        }
-
-        // Verify LPO belongs to this store's project
-        if ($lpo->requisition->project_id !== $store->project_id) {
-            abort(403, 'This LPO does not belong to your project store.');
-        }
-
-        $lpo->load(['items', 'requisition', 'requisition.project', 'supplier', 'preparer']);
-
-        return view('stores.lpos.show', compact('store', 'lpo'));
+ * Show LPO details
+ */
+public function show(Store $store, Lpo $lpo)
+{
+    // Authorization check - verify user can access the store in URL
+    if (!$this->canAccessStore(auth()->user(), $store)) {
+        abort(403, 'Unauthorized access to this store.');
     }
 
+    // Get all stores this user can access
+    $user = auth()->user();
+    $accessibleStores = Store::where(function($query) use ($user) {
+            if ($user->id === 6) {
+                $query->where('type', Store::TYPE_MAIN);
+            } else {
+                $query->where('type', Store::TYPE_PROJECT)
+                      ->whereHas('project.users', function($projectQuery) use ($user) {
+                          $projectQuery->where('user_id', $user->id);
+                      });
+            }
+        })->get();
+    
+    $allProjectIds = $accessibleStores->pluck('project_id')->filter()->toArray();
+
+    // Check if LPO belongs to ANY of user's accessible stores
+    if (!in_array($lpo->requisition->project_id, $allProjectIds)) {
+        abort(403, 'This LPO does not belong to your project stores.');
+    }
+
+    // Get the correct store for this LPO (for display purposes)
+    $correctStore = $accessibleStores->firstWhere('project_id', $lpo->requisition->project_id);
+    if ($correctStore) {
+        $store = $correctStore;
+    }
+
+    $lpo->load(['items', 'requisition', 'requisition.project', 'supplier', 'preparer']);
+
+    return view('stores.lpos.show', compact('store', 'lpo'));
+}
     /**
      * Check if user can access the store
      */

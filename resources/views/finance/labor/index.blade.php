@@ -10,12 +10,15 @@
             <h2 class="mb-1">Labor Workers Management</h2>
             <p class="text-muted mb-0">Manage all labor workers and their payments</p>
         </div>
-        <div class="btn-group">
-              <a href="{{ route('finance.labor.bulk-payments.index') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-cash-stack"></i> Bulk Payments
-                </a>
+        <div class="d-flex gap-2">
+            <a href="{{ route('finance.labor.bulk-payments.index') }}" class="btn btn-outline-primary">
+                <i class="bi bi-cash-stack"></i> Bulk Payments
+            </a>
             <a href="{{ route('finance.labor.import') }}" class="btn btn-outline-primary">
-                <i class="bi bi-upload"></i> Import Workers
+                <i class="bi bi-upload"></i> Import
+            </a>
+            <a href="{{ route('finance.labor.export.excel') }}" class="btn btn-success">
+                <i class="bi bi-download"></i> Export Excel
             </a>
             <a href="{{ route('finance.labor.create') }}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Worker

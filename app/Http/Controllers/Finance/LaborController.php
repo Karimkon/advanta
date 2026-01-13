@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\LaborWorker;
 use App\Models\LaborPayment;
 use App\Models\Expense;
+use App\Exports\LaborWorkersExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Imports\LaborWorkersImport;
@@ -309,5 +310,14 @@ private function convertWholeNumberToWords($number)
     } else {
         return 'Very Large Amount';
     }
-}           
+}
+
+    /**
+     * Export labor workers to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $projectId = $request->get('project_id');
+        return Excel::download(new LaborWorkersExport($projectId), 'labor_workers_' . date('Y-m-d') . '.xlsx');
+    }
 }

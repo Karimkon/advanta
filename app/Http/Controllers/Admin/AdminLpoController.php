@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Lpo;
 use App\Models\LpoItem;
 use App\Models\Procurement;
+use App\Exports\LposExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class AdminLpoController extends Controller
 {
@@ -169,5 +172,37 @@ class AdminLpoController extends Controller
             DB::rollBack();
             return back()->with('error', 'Failed to update prices: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Export LPOs to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $filters = $request->only(['status', 'supplier_id']);
+        return Excel::download(new LposExport($filters), 'lpos_' . date('Y-m-d') . '.xlsx');
+    }
+
+    /**
+     * Export LPOs to PDF
+     */
+    public function exportPdf(Request $request)
+    {
+        $query = Lpo::with(['supplier', 'requisition.project', 'items', 'issuer']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $lpos = $query->latest()->get();
+
+        $pdf = Pdf::loadView('exports.pdf.lpos', [
+            'lpos' => $lpos,
+            'title' => 'LPOs Report'
+        ]);
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download('lpos_' . date('Y-m-d') . '.pdf');
     }
 }

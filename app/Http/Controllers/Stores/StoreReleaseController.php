@@ -58,7 +58,7 @@ class StoreReleaseController extends Controller
         return false;
     }
 
- public function create(Store $store, Requisition $requisition)
+public function create(Store $store, Requisition $requisition)
 {
     $stores = Store::all();
 
@@ -77,22 +77,70 @@ class StoreReleaseController extends Controller
     
     // Enhanced inventory item matching
     foreach ($requisition->items as $item) {
-        // Try multiple matching strategies
         $inventoryItem = null;
         
-        // 1. Try by product catalog ID first
+        // 1. Try by product catalog ID first (most reliable)
         if ($item->product_catalog_id) {
             $inventoryItem = InventoryItem::where('store_id', $store->id)
                 ->where('product_catalog_id', $item->product_catalog_id)
                 ->first();
         }
         
-        // 2. Try by name matching
+        // 2. Try by exact name match
+        if (!$inventoryItem) {
+            $inventoryItem = InventoryItem::where('store_id', $store->id)
+                ->where('name', $item->name)
+                ->first();
+        }
+        
+        // 3. Try by partial name match (item name contained in inventory name)
         if (!$inventoryItem) {
             $inventoryItem = InventoryItem::where('store_id', $store->id)
                 ->where('name', 'like', '%' . $item->name . '%')
                 ->first();
         }
+        
+        // 4. Try reverse - inventory name contained in item name
+        if (!$inventoryItem) {
+            $inventoryItem = InventoryItem::where('store_id', $store->id)
+                ->whereRaw('? LIKE CONCAT("%", name, "%")', [$item->name])
+                ->first();
+        }
+        
+        // 5. Try by SKU if the item name looks like it contains a SKU
+        if (!$inventoryItem && preg_match('/SKU-[A-Z0-9]+/i', $item->name, $matches)) {
+            $inventoryItem = InventoryItem::where('store_id', $store->id)
+                ->where('sku', $matches[0])
+                ->first();
+        }
+        
+        // 6. Try fuzzy match - extract key words and match
+        if (!$inventoryItem) {
+            // Extract first few significant words from item name
+            $words = preg_split('/[\s\-\_\(\)]+/', $item->name);
+            $significantWords = array_filter($words, fn($w) => strlen($w) > 3);
+            $firstWords = array_slice($significantWords, 0, 3);
+            
+            if (count($firstWords) >= 2) {
+                $searchPattern = '%' . implode('%', $firstWords) . '%';
+                $inventoryItem = InventoryItem::where('store_id', $store->id)
+                    ->where('name', 'like', $searchPattern)
+                    ->first();
+            }
+        }
+        
+        // Log for debugging
+        \Log::info("Store Release Matching", [
+            'requisition_item_id' => $item->id,
+            'requisition_item_name' => $item->name,
+            'product_catalog_id' => $item->product_catalog_id,
+            'store_id' => $store->id,
+            'matched_inventory_item' => $inventoryItem ? [
+                'id' => $inventoryItem->id,
+                'name' => $inventoryItem->name,
+                'quantity' => $inventoryItem->quantity
+            ] : null
+        ]);
         
         $item->available_stock = $inventoryItem ? $inventoryItem->quantity : 0;
         $item->can_fulfill = $inventoryItem && $inventoryItem->quantity >= $item->quantity;

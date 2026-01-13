@@ -4,13 +4,15 @@ namespace App\Http\Controllers\CEO;
 
 use App\Http\Controllers\Controller;
 use App\Models\Requisition;
-use App\Models\RequisitionItem; 
+use App\Models\RequisitionItem;
 use App\Models\RequisitionApproval;
 use App\Models\Lpo;
-use App\Models\LpoItem; 
+use App\Models\LpoItem;
 use App\Models\Supplier;
+use App\Exports\CEORequisitionsExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CEORequisitionController extends Controller
 {
@@ -28,6 +30,22 @@ class CEORequisitionController extends Controller
 
         return view('ceo.requisitions.index', compact('requisitions'));
     }
+
+    /**
+ * Alias for approveRequisition - for route compatibility
+ */
+public function approve(Requisition $requisition)
+{
+    return $this->approveRequisition($requisition);
+}
+
+/**
+ * Alias for rejectRequisition - for route compatibility
+ */
+public function reject(Requisition $requisition)
+{
+    return $this->rejectRequisition($requisition);
+}
 
 public function pending()
 {
@@ -425,5 +443,14 @@ public function approveRequisition(Requisition $requisition)
         }
         
         return $changes ? implode(', ', $changes) : 'Details updated';
+    }
+
+    /**
+     * Export requisitions to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $status = $request->get('status');
+        return Excel::download(new CEORequisitionsExport($status), 'ceo_requisitions_' . date('Y-m-d') . '.xlsx');
     }
 }

@@ -7,9 +7,11 @@ use App\Models\Project;
 use App\Models\Subcontractor;
 use App\Models\ProjectSubcontractor;
 use App\Models\SubcontractorPayment;
+use App\Exports\SubcontractorPaymentsExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Maatwebsite\Excel\Facades\Excel;
 
 class SubcontractorController extends Controller
 {
@@ -124,5 +126,13 @@ class SubcontractorController extends Controller
         ]);
 
         return view('finance.subcontractors.ledger', compact('projectSubcontractor', 'ledger'));
+    }
+
+    /**
+     * Export subcontractor payments to Excel
+     */
+    public function exportExcel()
+    {
+        return Excel::download(new SubcontractorPaymentsExport, 'subcontractor_payments_' . date('Y-m-d') . '.xlsx');
     }
 }

@@ -81,13 +81,15 @@ class StoresDashboardController extends Controller
 
         // Get pending LPOs count
         $pendingLposCount = 0;
-        if ($currentStore->project_id) {
-            $pendingLposCount = Lpo::whereHas('requisition', function($query) use ($currentStore) {
-                    $query->where('project_id', $currentStore->project_id);
-                })
-                ->where('status', 'issued')
-                ->count();
-        }
+$allProjectIds = $stores->pluck('project_id')->filter()->toArray();
+
+if (!empty($allProjectIds)) {
+    $pendingLposCount = Lpo::whereHas('requisition', function($query) use ($allProjectIds) {
+            $query->whereIn('project_id', $allProjectIds);
+        })
+        ->where('status', 'issued')
+        ->count();
+}
 
         // Build comprehensive notification data for the bell icon
         $notifications = [

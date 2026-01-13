@@ -9,7 +9,10 @@ use App\Models\Requisition;
 use App\Models\Lpo;
 use App\Models\Expense;
 use App\Models\LpoReceivedItem;
+use App\Exports\PaymentsExport;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PaymentController extends Controller
 {
@@ -324,4 +327,46 @@ class PaymentController extends Controller
         fclose($handle);
     }, 'payments_with_vat_export_' . date('Y-m-d') . '.csv');
 }
+
+    /**
+     * Export payments to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $filters = $request->only(['payment_method', 'status', 'date_from', 'date_to']);
+        return Excel::download(new PaymentsExport($filters), 'payments_' . date('Y-m-d') . '.xlsx');
+    }
+
+    /**
+     * Export payments to PDF
+     */
+    public function exportPdf(Request $request)
+    {
+        $query = Payment::with(['lpo.requisition.project', 'supplier', 'paidBy'])
+            ->whereNotNull('paid_on');
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('date_from')) {
+            $query->whereDate('paid_on', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('paid_on', '<=', $request->date_to);
+        }
+
+        $payments = $query->latest()->get();
+
+        $pdf = Pdf::loadView('exports.pdf.payments', [
+            'payments' => $payments,
+            'title' => 'Payments Report'
+        ]);
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download('payments_' . date('Y-m-d') . '.pdf');
+    }
 }

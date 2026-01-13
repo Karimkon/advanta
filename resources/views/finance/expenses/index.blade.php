@@ -9,16 +9,23 @@
             <h2 class="mb-1">Expenses Management</h2>
             <p class="text-muted mb-0">Track and manage all project expenses</p>
         </div>
-        <div class="btn-group">
+        <div class="d-flex gap-2">
             <a href="{{ route('finance.expenses.create') }}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> New Expense
             </a>
             <a href="{{ route('finance.expenses.reports') }}" class="btn btn-info">
                 <i class="bi bi-graph-up"></i> Reports
             </a>
-            <a href="{{ route('finance.expenses.export') }}" class="btn btn-success">
-                <i class="bi bi-download"></i> Export
-            </a>
+            <div class="btn-group">
+                <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-download"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{{ route('finance.expenses.export.excel') }}"><i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('finance.expenses.export.pdf') }}"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</a></li>
+                    <li><a class="dropdown-item" href="{{ route('finance.expenses.export') }}"><i class="bi bi-file-earmark-text me-2"></i>CSV</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 

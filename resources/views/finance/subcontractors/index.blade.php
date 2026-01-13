@@ -10,9 +10,14 @@
             <h2 class="mb-1">Subcontractors Management</h2>
             <p class="text-muted mb-0">Manage all subcontractors and their contracts</p>
         </div>
-        <a href="{{ route('finance.subcontractors.create') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Add Subcontractor
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{{ route('finance.subcontractors.export.excel') }}" class="btn btn-success">
+                <i class="bi bi-download"></i> Export Excel
+            </a>
+            <a href="{{ route('finance.subcontractors.create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Subcontractor
+            </a>
+        </div>
     </div>
 
     <div class="card shadow-sm">

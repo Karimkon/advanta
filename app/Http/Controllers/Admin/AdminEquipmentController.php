@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Equipment;
 use App\Models\Project;
+use App\Exports\EquipmentExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AdminEquipmentController extends Controller
 {
@@ -177,5 +179,13 @@ class AdminEquipmentController extends Controller
         return redirect()
             ->route('admin.equipments.index')
             ->with('success', 'Equipment deleted successfully.');
+    }
+
+    /**
+     * Export equipments to Excel
+     */
+    public function exportExcel()
+    {
+        return Excel::download(new EquipmentExport, 'equipment_' . date('Y-m-d') . '.xlsx');
     }
 }

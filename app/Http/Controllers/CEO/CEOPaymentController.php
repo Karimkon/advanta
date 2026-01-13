@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Requisition;
 use App\Models\Expense;
+use App\Exports\CEOPaymentsExport;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB; // ADD THIS IMPORT
-use Illuminate\Support\Facades\Storage; // ADD THIS IMPORT
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class CEOPaymentController extends Controller
 {
@@ -145,5 +148,37 @@ class CEOPaymentController extends Controller
             ->paginate(15);
 
         return view('ceo.payments.index', compact('payments'));
+    }
+
+    /**
+     * Export payments to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $approvalStatus = $request->get('approval_status');
+        return Excel::download(new CEOPaymentsExport($approvalStatus), 'ceo_payments_' . date('Y-m-d') . '.xlsx');
+    }
+
+    /**
+     * Export payments to PDF
+     */
+    public function exportPdf(Request $request)
+    {
+        $query = Payment::with(['lpo.requisition.project', 'supplier', 'paidBy', 'approvedBy']);
+
+        if ($request->filled('approval_status')) {
+            $query->where('approval_status', $request->approval_status);
+        }
+
+        $payments = $query->latest()->get();
+
+        $pdf = Pdf::loadView('exports.pdf.payments', [
+            'payments' => $payments,
+            'title' => 'CEO Payments Report'
+        ]);
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download('ceo_payments_' . date('Y-m-d') . '.pdf');
     }
 }

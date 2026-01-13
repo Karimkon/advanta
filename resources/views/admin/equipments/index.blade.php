@@ -7,8 +7,13 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold mb-1">🚜 Company Equipments</h2>
+            <h2 class="fw-bold mb-1">Company Equipments</h2>
             <p class="text-muted mb-0">View and manage all company equipment</p>
+        </div>
+        <div class="btn-group">
+            <a href="{{ route('admin.equipments.export.excel') }}" class="btn btn-success">
+                <i class="bi bi-download"></i> Export Excel
+            </a>
         </div>
     </div>
 

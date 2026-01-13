@@ -187,6 +187,8 @@ Route::get('product-catalog/export-data', [ProductCatalogController::class, 'exp
     // Projects Management
     Route::prefix('projects')->name('projects.')->group(function () {
         Route::get('/', [AdminProjectController::class, 'index'])->name('index');
+        Route::get('/export/excel', [AdminProjectController::class, 'exportExcel'])->name('export.excel');
+        Route::get('/export/pdf', [AdminProjectController::class, 'exportPdf'])->name('export.pdf');
         Route::get('/create', [AdminProjectController::class, 'create'])->name('create');
         Route::post('/', [AdminProjectController::class, 'store'])->name('store');
         Route::get('/{project}', [AdminProjectController::class, 'show'])->name('show');
@@ -198,17 +200,20 @@ Route::get('product-catalog/export-data', [ProductCatalogController::class, 'exp
     // Requisitions Management
     Route::prefix('requisitions')->name('requisitions.')->group(function () {
         Route::get('/', [AdminRequisitionController::class, 'index'])->name('index');
-        Route::get('/create', [AdminRequisitionController::class, 'create'])->name('create');
-        Route::post('/', [AdminRequisitionController::class, 'store'])->name('store');
+        Route::get('/export/excel', [AdminRequisitionController::class, 'exportExcel'])->name('export.excel');
+        Route::get('/export/pdf', [AdminRequisitionController::class, 'exportPdf'])->name('export.pdf');
+        // Route::get('/create', [AdminRequisitionController::class, 'create'])->name('create'); // Admin shouldn't create requisitions
+        // Route::post('/', [AdminRequisitionController::class, 'store'])->name('store'); // Admin shouldn't create requisitions
         Route::get('/{requisition}', [AdminRequisitionController::class, 'show'])->name('show');
         Route::get('/{requisition}/edit', [AdminRequisitionController::class, 'edit'])->name('edit');
         Route::put('/{requisition}', [AdminRequisitionController::class, 'update'])->name('update');
         Route::delete('/{requisition}', [AdminRequisitionController::class, 'destroy'])->name('destroy');
+        
+        // Action routes - MUST be inside the requisitions group for correct naming
+        Route::post('/{requisition}/approve', [AdminRequisitionController::class, 'approve'])->name('approve');
+        Route::post('/{requisition}/reject', [AdminRequisitionController::class, 'reject'])->name('reject');
+        Route::post('/{requisition}/send-to-procurement', [AdminRequisitionController::class, 'sendToProcurement'])->name('send-to-procurement');
     });
-
-     Route::post('/{requisition}/approve', [AdminRequisitionController::class, 'approve'])->name('approve');
-    Route::post('/{requisition}/reject', [AdminRequisitionController::class, 'reject'])->name('reject');
-    Route::post('/{requisition}/send-to-procurement', [AdminRequisitionController::class, 'sendToProcurement'])->name('send-to-procurement');
 
     // Procurement
     Route::prefix('procurement')->name('procurement.')->group(function () {
@@ -238,6 +243,8 @@ Route::get('product-catalog/export-data', [ProductCatalogController::class, 'exp
                 ->get();
             return view('admin.lpos.index', compact('lpos'));
         })->name('index');
+        Route::get('/export/excel', [\App\Http\Controllers\Admin\AdminLpoController::class, 'exportExcel'])->name('export.excel');
+        Route::get('/export/pdf', [\App\Http\Controllers\Admin\AdminLpoController::class, 'exportPdf'])->name('export.pdf');
 
         Route::get('/{lpo}', function (\App\Models\Lpo $lpo) {
             $lpo->load(['supplier', 'requisition.project', 'items', 'issuer', 'receivedItems']);
@@ -520,6 +527,7 @@ Route::prefix('milestones')->name('milestones.')->group(function () {
     // Equipment Management
     Route::prefix('equipments')->name('equipments.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'index'])->name('index');
+        Route::get('/export/excel', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'exportExcel'])->name('export.excel');
         Route::get('/{equipment}', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'show'])->name('show');
         Route::get('/{equipment}/edit', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'edit'])->name('edit');
         Route::put('/{equipment}', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'update'])->name('update');
@@ -677,21 +685,25 @@ Route::middleware(['auth','role:finance'])->prefix('finance')->name('finance.')-
         Route::get('/pending', [PaymentController::class, 'pending'])->name('pending');
         Route::get('/create/{requisition}', [PaymentController::class, 'create'])->name('create');
         Route::post('/store/{requisition}', [PaymentController::class, 'store'])->name('store');
-        Route::get('/{payment}', [PaymentController::class, 'show'])->name('show');
         Route::get('/export/csv', [PaymentController::class, 'export'])->name('export');
+        Route::get('/export/excel', [PaymentController::class, 'exportExcel'])->name('export.excel');
+        Route::get('/export/pdf', [PaymentController::class, 'exportPdf'])->name('export.pdf');
+        Route::get('/{payment}', [PaymentController::class, 'show'])->name('show');
     });
     
     // Expenses
     Route::prefix('expenses')->name('expenses.')->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('index');
         Route::get('/create', [ExpenseController::class, 'create'])->name('create');
+        Route::get('/export/csv', [ExpenseController::class, 'export'])->name('export');
+        Route::get('/export/excel', [ExpenseController::class, 'exportExcel'])->name('export.excel');
+        Route::get('/export/pdf', [ExpenseController::class, 'exportPdf'])->name('export.pdf');
+        Route::get('/reports/summary', [ExpenseController::class, 'reports'])->name('reports');
         Route::post('/', [ExpenseController::class, 'store'])->name('store');
         Route::get('/{expense}', [ExpenseController::class, 'show'])->name('show');
         Route::get('/{expense}/edit', [ExpenseController::class, 'edit'])->name('edit');
         Route::put('/{expense}', [ExpenseController::class, 'update'])->name('update');
         Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
-        Route::get('/reports/summary', [ExpenseController::class, 'reports'])->name('reports');
-        Route::get('/export/csv', [ExpenseController::class, 'export'])->name('export');
     });
     
     // Financial Reports
@@ -705,10 +717,11 @@ Route::middleware(['auth','role:finance'])->prefix('finance')->name('finance.')-
 Route::prefix('subcontractors')->name('subcontractors.')->group(function () {
     Route::get('/', [SubcontractorController::class, 'index'])->name('index');
     Route::get('/create', [SubcontractorController::class, 'create'])->name('create');
+    Route::get('/export/excel', [SubcontractorController::class, 'exportExcel'])->name('export.excel');
     Route::post('/', [SubcontractorController::class, 'store'])->name('store');
     Route::get('/{subcontractor}', [SubcontractorController::class, 'show'])->name('show');
     Route::get('/contract/{projectSubcontractor}/ledger', [SubcontractorController::class, 'ledger'])->name('ledger');
-    
+
     // Payments
     Route::get('/contract/{projectSubcontractor}/payments/create', [SubcontractorPaymentController::class, 'create'])->name('payments.create');
     Route::post('/contract/{projectSubcontractor}/payments', [SubcontractorPaymentController::class, 'store'])->name('payments.store');
@@ -717,6 +730,7 @@ Route::prefix('subcontractors')->name('subcontractors.')->group(function () {
 Route::prefix('labor')->name('labor.')->group(function () {
     Route::get('/', [LaborController::class, 'index'])->name('index');
     Route::get('/create', [LaborController::class, 'create'])->name('create');
+    Route::get('/export/excel', [LaborController::class, 'exportExcel'])->name('export.excel');
     Route::post('/', [LaborController::class, 'store'])->name('store');
      Route::get('/import', [LaborController::class, 'import'])->name('import');
     Route::post('/import', [LaborController::class, 'processImport'])->name('process-import');
@@ -811,10 +825,11 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
     Route::prefix('requisitions')->name('requisitions.')->group(function () {
         Route::get('/', [CEORequisitionController::class, 'index'])->name('index');
         Route::get('/pending', [CEORequisitionController::class, 'pending'])->name('pending');
+        Route::get('/export/excel', [CEORequisitionController::class, 'exportExcel'])->name('export.excel');
         Route::get('/{requisition}', [CEORequisitionController::class, 'show'])->name('show');
          Route::get('/{requisition}/edit', [CEORequisitionController::class, 'edit'])->name('edit');
         Route::put('/{requisition}', [CEORequisitionController::class, 'update'])->name('update');
-        
+
         // Approval routes
         Route::post('/{requisition}/approve', [CEORequisitionController::class, 'approve'])->name('approve');
         Route::post('/{requisition}/reject', [CEORequisitionController::class, 'reject'])->name('reject');
@@ -831,6 +846,8 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/pending', [CEOPaymentController::class, 'pendingPayments'])->name('pending');
         Route::get('/', [CEOPaymentController::class, 'allPayments'])->name('index');
+        Route::get('/export/excel', [CEOPaymentController::class, 'exportExcel'])->name('export.excel');
+        Route::get('/export/pdf', [CEOPaymentController::class, 'exportPdf'])->name('export.pdf');
         Route::get('/{payment}', [CEOPaymentController::class, 'showPayment'])->name('show');
         Route::post('/{payment}/approve', [CEOPaymentController::class, 'approvePayment'])->name('approve');
         Route::post('/{payment}/reject', [CEOPaymentController::class, 'rejectPayment'])->name('reject');
@@ -849,6 +866,8 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
         Route::get('/project/{project}', [CEOFinancialReportsController::class, 'projectReport'])->name('project');
         Route::get('/requisitions', [CEOFinancialReportsController::class, 'requisitionsReport'])->name('requisitions');
         Route::get('/export/summary', [CEOFinancialReportsController::class, 'exportFinancialSummary'])->name('export.summary');
+        Route::get('/export/excel', [CEOFinancialReportsController::class, 'exportExcel'])->name('export.excel');
+        Route::get('/export/pdf', [CEOFinancialReportsController::class, 'exportPdf'])->name('export.pdf');
     });
 
       // Inventory Overview - ADD THESE NEW ROUTES
@@ -857,6 +876,7 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
         Route::get('/store/{store}', [CEOInventoryController::class, 'storeDetail'])->name('store');
         Route::get('/movements', [CEOInventoryController::class, 'stockMovements'])->name('movements');
         Route::get('/export', [CEOInventoryController::class, 'exportInventoryReport'])->name('export');
+        Route::get('/export/excel', [CEOInventoryController::class, 'exportExcel'])->name('export.excel');
     });
 
     // CEO Milestone Routes

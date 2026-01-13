@@ -9,13 +9,20 @@
             <h2 class="mb-1">All Payments</h2>
             <p class="text-muted mb-0">View and manage all payment records</p>
         </div>
-        <div class="btn-group">
+        <div class="d-flex gap-2">
             <a href="{{ route('finance.payments.pending') }}" class="btn btn-warning">
-                <i class="bi bi-clock"></i> Pending Payments
+                <i class="bi bi-clock"></i> Pending
             </a>
-            <a href="{{ route('finance.payments.export') }}" class="btn btn-success">
-                <i class="bi bi-download"></i> Export CSV
-            </a>
+            <div class="btn-group">
+                <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-download"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{{ route('finance.payments.export.excel') }}"><i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)</a></li>
+                    <li><a class="dropdown-item" href="{{ route('finance.payments.export.pdf') }}"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</a></li>
+                    <li><a class="dropdown-item" href="{{ route('finance.payments.export') }}"><i class="bi bi-file-earmark-text me-2"></i>CSV</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 

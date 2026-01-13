@@ -52,7 +52,15 @@ class Requisition extends Model
 
     public function requester()
     {
-        return $this->belongsTo(User::class, 'requested_by');
+        return $this->belongsTo(User::class, 'requested_by')->withDefault(function ($user, $requisition) {
+            // If it's a subcontractor requisition, use subcontractor name
+            if ($requisition->subcontractor_id) {
+                $subcontractor = Subcontractor::find($requisition->subcontractor_id);
+                $user->name = $subcontractor ? $subcontractor->name . ' (Subcontractor)' : 'N/A';
+            } else {
+                $user->name = 'N/A';
+            }
+        });
     }
 
     public function subcontractor()

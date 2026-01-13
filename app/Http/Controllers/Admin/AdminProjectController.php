@@ -7,8 +7,11 @@ use App\Models\Project;
 use App\Models\ProjectMilestone;
 use App\Models\User;
 use App\Models\Store;
+use App\Exports\ProjectsExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 use DateTime;
 
 class AdminProjectController extends Controller
@@ -668,5 +671,30 @@ public function update(Request $request, Project $project)
             DB::rollBack();
             return back()->with('error', 'Failed to delete project: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Export projects to Excel
+     */
+    public function exportExcel()
+    {
+        return Excel::download(new ProjectsExport, 'projects_' . date('Y-m-d') . '.xlsx');
+    }
+
+    /**
+     * Export projects to PDF
+     */
+    public function exportPdf()
+    {
+        $projects = Project::with(['users'])->latest()->get();
+
+        $pdf = Pdf::loadView('exports.pdf.projects', [
+            'projects' => $projects,
+            'title' => 'Projects Report'
+        ]);
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download('projects_' . date('Y-m-d') . '.pdf');
     }
 }

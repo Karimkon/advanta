@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Expense;
 use App\Models\Project;
+use App\Exports\ExpensesExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ExpenseController extends Controller
 {
@@ -128,5 +131,40 @@ class ExpenseController extends Controller
                 echo "{$expense->incurred_on},{$expense->project->name},{$expense->type},{$expense->description},{$expense->amount},{$expense->status}\n";
             }
         }, 'expenses_export_' . date('Y-m-d') . '.csv');
+    }
+
+    /**
+     * Export expenses to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $filters = $request->only(['project_id', 'type', 'status', 'date_from', 'date_to']);
+        return Excel::download(new ExpensesExport($filters), 'expenses_' . date('Y-m-d') . '.xlsx');
+    }
+
+    /**
+     * Export expenses to PDF
+     */
+    public function exportPdf(Request $request)
+    {
+        $query = Expense::with(['project', 'recordedBy']);
+
+        if ($request->filled('project_id')) {
+            $query->where('project_id', $request->project_id);
+        }
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $expenses = $query->latest()->get();
+
+        $pdf = Pdf::loadView('exports.pdf.expenses', [
+            'expenses' => $expenses,
+            'title' => 'Expenses Report'
+        ]);
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download('expenses_' . date('Y-m-d') . '.pdf');
     }
 }
