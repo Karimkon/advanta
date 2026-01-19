@@ -354,6 +354,11 @@ body {
             <i class="bi bi-person-badge"></i> Office Staff
         </a>
 
+        <!-- Clients -->
+        <a href="{{ route('admin.clients.index') }}" class="{{ request()->routeIs('admin.clients.*') ? 'active' : '' }}">
+            <i class="bi bi-person-check"></i> Clients
+        </a>
+
         <!-- Company Equipments -->
         <a href="{{ route('admin.equipments.index') }}" class="{{ request()->routeIs('admin.equipments.*') ? 'active' : '' }}">
             <i class="bi bi-truck"></i> Company Equipments

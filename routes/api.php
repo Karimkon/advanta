@@ -33,6 +33,8 @@ use App\Models\StaffReport;
 use App\Models\QhseReport;
 use App\Models\InAppNotification;
 use App\Models\Equipment;
+use App\Models\Client;
+use App\Models\DeviceToken;
 
 /*
 |--------------------------------------------------------------------------
@@ -3296,6 +3298,77 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
+    // ==================== DEVICE TOKENS (Push Notifications) ====================
+    Route::prefix('device-token')->group(function () {
+
+        // Register device token for push notifications
+        Route::post('/register', function (Request $request) {
+            $request->validate([
+                'device_token' => 'required|string',
+                'device_type' => 'required|in:ios,android,web',
+            ]);
+
+            $user = $request->user();
+
+            // Check if token already exists for any user
+            $existingToken = DeviceToken::where('device_token', $request->device_token)->first();
+
+            if ($existingToken) {
+                // If token belongs to a different user, reassign it
+                if ($existingToken->tokenable_id !== $user->id || $existingToken->tokenable_type !== get_class($user)) {
+                    $existingToken->update([
+                        'tokenable_type' => get_class($user),
+                        'tokenable_id' => $user->id,
+                        'device_type' => $request->device_type,
+                        'is_active' => true,
+                        'last_used_at' => now(),
+                    ]);
+                } else {
+                    // Just update the existing token
+                    $existingToken->update([
+                        'is_active' => true,
+                        'last_used_at' => now(),
+                    ]);
+                }
+            } else {
+                // Create new token
+                DeviceToken::create([
+                    'tokenable_type' => get_class($user),
+                    'tokenable_id' => $user->id,
+                    'device_token' => $request->device_token,
+                    'device_type' => $request->device_type,
+                    'is_active' => true,
+                    'last_used_at' => now(),
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Device token registered successfully',
+            ]);
+        });
+
+        // Unregister device token (on logout)
+        Route::post('/unregister', function (Request $request) {
+            $request->validate([
+                'device_token' => 'required|string',
+            ]);
+
+            $user = $request->user();
+
+            // Find and deactivate the token
+            DeviceToken::where('device_token', $request->device_token)
+                ->where('tokenable_id', $user->id)
+                ->where('tokenable_type', get_class($user))
+                ->update(['is_active' => false]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Device token unregistered successfully',
+            ]);
+        });
+    });
+
     // ==================== REPORTS ====================
     Route::prefix('reports')->group(function () {
 
@@ -3518,11 +3591,217 @@ Route::middleware('auth:sanctum')->group(function () {
             }
             
             $equipment->delete();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Equipment deleted successfully',
             ]);
         });
+
+    // ====================
+    // CLIENT ROUTES
+    // ====================
+
+    Route::prefix('client')->group(function () {
+        // Client Login (Public - no auth required)
+        Route::post('/login', function (Request $request) {
+            $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
+
+            $client = \App\Models\Client::where('email', $request->email)->first();
+
+            if (!$client || !Hash::check($request->password, $client->password)) {
+                throw ValidationException::withMessages([
+                    'email' => ['The provided credentials are incorrect.'],
+                ]);
+            }
+
+            if (!$client->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account has been deactivated. Please contact administrator.',
+                ], 403);
+            }
+
+            $token = $client->createToken('client-app')->plainTextToken;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Login successful',
+                'data' => [
+                    'client' => [
+                        'id' => $client->id,
+                        'name' => $client->name,
+                        'email' => $client->email,
+                        'phone' => $client->phone,
+                        'company' => $client->company,
+                        'is_active' => $client->is_active,
+                        'created_at' => $client->created_at,
+                    ],
+                    'token' => $token,
+                ],
+            ]);
+        });
+
+        // Protected client routes
+        Route::middleware('auth:sanctum')->group(function () {
+            // Logout
+            Route::post('/logout', function (Request $request) {
+                $request->user()->currentAccessToken()->delete();
+                return response()->json(['success' => true, 'message' => 'Logged out successfully']);
+            });
+
+            // Get client profile
+            Route::get('/profile', function (Request $request) {
+                $client = $request->user();
+                $client->load('projects');
+
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'id' => $client->id,
+                        'name' => $client->name,
+                        'email' => $client->email,
+                        'phone' => $client->phone,
+                        'company' => $client->company,
+                        'is_active' => $client->is_active,
+                        'projects_count' => $client->projects->count(),
+                        'created_at' => $client->created_at,
+                    ],
+                ]);
+            });
+
+            // Get client projects
+            Route::get('/projects', function (Request $request) {
+                $client = $request->user();
+                $projects = $client->projects()
+                    ->with(['users', 'milestones'])
+                    ->get()
+                    ->map(function ($project) {
+                        return [
+                            'id' => $project->id,
+                            'name' => $project->name,
+                            'code' => $project->code,
+                            'location' => $project->location,
+                            'status' => $project->status,
+                            'budget' => $project->budget,
+                            'start_date' => $project->start_date,
+                            'end_date' => $project->end_date,
+                            'description' => $project->description,
+                            'progress' => $project->progress ?? 0,
+                            'milestones_count' => $project->milestones->count(),
+                            'completed_milestones' => $project->milestones->where('status', 'completed')->count(),
+                            'created_at' => $project->created_at,
+                        ];
+                    });
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $projects,
+                ]);
+            });
+
+            // Get project milestones
+            Route::get('/projects/{projectId}/milestones', function (Request $request, $projectId) {
+                $client = $request->user();
+                $project = $client->projects()->find($projectId);
+
+                if (!$project) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Project not found or access denied',
+                    ], 404);
+                }
+
+                $milestones = $project->milestones()
+                    ->orderBy('scheduled_date', 'asc')
+                    ->get()
+                    ->map(function ($milestone) {
+                        $photos = [];
+                        if ($milestone->photos) {
+                            $photoArray = json_decode($milestone->photos, true);
+                            if (is_array($photoArray)) {
+                                foreach ($photoArray as $photo) {
+                                    $photos[] = asset('storage/' . $photo);
+                                }
+                            }
+                        }
+
+                        return [
+                            'id' => $milestone->id,
+                            'title' => $milestone->title,
+                            'description' => $milestone->description,
+                            'status' => $milestone->status,
+                            'scheduled_date' => $milestone->scheduled_date,
+                            'completed_date' => $milestone->completed_date,
+                            'progress_percentage' => $milestone->progress_percentage ?? 0,
+                            'notes' => $milestone->notes,
+                            'surveyor_name' => $milestone->surveyor_name,
+                            'photos' => $photos,
+                            'created_at' => $milestone->created_at,
+                        ];
+                    });
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $milestones,
+                ]);
+            });
+
+            // Get milestone detail
+            Route::get('/projects/{projectId}/milestones/{milestoneId}', function (Request $request, $projectId, $milestoneId) {
+                $client = $request->user();
+                $project = $client->projects()->find($projectId);
+
+                if (!$project) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Project not found or access denied',
+                    ], 404);
+                }
+
+                $milestone = $project->milestones()->find($milestoneId);
+
+                if (!$milestone) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Milestone not found',
+                    ], 404);
+                }
+
+                $photos = [];
+                if ($milestone->photos) {
+                    $photoArray = json_decode($milestone->photos, true);
+                    if (is_array($photoArray)) {
+                        foreach ($photoArray as $photo) {
+                            $photos[] = asset('storage/' . $photo);
+                        }
+                    }
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'id' => $milestone->id,
+                        'project_id' => $milestone->project_id,
+                        'project_name' => $project->name,
+                        'title' => $milestone->title,
+                        'description' => $milestone->description,
+                        'status' => $milestone->status,
+                        'scheduled_date' => $milestone->scheduled_date,
+                        'completed_date' => $milestone->completed_date,
+                        'progress_percentage' => $milestone->progress_percentage ?? 0,
+                        'notes' => $milestone->notes,
+                        'surveyor_name' => $milestone->surveyor_name,
+                        'photos' => $photos,
+                        'created_at' => $milestone->created_at,
+                        'updated_at' => $milestone->updated_at,
+                    ],
+                ]);
+            });
+        });
+    });
 });
 });

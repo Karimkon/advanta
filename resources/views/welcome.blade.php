@@ -195,6 +195,12 @@
             <h4 class="text-lg font-bold mb-2 text-orange-300">Subcontractor Portal</h4>
             <p class="text-sm text-gray-300">Request materials & requisitions</p>
         </a>
+        <!-- Client Portal Card -->
+        <a href="/client/login" class="role-card group p-6 rounded-2xl text-center">
+            <div class="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">👤</div>
+            <h4 class="text-lg font-bold mb-2 text-sky-300">Client Portal</h4>
+            <p class="text-sm text-gray-300">View project milestones</p>
+        </a>
     </div>
 
     <!-- Manual Icon at Bottom -->

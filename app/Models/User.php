@@ -57,4 +57,16 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Store::class, 'shop_id');
     }
+
+    // Device tokens for push notifications
+    public function deviceTokens()
+    {
+        return $this->morphMany(DeviceToken::class, 'tokenable');
+    }
+
+    // Get active device tokens
+    public function activeDeviceTokens()
+    {
+        return $this->deviceTokens()->where('is_active', true);
+    }
 }

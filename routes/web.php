@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Auth;
 // ----------------------
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminUserController;
-use App\Http\Controllers\Admin\AdminProjectController; 
+use App\Http\Controllers\Admin\AdminProjectController;
+use App\Http\Controllers\Admin\AdminClientController; 
 use App\Http\Controllers\Operations\OperationsDashboardController;
 use App\Http\Controllers\Procurement\ProcurementDashboardController;
 use App\Http\Controllers\Finance\FinanceDashboardController;
@@ -149,6 +150,26 @@ Route::post('/surveyor/login', fn(Request $r) =>
 Route::post('/supplier/login', fn(Request $r) => 
     roleLogin($r,'supplier','supplier.dashboard')
 )->name('supplier.login.submit');
+
+// ----------------------
+// Privacy Policy Page
+// ----------------------
+Route::get('/privacy', function () {
+    return view('privacy');
+})->name('privacy');
+
+// ----------------------
+// Support Page with WhatsApp
+// ----------------------
+Route::get('/support', function () {
+    $whatsappNumber = '0707208954'; // Your WhatsApp number
+    $whatsappUrl = "https://wa.me/256707208954?text=Hello%20Advanta%20Support%2C%20I%20need%20assistance%20with...";
+    
+    return view('support', [
+        'whatsappUrl' => $whatsappUrl,
+        'whatsappNumber' => $whatsappNumber
+    ]);
+})->name('support');
 
 // ====================================================
 // LOGOUT (shared)
@@ -533,6 +554,20 @@ Route::prefix('milestones')->name('milestones.')->group(function () {
         Route::put('/{equipment}', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'update'])->name('update');
         Route::delete('/{equipment}', [\App\Http\Controllers\Admin\AdminEquipmentController::class, 'destroy'])->name('destroy');
     });
+
+    // Client Management
+    Route::prefix('clients')->name('clients.')->group(function () {
+        Route::get('/', [AdminClientController::class, 'index'])->name('index');
+        Route::get('/create', [AdminClientController::class, 'create'])->name('create');
+        Route::post('/', [AdminClientController::class, 'store'])->name('store');
+        Route::get('/{client}', [AdminClientController::class, 'show'])->name('show');  // ADD THIS LINE
+        Route::get('/{client}/edit', [AdminClientController::class, 'edit'])->name('edit');
+        Route::put('/{client}', [AdminClientController::class, 'update'])->name('update');
+        Route::delete('/{client}', [AdminClientController::class, 'destroy'])->name('destroy');
+        Route::post('/{client}/toggle-status', [AdminClientController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{client}/attach-project', [AdminClientController::class, 'attachProject'])->name('attach-project');
+        Route::delete('/{client}/detach-project/{project}', [AdminClientController::class, 'detachProject'])->name('detach-project');
+    });
 });
 
 // Replace your current API route with this:
@@ -625,6 +660,7 @@ Route::middleware(['auth','role:procurement'])->prefix('procurement')->name('pro
         Route::delete('/{supplier}', [ProcurementSupplierController::class, 'destroy'])->name('destroy');
     });
 });
+
 
 // Add to web.php temporarily
 Route::get('/debug/store-service/{lpo_id}', function($lpo_id) {
@@ -750,6 +786,7 @@ Route::prefix('labor')->name('labor.')->group(function () {
             Route::get('/report', [\App\Http\Controllers\Finance\BulkLaborPaymentController::class, 'getMonthlyReport'])->name('report');
         });
 });
+
 
     // Equipment Management
     Route::prefix('equipments')->name('equipments.')->group(function () {
@@ -908,6 +945,7 @@ Route::middleware(['auth','role:ceo'])->prefix('ceo')->name('ceo.')->group(funct
     });
 });
 
+// ====================================================
 // PROJECT MANAGER
 Route::middleware(['auth','role:project_manager'])->prefix('project-manager')->name('project_manager.')->group(function () {
     Route::get('/dashboard', [ProjectManagerDashboardController::class,'index'])->name('dashboard');
@@ -935,6 +973,7 @@ Route::middleware(['auth','role:project_manager'])->prefix('project-manager')->n
     });
 });
 
+// ====================================================
 // ENGINEER
 Route::middleware(['auth','role:engineer'])->prefix('engineer')->name('engineer.')->group(function () {
     Route::get('/dashboard', [EngineerDashboardController::class,'index'])->name('dashboard');
@@ -973,6 +1012,7 @@ Route::middleware(['auth','role:surveyor'])->prefix('surveyor')->name('surveyor.
     });
 });
 
+// ====================================================
 // Staff Reports Public Routes (no authentication required)
 Route::prefix('staff-reports')->name('staff-reports.')->group(function () {
     Route::get('/submit', [StaffReportController::class, 'create'])->name('create');
@@ -1040,5 +1080,30 @@ Route::middleware(['auth:subcontractor'])->prefix('subcontractor')->name('subcon
         Route::get('/{requisition}/edit', [SubcontractorRequisitionController::class, 'edit'])->name('edit');
         Route::put('/{requisition}', [SubcontractorRequisitionController::class, 'update'])->name('update');
         Route::delete('/{requisition}', [SubcontractorRequisitionController::class, 'destroy'])->name('destroy');
+    });
+});
+
+// ====================================================
+// CLIENT ROUTES
+// ====================================================
+use App\Http\Controllers\Client\ClientAuthController;
+use App\Http\Controllers\Client\ClientDashboardController;
+
+// Client Auth Routes (Public)
+Route::prefix('client')->name('client.')->group(function () {
+    Route::get('/login', [ClientAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [ClientAuthController::class, 'login'])->name('login.submit');
+    Route::post('/logout', [ClientAuthController::class, 'logout'])->name('logout');
+});
+
+// Client Protected Routes
+Route::middleware(['auth:client'])->prefix('client')->name('client.')->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [ClientDashboardController::class, 'index'])->name('dashboard');
+    
+    // Projects & Milestones
+    Route::prefix('projects')->name('projects.')->group(function () {
+        Route::get('/{project}/milestones', [ClientDashboardController::class, 'projectMilestones'])->name('milestones');
+        Route::get('/{project}/milestones/{milestone}', [ClientDashboardController::class, 'milestoneDetail'])->name('milestone.detail');
     });
 });
