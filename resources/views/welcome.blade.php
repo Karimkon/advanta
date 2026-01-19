@@ -76,6 +76,64 @@
 
 <body class="gradient-bg text-white min-h-screen flex items-center justify-center">
 
+<!-- Error/Success Message Alert -->
+@if(session('error'))
+<div id="alert-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg px-4">
+    <div class="bg-red-500/90 backdrop-blur-lg text-white px-6 py-4 rounded-2xl shadow-2xl border border-red-400/30 flex items-center gap-4">
+        <div class="bg-white/20 p-2 rounded-full">
+            <i class="bi bi-exclamation-triangle text-xl"></i>
+        </div>
+        <div class="flex-1">
+            <div class="font-bold text-sm">Session Notice</div>
+            <div class="text-sm text-red-100">{{ session('error') }}</div>
+        </div>
+        <button onclick="document.getElementById('alert-message').remove()" class="text-white/70 hover:text-white transition-colors">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+</div>
+<script>
+    // Auto-hide alert after 5 seconds
+    setTimeout(function() {
+        const alert = document.getElementById('alert-message');
+        if (alert) {
+            alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            alert.style.opacity = '0';
+            alert.style.transform = 'translate(-50%, -20px)';
+            setTimeout(() => alert.remove(), 500);
+        }
+    }, 5000);
+</script>
+@endif
+
+@if(session('success'))
+<div id="success-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg px-4">
+    <div class="bg-green-500/90 backdrop-blur-lg text-white px-6 py-4 rounded-2xl shadow-2xl border border-green-400/30 flex items-center gap-4">
+        <div class="bg-white/20 p-2 rounded-full">
+            <i class="bi bi-check-circle text-xl"></i>
+        </div>
+        <div class="flex-1">
+            <div class="font-bold text-sm">Success</div>
+            <div class="text-sm text-green-100">{{ session('success') }}</div>
+        </div>
+        <button onclick="document.getElementById('success-message').remove()" class="text-white/70 hover:text-white transition-colors">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+</div>
+<script>
+    setTimeout(function() {
+        const alert = document.getElementById('success-message');
+        if (alert) {
+            alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            alert.style.opacity = '0';
+            alert.style.transform = 'translate(-50%, -20px)';
+            setTimeout(() => alert.remove(), 500);
+        }
+    }, 5000);
+</script>
+@endif
+
 <div class="max-w-6xl w-full mx-auto text-center p-8">
     <!-- Logo Section -->
     <div class="fade-in-up mb-8 logo-container">
