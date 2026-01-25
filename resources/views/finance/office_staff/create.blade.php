@@ -52,7 +52,14 @@
                                 <option value="Operations">Operations</option>
                                 <option value="Finance">Finance</option>
                                 <option value="Administration">Administration</option>
-                                <option value="Marketing">Marketing</option>
+                                <option value="Construction">Construction</option>
+                                <option value="Foreman">Foreman</option>
+                                <option value="Driver">Driver</option>
+                                <option value="Stores">Stores</option>
+                                <option value="CivilEngineer">Civil Engineer</option>
+                                <option value="ProjectManager">Project Manager</option>
+                                <option value="Procurement">Procurement</option>
+                                <option value="QuantitySurveyor">Quantity Surveyor</option>
                                 <option value="IT">IT</option>
                                 <option value="HR">HR</option>
                             </select>

@@ -9,11 +9,20 @@ use App\Models\StoreRelease;
 use App\Models\StoreReleaseItem;
 use App\Models\InventoryItem;
 use App\Models\InventoryLog;
+use App\Models\AuditLog;
+use App\Services\InventoryMatchingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class StoreReleaseController extends Controller
 {
+    protected InventoryMatchingService $matchingService;
+
+    public function __construct(InventoryMatchingService $matchingService)
+    {
+        $this->matchingService = $matchingService;
+    }
+
     public function index(Store $store)
     {
         $user = auth()->user();
@@ -67,84 +76,31 @@ public function create(Store $store, Requisition $requisition)
         abort(403, 'Unauthorized access to this store.');
     }
 
-    if ($requisition->store_id !== $store->id || 
+    if ($requisition->store_id !== $store->id ||
         $requisition->status !== Requisition::STATUS_PROJECT_MANAGER_APPROVED ||
         $requisition->type !== Requisition::TYPE_STORE) {
         abort(403, 'Invalid requisition for store release.');
     }
 
     $requisition->load(['items']);
-    
-    // Enhanced inventory item matching
+
+    // Use the InventoryMatchingService for cleaner, more maintainable matching
+    $this->matchingService->findMatchesForItems($requisition->items, $store->id);
+
+    // Log each match attempt for debugging (optional - can be disabled in production)
     foreach ($requisition->items as $item) {
-        $inventoryItem = null;
-        
-        // 1. Try by product catalog ID first (most reliable)
-        if ($item->product_catalog_id) {
-            $inventoryItem = InventoryItem::where('store_id', $store->id)
-                ->where('product_catalog_id', $item->product_catalog_id)
-                ->first();
-        }
-        
-        // 2. Try by exact name match
-        if (!$inventoryItem) {
-            $inventoryItem = InventoryItem::where('store_id', $store->id)
-                ->where('name', $item->name)
-                ->first();
-        }
-        
-        // 3. Try by partial name match (item name contained in inventory name)
-        if (!$inventoryItem) {
-            $inventoryItem = InventoryItem::where('store_id', $store->id)
-                ->where('name', 'like', '%' . $item->name . '%')
-                ->first();
-        }
-        
-        // 4. Try reverse - inventory name contained in item name
-        if (!$inventoryItem) {
-            $inventoryItem = InventoryItem::where('store_id', $store->id)
-                ->whereRaw('? LIKE CONCAT("%", name, "%")', [$item->name])
-                ->first();
-        }
-        
-        // 5. Try by SKU if the item name looks like it contains a SKU
-        if (!$inventoryItem && preg_match('/SKU-[A-Z0-9]+/i', $item->name, $matches)) {
-            $inventoryItem = InventoryItem::where('store_id', $store->id)
-                ->where('sku', $matches[0])
-                ->first();
-        }
-        
-        // 6. Try fuzzy match - extract key words and match
-        if (!$inventoryItem) {
-            // Extract first few significant words from item name
-            $words = preg_split('/[\s\-\_\(\)]+/', $item->name);
-            $significantWords = array_filter($words, fn($w) => strlen($w) > 3);
-            $firstWords = array_slice($significantWords, 0, 3);
-            
-            if (count($firstWords) >= 2) {
-                $searchPattern = '%' . implode('%', $firstWords) . '%';
-                $inventoryItem = InventoryItem::where('store_id', $store->id)
-                    ->where('name', 'like', $searchPattern)
-                    ->first();
-            }
-        }
-        
-        // Log for debugging
-        \Log::info("Store Release Matching", [
-            'requisition_item_id' => $item->id,
-            'requisition_item_name' => $item->name,
-            'product_catalog_id' => $item->product_catalog_id,
-            'store_id' => $store->id,
-            'matched_inventory_item' => $inventoryItem ? [
-                'id' => $inventoryItem->id,
-                'name' => $inventoryItem->name,
-                'quantity' => $inventoryItem->quantity
-            ] : null
-        ]);
-        
-        $item->available_stock = $inventoryItem ? $inventoryItem->quantity : 0;
-        $item->can_fulfill = $inventoryItem && $inventoryItem->quantity >= $item->quantity;
-        $item->inventory_item = $inventoryItem;
+        $this->matchingService->logMatchAttempt(
+            $item,
+            $store->id,
+            [
+                'item' => $item->matched_inventory_item,
+                'match_type' => $item->match_type,
+                'confidence' => $item->match_confidence,
+            ]
+        );
+
+        // Set the inventory_item property for backward compatibility with the view
+        $item->inventory_item = $item->matched_inventory_item;
     }
 
     return view('stores.releases.create', compact('store', 'requisition', 'stores'));
@@ -238,6 +194,24 @@ public function create(Store $store, Requisition $requisition)
         if ($totalReleased > 0) {
             $newStatus = $allItemsReleased ? Requisition::STATUS_COMPLETED : Requisition::STATUS_PARTIAL;
             $requisition->update(['status' => $newStatus]);
+
+            // Log the store release
+            AuditLog::log(
+                AuditLog::ACTION_RELEASE,
+                "Store release completed for requisition {$requisition->ref} - {$totalReleased} items released",
+                $storeRelease,
+                null,
+                [
+                    'total_items_released' => $totalReleased,
+                    'all_items_released' => $allItemsReleased,
+                    'new_requisition_status' => $newStatus,
+                ],
+                [
+                    'store_name' => $store->name,
+                    'requisition_ref' => $requisition->ref,
+                    'project_name' => $requisition->project->name ?? null,
+                ]
+            );
         } else {
             throw new \Exception("No items were released. Please specify quantities to release.");
         }

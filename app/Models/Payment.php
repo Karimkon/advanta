@@ -9,10 +9,40 @@ class Payment extends Model
 {
     use HasFactory;
 
-    // Approval status constants
+    // Approval status constants - use these consistently throughout the application
     const APPROVAL_PENDING = 'pending_ceo';
     const APPROVAL_APPROVED = 'ceo_approved';
     const APPROVAL_REJECTED = 'ceo_rejected';
+
+    // Payment status constants
+    const STATUS_PENDING = 'pending';
+    const STATUS_PROCESSING = 'processing';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_FAILED = 'failed';
+
+    /**
+     * Boot method to synchronize approval fields
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Ensure ceo_approved boolean stays in sync with approval_status
+        static::saving(function ($payment) {
+            // If approval_status is being set, sync ceo_approved
+            if ($payment->isDirty('approval_status')) {
+                $payment->ceo_approved = $payment->approval_status === self::APPROVAL_APPROVED;
+            }
+            // If ceo_approved is being set directly, sync approval_status
+            elseif ($payment->isDirty('ceo_approved')) {
+                if ($payment->ceo_approved && $payment->approval_status !== self::APPROVAL_APPROVED) {
+                    $payment->approval_status = self::APPROVAL_APPROVED;
+                } elseif (!$payment->ceo_approved && $payment->approval_status === self::APPROVAL_APPROVED) {
+                    $payment->approval_status = self::APPROVAL_PENDING;
+                }
+            }
+        });
+    }
 
     protected $fillable = [
         'expense_id',
@@ -206,5 +236,93 @@ public function getBaseAmountAttribute()
             self::APPROVAL_REJECTED => 'CEO Rejected',
             default => 'Unknown'
         };
+    }
+
+    // Scope for approved payments
+    public function scopeApproved($query)
+    {
+        return $query->where('approval_status', self::APPROVAL_APPROVED);
+    }
+
+    // Scope for rejected payments
+    public function scopeRejected($query)
+    {
+        return $query->where('approval_status', self::APPROVAL_REJECTED);
+    }
+
+    // Scope for payments by status
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    // Scope for payments by approval status
+    public function scopeByApprovalStatus($query, string $approvalStatus)
+    {
+        return $query->where('approval_status', $approvalStatus);
+    }
+
+    /**
+     * Approve the payment (CEO action)
+     */
+    public function approve(?int $approvedById = null, ?string $notes = null): bool
+    {
+        $this->approval_status = self::APPROVAL_APPROVED;
+        $this->ceo_approved = true;
+        $this->ceo_approved_by = $approvedById ?? auth()->id();
+        $this->ceo_approved_at = now();
+        $this->ceo_notes = $notes;
+        $this->status = self::STATUS_COMPLETED;
+
+        return $this->save();
+    }
+
+    /**
+     * Reject the payment (CEO action)
+     */
+    public function reject(?int $rejectedById = null, ?string $notes = null): bool
+    {
+        $this->approval_status = self::APPROVAL_REJECTED;
+        $this->ceo_approved = false;
+        $this->ceo_approved_by = $rejectedById ?? auth()->id();
+        $this->ceo_approved_at = now();
+        $this->ceo_notes = $notes;
+        $this->status = self::STATUS_FAILED;
+
+        return $this->save();
+    }
+
+    /**
+     * Get unified status for display (combines status and approval_status)
+     */
+    public function getDisplayStatus(): string
+    {
+        if ($this->approval_status === self::APPROVAL_REJECTED) {
+            return 'Rejected';
+        }
+        if ($this->approval_status === self::APPROVAL_PENDING) {
+            return 'Pending Approval';
+        }
+        if ($this->approval_status === self::APPROVAL_APPROVED) {
+            return 'Approved';
+        }
+        return ucfirst($this->status ?? 'Unknown');
+    }
+
+    /**
+     * Get unified status color for UI
+     */
+    public function getDisplayStatusColor(): string
+    {
+        if ($this->approval_status === self::APPROVAL_REJECTED) {
+            return 'danger';
+        }
+        if ($this->approval_status === self::APPROVAL_PENDING) {
+            return 'warning';
+        }
+        if ($this->approval_status === self::APPROVAL_APPROVED) {
+            return 'success';
+        }
+        return 'secondary';
     }
 }

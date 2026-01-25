@@ -35,6 +35,7 @@ use App\Models\InAppNotification;
 use App\Models\Equipment;
 use App\Models\Client;
 use App\Models\DeviceToken;
+use App\Models\AuditLog;
 
 /*
 |--------------------------------------------------------------------------
@@ -90,6 +91,56 @@ Route::post('/login', function (Request $request) {
             'shop_id' => $user->shop_id,
             'back_debt' => $user->back_debt,
             'created_at' => $user->created_at,
+        ],
+    ]);
+});
+
+// Client Login (Public - no auth required)
+Route::post('/client/login', function (Request $request) {
+    $request->validate([
+        'email' => 'required|email',
+        'password' => 'required',
+    ]);
+
+    $client = \App\Models\Client::where('email', $request->email)->first();
+
+    if (!$client) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No account found with this email address.',
+        ], 401);
+    }
+
+    if (!Hash::check($request->password, $client->password)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid password. Please try again.',
+        ], 401);
+    }
+
+    if (!$client->isActive()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Your account has been deactivated. Please contact administrator.',
+        ], 403);
+    }
+
+    $token = $client->createToken('client-app')->plainTextToken;
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'data' => [
+            'client' => [
+                'id' => $client->id,
+                'name' => $client->name,
+                'email' => $client->email,
+                'phone' => $client->phone,
+                'company' => $client->company,
+                'is_active' => $client->isActive(),
+                'created_at' => $client->created_at,
+            ],
+            'token' => $token,
         ],
     ]);
 });
@@ -594,9 +645,9 @@ Route::middleware('auth:sanctum')->group(function () {
             $user = $request->user();
             $query = Project::query();
 
-            // Filter by user's assigned projects for non-admin/ceo/finance roles
-            // Finance needs access to all projects for labor/subcontractor management
-            if (!in_array($user->role, ['admin', 'ceo', 'finance'])) {
+            // Filter by user's assigned projects for non-admin/ceo/finance/operations roles
+            // Finance and Operations need access to all projects for management
+            if (!in_array($user->role, ['admin', 'ceo', 'finance', 'operations'])) {
                 $projectIds = $user->projects->pluck('id');
                 $query->whereIn('id', $projectIds);
             }
@@ -624,7 +675,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
             // Check access
             $user = $request->user();
-            if (!in_array($user->role, ['admin', 'ceo']) && !$user->projects->contains($id)) {
+            if (!in_array($user->role, ['admin', 'ceo', 'finance', 'operations']) && !$user->projects->contains($id)) {
                 return response()->json(['success' => false, 'message' => 'Access denied'], 403);
             }
 
@@ -2194,16 +2245,33 @@ Route::middleware('auth:sanctum')->group(function () {
                 'comments' => 'nullable|string',
             ]);
 
-            $payment = Payment::find($id);
+            $payment = Payment::with(['lpo.requisition', 'supplier'])->find($id);
             if (!$payment) {
                 return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
             }
 
+            $oldStatus = $payment->status;
             $status = $request->action === 'approve' ? 'ceo_approved' : 'ceo_rejected';
             $payment->update([
                 'status' => $status,
-                'approval_comments' => $request->comments,
+                'approval_status' => $status,
+                'ceo_approved' => $request->action === 'approve',
+                'ceo_approved_by' => auth()->id(),
+                'ceo_approved_at' => now(),
+                'ceo_notes' => $request->comments,
             ]);
+
+            // Log the approval/rejection action
+            $action = $request->action === 'approve' ? AuditLog::ACTION_APPROVE : AuditLog::ACTION_REJECT;
+            AuditLog::log(
+                $action,
+                "Payment of UGX " . number_format($payment->amount, 2) . " " . $request->action . "d" .
+                ($payment->supplier ? " for " . $payment->supplier->name : ""),
+                $payment,
+                ['status' => $oldStatus],
+                ['status' => $status, 'ceo_notes' => $request->comments],
+                ['lpo_number' => $payment->lpo?->lpo_number]
+            );
 
             return response()->json([
                 'success' => true,
@@ -2719,6 +2787,167 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
+    // ==================== AUDIT LOGS ====================
+    Route::prefix('audit-logs')->group(function () {
+        // Get all audit logs (admin/ceo only)
+        Route::get('/', function (Request $request) {
+            if (!in_array($request->user()->role, ['admin', 'ceo'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $query = AuditLog::with('user')->latest();
+
+            // Filter by date range
+            if ($request->has('start_date')) {
+                $query->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->has('end_date')) {
+                $query->whereDate('created_at', '<=', $request->end_date);
+            }
+
+            // Filter by user
+            if ($request->has('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
+
+            // Filter by action
+            if ($request->has('action')) {
+                $query->where('action', $request->action);
+            }
+
+            // Filter by model type
+            if ($request->has('model_type')) {
+                $modelType = $request->model_type;
+                if (!str_contains($modelType, '\\')) {
+                    $modelType = 'App\\Models\\' . $modelType;
+                }
+                $query->where('model_type', $modelType);
+            }
+
+            // Search description
+            if ($request->has('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('description', 'like', "%{$search}%")
+                      ->orWhere('user_name', 'like', "%{$search}%");
+                });
+            }
+
+            $logs = $query->paginate($request->per_page ?? 20);
+
+            return response()->json([
+                'success' => true,
+                'data' => $logs->map(fn($log) => $log->toApiResponse()),
+                'meta' => [
+                    'current_page' => $logs->currentPage(),
+                    'last_page' => $logs->lastPage(),
+                    'per_page' => $logs->perPage(),
+                    'total' => $logs->total(),
+                ],
+            ]);
+        });
+
+        // Get audit statistics
+        Route::get('/stats', function (Request $request) {
+            if (!in_array($request->user()->role, ['admin', 'ceo'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $days = $request->days ?? 30;
+
+            $actionStats = AuditLog::where('created_at', '>=', now()->subDays($days))
+                ->selectRaw('action, COUNT(*) as count')
+                ->groupBy('action')
+                ->pluck('count', 'action');
+
+            $modelStats = AuditLog::where('created_at', '>=', now()->subDays($days))
+                ->selectRaw('model_type, COUNT(*) as count')
+                ->whereNotNull('model_type')
+                ->groupBy('model_type')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    return [class_basename($item->model_type) => $item->count];
+                });
+
+            $userStats = AuditLog::where('created_at', '>=', now()->subDays($days))
+                ->selectRaw('user_id, user_name, COUNT(*) as count')
+                ->whereNotNull('user_id')
+                ->groupBy('user_id', 'user_name')
+                ->orderByDesc('count')
+                ->limit(10)
+                ->get();
+
+            $dailyStats = AuditLog::where('created_at', '>=', now()->subDays(7))
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->pluck('count', 'date');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_logs' => AuditLog::where('created_at', '>=', now()->subDays($days))->count(),
+                    'by_action' => $actionStats,
+                    'by_model' => $modelStats,
+                    'top_users' => $userStats,
+                    'daily_activity' => $dailyStats,
+                    'period_days' => $days,
+                ],
+            ]);
+        });
+
+        // Get logs for specific model
+        Route::get('/model/{modelType}/{modelId}', function (Request $request, $modelType, $modelId) {
+            if (!in_array($request->user()->role, ['admin', 'ceo', 'finance'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            if (!str_contains($modelType, '\\')) {
+                $modelType = 'App\\Models\\' . ucfirst($modelType);
+            }
+
+            $logs = AuditLog::where('model_type', $modelType)
+                ->where('model_id', $modelId)
+                ->with('user')
+                ->latest()
+                ->paginate($request->per_page ?? 20);
+
+            return response()->json([
+                'success' => true,
+                'data' => $logs->map(fn($log) => $log->toApiResponse()),
+                'meta' => [
+                    'current_page' => $logs->currentPage(),
+                    'last_page' => $logs->lastPage(),
+                    'per_page' => $logs->perPage(),
+                    'total' => $logs->total(),
+                ],
+            ]);
+        });
+
+        // Get logs for specific user
+        Route::get('/user/{userId}', function (Request $request, $userId) {
+            if (!in_array($request->user()->role, ['admin', 'ceo'])) {
+                return response()->json(['success' => false, 'message' => 'Access denied'], 403);
+            }
+
+            $logs = AuditLog::where('user_id', $userId)
+                ->with('user')
+                ->latest()
+                ->paginate($request->per_page ?? 20);
+
+            return response()->json([
+                'success' => true,
+                'data' => $logs->map(fn($log) => $log->toApiResponse()),
+                'meta' => [
+                    'current_page' => $logs->currentPage(),
+                    'last_page' => $logs->lastPage(),
+                    'per_page' => $logs->perPage(),
+                    'total' => $logs->total(),
+                ],
+            ]);
+        });
+    });
+
     // ==================== LABOR MANAGEMENT ====================
     Route::prefix('labor')->group(function () {
 
@@ -2982,8 +3211,34 @@ Route::middleware('auth:sanctum')->group(function () {
     // ==================== SUBCONTRACTORS ====================
     Route::prefix('subcontractors')->group(function () {
 
-        Route::get('/', function () {
-            $subcontractors = Subcontractor::with(['projectContracts.payments'])->orderBy('name')->get();
+        Route::get('/', function (Request $request) {
+            $query = Subcontractor::with(['projectContracts.payments']);
+
+            // Search functionality
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('contact_person', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('specialization', 'like', "%{$search}%")
+                      ->orWhere('tax_number', 'like', "%{$search}%")
+                      ->orWhere('address', 'like', "%{$search}%");
+                });
+            }
+
+            // Filter by status
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            // Filter by specialization
+            if ($request->filled('specialization')) {
+                $query->where('specialization', $request->specialization);
+            }
+
+            $subcontractors = $query->orderBy('name')->get();
 
             // Transform to Flutter expected format with totals
             $data = $subcontractors->map(function ($s) {
@@ -3010,7 +3265,11 @@ Route::middleware('auth:sanctum')->group(function () {
                 ];
             });
 
-            return response()->json(['success' => true, 'data' => $data]);
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'total' => $data->count(),
+            ]);
         });
 
         Route::get('/{id}', function ($id) {
@@ -3618,7 +3877,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 ]);
             }
 
-            if (!$client->is_active) {
+            if (!$client->isActive()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Your account has been deactivated. Please contact administrator.',
@@ -3637,7 +3896,7 @@ Route::middleware('auth:sanctum')->group(function () {
                         'email' => $client->email,
                         'phone' => $client->phone,
                         'company' => $client->company,
-                        'is_active' => $client->is_active,
+                        'is_active' => $client->isActive(),
                         'created_at' => $client->created_at,
                     ],
                     'token' => $token,
@@ -3666,7 +3925,7 @@ Route::middleware('auth:sanctum')->group(function () {
                         'email' => $client->email,
                         'phone' => $client->phone,
                         'company' => $client->company,
-                        'is_active' => $client->is_active,
+                        'is_active' => $client->isActive(),
                         'projects_count' => $client->projects->count(),
                         'created_at' => $client->created_at,
                     ],
@@ -3716,17 +3975,12 @@ Route::middleware('auth:sanctum')->group(function () {
                 }
 
                 $milestones = $project->milestones()
-                    ->orderBy('scheduled_date', 'asc')
+                    ->orderBy('due_date', 'asc')
                     ->get()
                     ->map(function ($milestone) {
                         $photos = [];
-                        if ($milestone->photos) {
-                            $photoArray = json_decode($milestone->photos, true);
-                            if (is_array($photoArray)) {
-                                foreach ($photoArray as $photo) {
-                                    $photos[] = asset('storage/' . $photo);
-                                }
-                            }
+                        if ($milestone->photo_path) {
+                            $photos[] = asset('storage/' . $milestone->photo_path);
                         }
 
                         return [
@@ -3734,11 +3988,11 @@ Route::middleware('auth:sanctum')->group(function () {
                             'title' => $milestone->title,
                             'description' => $milestone->description,
                             'status' => $milestone->status,
-                            'scheduled_date' => $milestone->scheduled_date,
-                            'completed_date' => $milestone->completed_date,
-                            'progress_percentage' => $milestone->progress_percentage ?? 0,
-                            'notes' => $milestone->notes,
-                            'surveyor_name' => $milestone->surveyor_name,
+                            'scheduled_date' => $milestone->due_date,
+                            'completed_date' => $milestone->completed_at,
+                            'progress_percentage' => $milestone->completion_percentage ?? 0,
+                            'notes' => $milestone->progress_notes,
+                            
                             'photos' => $photos,
                             'created_at' => $milestone->created_at,
                         ];
@@ -3772,13 +4026,8 @@ Route::middleware('auth:sanctum')->group(function () {
                 }
 
                 $photos = [];
-                if ($milestone->photos) {
-                    $photoArray = json_decode($milestone->photos, true);
-                    if (is_array($photoArray)) {
-                        foreach ($photoArray as $photo) {
-                            $photos[] = asset('storage/' . $photo);
-                        }
-                    }
+                if ($milestone->photo_path) {
+                    $photos[] = asset('storage/' . $milestone->photo_path);
                 }
 
                 return response()->json([
@@ -3790,11 +4039,11 @@ Route::middleware('auth:sanctum')->group(function () {
                         'title' => $milestone->title,
                         'description' => $milestone->description,
                         'status' => $milestone->status,
-                        'scheduled_date' => $milestone->scheduled_date,
-                        'completed_date' => $milestone->completed_date,
-                        'progress_percentage' => $milestone->progress_percentage ?? 0,
-                        'notes' => $milestone->notes,
-                        'surveyor_name' => $milestone->surveyor_name,
+                        'scheduled_date' => $milestone->due_date,
+                        'completed_date' => $milestone->completed_at,
+                        'progress_percentage' => $milestone->completion_percentage ?? 0,
+                        'notes' => $milestone->progress_notes,
+                        
                         'photos' => $photos,
                         'created_at' => $milestone->created_at,
                         'updated_at' => $milestone->updated_at,

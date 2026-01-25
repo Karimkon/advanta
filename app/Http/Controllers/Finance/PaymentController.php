@@ -10,6 +10,7 @@ use App\Models\Lpo;
 use App\Models\Expense;
 use App\Models\LpoReceivedItem;
 use App\Exports\PaymentsExport;
+use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -127,6 +128,16 @@ class PaymentController extends Controller
                 'reference_id' => $payment->id,
                 'reference_type' => Payment::class,
             ]);
+
+            // Log the payment creation
+            AuditLog::logCreate($payment,
+                "Payment of UGX " . number_format($request->amount, 2) . " created for " .
+                ($requisition->supplier->name ?? 'supplier') . " (LPO: " . $requisition->lpo->lpo_number . ")",
+                [
+                    'requisition_ref' => $requisition->ref,
+                    'project_name' => $requisition->project->name ?? null,
+                ]
+            );
         });
 
         return redirect()->route('finance.payments.pending')

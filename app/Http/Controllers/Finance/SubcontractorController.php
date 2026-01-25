@@ -15,14 +15,41 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class SubcontractorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $subcontractors = Subcontractor::with(['projectSubcontractors.project', 'payments'])
-            ->withCount('projectSubcontractors')
-            ->latest()
-            ->paginate(20);
+        $query = Subcontractor::with(['projectSubcontractors.project', 'payments'])
+            ->withCount('projectSubcontractors');
 
-        return view('finance.subcontractors.index', compact('subcontractors'));
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('contact_person', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('specialization', 'like', "%{$search}%")
+                  ->orWhere('tax_number', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by specialization
+        if ($request->filled('specialization')) {
+            $query->where('specialization', $request->specialization);
+        }
+
+        $subcontractors = $query->latest()->paginate(20)->withQueryString();
+
+        // Get unique specializations for filter dropdown
+        $specializations = Subcontractor::distinct()->pluck('specialization')->filter();
+
+        return view('finance.subcontractors.index', compact('subcontractors', 'specializations'));
     }
 
     public function create()
