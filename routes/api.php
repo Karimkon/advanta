@@ -145,6 +145,175 @@ Route::post('/client/login', function (Request $request) {
     ]);
 });
 
+// Protected Client Routes (requires token from client login)
+Route::prefix('client')->middleware('auth:sanctum')->group(function () {
+    // Logout
+    Route::post('/logout', function (Request $request) {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json(['success' => true, 'message' => 'Logged out successfully']);
+    });
+
+    // Get client profile
+    Route::get('/profile', function (Request $request) {
+        $client = $request->user();
+        if (!($client instanceof \App\Models\Client)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        $client->load('projects');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $client->id,
+                'name' => $client->name,
+                'email' => $client->email,
+                'phone' => $client->phone,
+                'company' => $client->company,
+                'is_active' => $client->isActive(),
+                'projects_count' => $client->projects->count(),
+                'created_at' => $client->created_at,
+            ],
+        ]);
+    });
+
+    // Get client projects
+    Route::get('/projects', function (Request $request) {
+        $client = $request->user();
+        if (!($client instanceof \App\Models\Client)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $projects = $client->projects()
+            ->with(['users', 'milestones'])
+            ->get()
+            ->map(function ($project) {
+                $totalMilestones = $project->milestones->count();
+                $completedMilestones = $project->milestones->where('status', 'completed')->count();
+
+                // Calculate progress from milestones
+                $progress = $totalMilestones > 0
+                    ? round(($completedMilestones / $totalMilestones) * 100, 1)
+                    : 0;
+
+                return [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'code' => $project->code,
+                    'location' => $project->location,
+                    'status' => $project->status,
+                    'budget' => $project->budget,
+                    'start_date' => $project->start_date,
+                    'end_date' => $project->end_date,
+                    'description' => $project->description,
+                    'progress' => $progress,
+                    'milestones_count' => $totalMilestones,
+                    'completed_milestones' => $completedMilestones,
+                    'created_at' => $project->created_at,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $projects,
+        ]);
+    });
+
+    // Get project milestones
+    Route::get('/projects/{projectId}/milestones', function (Request $request, $projectId) {
+        $client = $request->user();
+        if (!($client instanceof \App\Models\Client)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $project = $client->projects()->find($projectId);
+
+        if (!$project) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Project not found or access denied',
+            ], 404);
+        }
+
+        $milestones = $project->milestones()
+            ->orderBy('due_date', 'asc')
+            ->get()
+            ->map(function ($milestone) {
+                $photos = [];
+                if ($milestone->photo_path) {
+                    $photos[] = asset('storage/' . $milestone->photo_path);
+                }
+
+                return [
+                    'id' => $milestone->id,
+                    'project_id' => $milestone->project_id,
+                    'title' => $milestone->title,
+                    'description' => $milestone->description,
+                    'status' => $milestone->status,
+                    'scheduled_date' => $milestone->due_date,
+                    'completed_date' => $milestone->completed_at,
+                    'progress_percentage' => $milestone->completion_percentage ?? 0,
+                    'notes' => $milestone->progress_notes,
+                    'photos' => $photos,
+                    'has_photos' => !empty($photos),
+                    'created_at' => $milestone->created_at,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $milestones,
+        ]);
+    });
+
+    // Get milestone detail
+    Route::get('/projects/{projectId}/milestones/{milestoneId}', function (Request $request, $projectId, $milestoneId) {
+        $client = $request->user();
+        if (!($client instanceof \App\Models\Client)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $project = $client->projects()->find($projectId);
+
+        if (!$project) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Project not found or access denied',
+            ], 404);
+        }
+
+        $milestone = $project->milestones()->find($milestoneId);
+
+        if (!$milestone) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Milestone not found',
+            ], 404);
+        }
+
+        $photos = [];
+        if ($milestone->photo_path) {
+            $photos[] = asset('storage/' . $milestone->photo_path);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $milestone->id,
+                'title' => $milestone->title,
+                'description' => $milestone->description,
+                'status' => $milestone->status,
+                'scheduled_date' => $milestone->due_date,
+                'completed_date' => $milestone->completed_at,
+                'progress_percentage' => $milestone->completion_percentage ?? 0,
+                'notes' => $milestone->progress_notes,
+                'photos' => $photos,
+                'created_at' => $milestone->created_at,
+                'updated_at' => $milestone->updated_at,
+            ],
+        ]);
+    });
+});
+
 // Staff Reports - Public submission with access code
 Route::post('/public/staff-reports', function (Request $request) {
     $request->validate([
