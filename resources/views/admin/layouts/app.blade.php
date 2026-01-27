@@ -359,6 +359,11 @@ body {
             <i class="bi bi-person-check"></i> Clients
         </a>
 
+        <!-- Subcontractors -->
+        <a href="{{ route('admin.subcontractors.index') }}" class="{{ request()->routeIs('admin.subcontractors.*') ? 'active' : '' }}">
+            <i class="bi bi-person-gear"></i> Subcontractors
+        </a>
+
         <!-- Company Equipments -->
         <a href="{{ route('admin.equipments.index') }}" class="{{ request()->routeIs('admin.equipments.*') ? 'active' : '' }}">
             <i class="bi bi-truck"></i> Company Equipments

@@ -48,6 +48,7 @@ use App\Http\Controllers\ProjectManager\ProjectManagerMilestoneController;
 use App\Http\Controllers\CEO\CEOLpoController;
 use App\Http\Controllers\StaffReportController;
 use App\Http\Controllers\Finance\SubcontractorController;
+use App\Http\Controllers\Admin\AdminSubcontractorController;
 use App\Http\Controllers\Finance\LaborController;
 use App\Http\Controllers\Finance\SubcontractorPaymentController;
 use App\Http\Controllers\Engineer\EngineerProjectController;
@@ -307,6 +308,23 @@ Route::get('product-catalog/export-data', [ProductCatalogController::class, 'exp
     // Salary Payments (Admin)
     Route::post('salary-payments', [\App\Http\Controllers\Finance\SalaryPaymentController::class, 'store'])->name('salary-payments.store');
     Route::delete('salary-payments/{payment}', [\App\Http\Controllers\Finance\SalaryPaymentController::class, 'destroy'])->name('salary-payments.destroy');
+
+    // Subcontractors Management (Admin)
+    Route::prefix('subcontractors')->name('subcontractors.')->group(function () {
+        Route::get('/', [AdminSubcontractorController::class, 'index'])->name('index');
+        Route::get('/create', [AdminSubcontractorController::class, 'create'])->name('create');
+        Route::post('/', [AdminSubcontractorController::class, 'store'])->name('store');
+        Route::get('/{subcontractor}', [AdminSubcontractorController::class, 'show'])->name('show');
+        Route::get('/{subcontractor}/edit', [AdminSubcontractorController::class, 'edit'])->name('edit');
+        Route::put('/{subcontractor}', [AdminSubcontractorController::class, 'update'])->name('update');
+        Route::delete('/{subcontractor}', [AdminSubcontractorController::class, 'destroy'])->name('destroy');
+
+        // Contract management
+        Route::get('/contracts/{projectSubcontractor}/edit', [AdminSubcontractorController::class, 'editContract'])->name('contracts.edit');
+        Route::put('/contracts/{projectSubcontractor}', [AdminSubcontractorController::class, 'updateContract'])->name('contracts.update');
+        Route::delete('/contracts/{projectSubcontractor}', [AdminSubcontractorController::class, 'destroyContract'])->name('contracts.destroy');
+        Route::post('/{subcontractor}/contracts', [AdminSubcontractorController::class, 'addContract'])->name('contracts.add');
+    });
 
     // Stores & Inventory
 Route::prefix('stores')->name('stores.')->group(function () {
